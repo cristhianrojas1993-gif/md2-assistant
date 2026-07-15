@@ -10,7 +10,7 @@
 </head>
 <body>
 <header>
-  <div><h1>MD2 Assistant — Alpha 0.8.3.3</h1><small>Asistente de partida · Massive Darkness 2</small></div>
+  <div><h1>MD2 Assistant — Versión 1.0</h1><small>Asistente de partida · Massive Darkness 2</small></div>
   <span class="phaseChip" id="phaseChip">Preparación</span>
 </header>
 
@@ -108,22 +108,23 @@
 
 </section>
 
+<section id="director" class="view">
+<div class="card"><h2>Misión</h2><label>Nombre<input id="missionName" placeholder="Ej.: El Paso"></label><label>Objetivo<textarea id="missionObjective"></textarea></label><label>Reglas especiales<textarea id="missionRules"></textarea></label><div class="row"><button id="saveMission" class="primary">Guardar misión</button><button id="announceMission">Leer objetivo</button></div><div id="missionSummary" class="notice"></div></div>
+<div class="card"><div class="row between"><h2>Enemigos</h2><button id="clearEnemies">Vaciar</button></div><div class="grid"><label>Nombre<input id="enemyName"></label><label>Tipo<select id="enemyType"><option>Cuadrilla</option><option>Líder</option><option>Monstruo errante</option><option>Jefe</option></select></label><label>Vida máxima<input id="enemyHpMax" type="number" min="1" value="5"></label><label>Fuego<input id="enemyFire" type="number" min="0" value="0"></label><label>Escarcha<input id="enemyFrost" type="number" min="0" value="0"></label></div><button id="addEnemy" class="primary">Registrar enemigo</button><div id="enemyList"></div></div>
+<div class="card"><h2>Diario de partida</h2><div class="row"><button id="exportJournal">Exportar diario</button><button id="clearJournal">Vaciar diario</button></div><div id="directorJournal"></div></div></section>
 <section id="settings" class="view">
-<div class="card"><h2>Audio</h2><div id="audioStatus" class="notice">Estado del audio: pendiente.</div>
-<audio id="musicHeroes" src="audio/heroes.wav" loop preload="auto"></audio>
-<audio id="musicCombat" src="audio/combat.wav" loop preload="auto"></audio>
-<audio id="musicDarkness" src="audio/darkness.wav" loop preload="auto"></audio><div class="actions"><button id="enableAudio" class="primary">Activar sonido</button><button id="testMusic">Probar música</button><button id="testVoiceSettings">Probar voz</button><button id="repeatLastAnnouncement">Repetir último anuncio</button></div></div>
-<div class="card"><h2>Música y efectos</h2><div class="grid"><label>Música ambiental<select id="musicSetting"><option value="yes">Activada</option><option value="no">Desactivada</option></select></label><label>Volumen música<input id="musicVolumeSetting" type="range" min="0" max="0.5" step="0.05" value="0.15"></label><label>Efectos de sonido<select id="sfxSetting"><option value="yes">Activados</option><option value="no">Desactivados</option></select></label></div></div>
-<div class="card"><h2>Asistente de voz</h2><div class="grid"><label>Narración<select id="voiceSetting"><option value="yes">Activada</option><option value="no">Desactivada</option></select></label><label>Velocidad<input id="voiceRateSetting" type="range" min=".7" max="1.3" step=".1" value="1"></label><label>Tono base<input id="voicePitchSetting" type="range" min=".7" max="1.3" step=".1" value="1"></label><label>Voz disponible<select id="voiceSelect"></select></label></div><p class="muted">Los perfiles por clase ajustan ligeramente velocidad y tono usando las voces disponibles en el dispositivo.</p></div>
-<div class="card"><h2>Partida y datos</h2><div class="actions"><button id="exportSettings">Exportar partida</button><label>Importar partida<input id="importSettings" type="file" accept=".json"></label><button id="newGameSettings" class="danger">Nueva partida</button></div></div>
-</section>
+<div class="card"><h2>Asistente de voz</h2><div id="audioStatus" class="notice">Estado de la voz: pendiente.</div>
+<div class="actions"><button id="enableAudio" class="primary">Activar voz</button><button id="testVoiceSettings">Probar voz</button><button id="repeatLastAnnouncement">Repetir último anuncio</button></div>
+<div class="grid"><label>Narración<select id="voiceSetting"><option value="yes">Activada</option><option value="no">Desactivada</option></select></label><label>Velocidad<input id="voiceRateSetting" type="range" min=".7" max="1.3" step=".1" value="1"></label><label>Tono base<input id="voicePitchSetting" type="range" min=".7" max="1.3" step=".1" value="1"></label><label>Voz disponible<select id="voiceSelect"></select></label></div>
+<p class="muted">La música fue retirada para mejorar estabilidad y compatibilidad. Se conserva la asistente de voz.</p></div>
+<div class="card"><h2>Partida y datos</h2><div class="actions"><button id="exportSettings">Exportar partida</button><label>Importar partida<input id="importSettings" type="file" accept=".json"></label><button id="newGameSettings" class="danger">Nueva partida</button></div></div></section>
 
 </main>
 
 <nav>
   <button data-tab="setup" class="active">Preparación</button>
   <button data-tab="game">Partida</button>
-  <button data-tab="rules">Reglas</button><button data-tab="settings">Configuración</button>
+  <button data-tab="rules">Reglas</button><button data-tab="director">Director</button><button data-tab="settings">Configuración</button>
 </nav>
 
 <script src="data.js"></script>

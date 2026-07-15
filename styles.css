@@ -37,3 +37,5 @@ nav button.active{background:var(--accent);color:#111;font-weight:800}
 .resToken{display:inline-block;padding:7px 10px;border-radius:999px;margin:3px;border:1px solid var(--line)}
 .resBlue{background:#173852;border-color:#4fa3d1}.resGrey{background:#383838;border-color:#777}
 .levelQueue{display:grid;gap:8px}.levelQueueItem{padding:9px;border:1px solid var(--line);border-radius:10px}.levelQueueItem.done{border-color:#4f9d63}
+
+#audioStatus.ok{border-left-color:#4f9d63;background:#132218}#audioStatus.warn{border-left-color:#d5aa35;background:#2a2413}#audioStatus.off{border-left-color:#a54a4a;background:#291515}@media(min-width:720px){nav{grid-template-columns:repeat(4,1fr)}}

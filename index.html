@@ -1,60 +1,113 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111318"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css"><title>MD2 Assistant</title></head>
-<body><header><div><h1>MD2 Assistant — Alpha 0.7</h1><small>Director de partida · 6 héroes base</small></div><span id="phaseChip">Héroes</span></header>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111318">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="styles.css">
+<title>MD2 Assistant</title>
+</head>
+<body>
+<header>
+  <div><h1>MD2 Assistant — Alpha 0.7.1</h1><small>Asistente de partida · Massive Darkness 2</small></div>
+  <span class="phaseChip" id="phaseChip">Preparación</span>
+</header>
+
 <div id="heroTabs" class="heroTabs"></div>
+
 <main>
-<section id="game" class="view active">
-<div class="card setupCard" id="setupCard"><h2>Preparación de partida</h2>
-<p class="muted">Añade solo los héroes participantes. Confirma el grupo y elige una habilidad inicial para cada uno.</p>
-<div id="setupRoster"></div><div class="row"><button id="confirmParty" class="primary">Confirmar grupo</button><button id="editParty">Editar grupo</button></div>
-<p id="setupHelp" class="notice">La partida todavía no está preparada.</p></div>
-<div class="card"><div class="stats"><div><small>Ronda</small><b id="round">1</b></div><div><small>Fase</small><b id="phase">Héroes</b></div><div><small>Mazmorra</small><b id="dungeon">1</b></div><div><small>Oscuridad</small><b id="darkPos">A1</b></div></div><div class="row"><button id="nextPhase" class="primary">Siguiente fase</button><button id="undoPhase">Deshacer</button></div><p id="phaseHelp" class="notice"></p></div>
-<div class="card"><div class="row between"><h2>Grupo</h2><button id="addHero">Añadir héroe</button></div><div id="roster"></div></div>
-<div class="card"><h2>Experiencia automática</h2><div class="actions"><button id="minionXp">Secuaz +1</button><button id="leaderXp">Líder +2 grupo</button><button id="roamerXp">Errante +4 grupo</button><button id="undoXp">Deshacer XP</button></div><p class="notice">La XP del secuaz la recibe el héroe activo.</p></div>
-<div class="card"><h2>Medidor de Oscuridad</h2><div id="darkTrack" class="track"></div><p id="darkEvent" class="notice"></p><div class="row"><button id="advanceDark">Avanzar</button><button id="rewindDark">Retroceder</button></div></div>
+<section id="setup" class="view active">
+  <div class="card setupHero">
+    <h2>1. Elegir héroes</h2>
+    <p class="muted">Añade las clases que participarán. Solo ellas aparecerán durante la partida.</p>
+    <div id="classPicker" class="classPicker"></div>
+    <div class="row"><button id="addSelectedClass">Añadir héroe</button></div>
+    <div id="setupHeroes"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. Confirmar grupo</h2>
+    <p class="muted">Asigna los nombres de los jugadores o personajes. Después la app guiará la elección inicial uno por uno.</p>
+    <button id="confirmGroup" class="primary">Confirmar grupo y elegir habilidades</button>
+    <p id="setupStatus" class="notice">Todavía no has confirmado el grupo.</p>
+  </div>
 </section>
 
-<section id="hero" class="view"><div class="heroTitle" id="heroTitle"></div>
-<div class="card"><div class="grid"><label>Héroe<select id="heroSelect"></select></label><label>Nombre<input id="heroName"></label><label>Clase<select id="heroClass"></select></label></div><button id="deleteHero" class="danger top">Eliminar héroe</button></div>
-<div class="card"><div class="stats"><div><small>Nivel</small><b id="level">1</b></div><div><small>XP</small><b id="xp">0</b></div><div><small>Acciones</small><b id="actionsLeft">3</b></div><div><small>Vida</small><b><span id="hp">0</span>/<span id="hpMax">0</span></b></div><div><small>Maná</small><b><span id="mana">0</span>/<span id="manaMax">0</span></b></div><div><small>Zona</small><b id="zone">Luz</b></div><div><small>Habilidad pendiente</small><b id="pendingSkill">Sí</b></div></div>
-<div class="row"><button id="hpDown">− Vida</button><button id="hpUp">+ Vida</button><button id="manaDown">− Maná</button><button id="manaUp">+ Maná</button><button id="toggleZone">Luz/Oscuridad</button></div>
-<h3>Experiencia y subida</h3><div class="row"><button data-xp="-5">−5 XP</button><button data-xp="-1">−1 XP</button><button data-xp="1">+1 XP</button><button data-xp="5">+5 XP</button><button id="levelUp" class="primary">Subir de nivel</button></div><p id="levelInfo" class="notice">La subida solo se permite durante la fase correspondiente.</p></div>
-<div class="card"><h2>Habilidades permanentes</h2><div id="baseAbilities"></div></div>
-<div class="card"><h2>Mecánica exclusiva</h2><div id="classPanel"></div></div>
+<section id="game" class="view">
+  <div class="card">
+    <div class="stats">
+      <div><small>Ronda</small><b id="round">1</b></div>
+      <div><small>Fase</small><b id="phase">Héroes</b></div>
+      <div><small>Mazmorra</small><b id="dungeon">1</b></div>
+      <div><small>Oscuridad</small><b id="darkPos">A1</b></div>
+    </div>
+    <div class="row"><button id="nextPhase" class="primary">Siguiente fase</button><button id="undoPhase">Deshacer</button></div>
+    <p id="phaseHelp" class="notice"></p>
+  </div>
+
+  <div class="card">
+    <h2>Experiencia automática</h2>
+    <div class="actions">
+      <button id="minionXp">Secuaz +1 al héroe activo</button>
+      <button id="leaderXp">Líder +2 al grupo</button>
+      <button id="roamerXp">Errante +4 al grupo</button>
+      <button id="undoXp">Deshacer XP</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Medidor de Oscuridad</h2>
+    <div id="darkTrack" class="track"></div>
+    <p id="darkEvent" class="notice"></p>
+    <div class="row"><button id="advanceDark">Avanzar</button><button id="rewindDark">Retroceder</button></div>
+  </div>
 </section>
 
-<section id="skills" class="view"><div class="card"><h2>Elecciones de habilidad</h2><p class="muted">Una elección por nivel; nivel actual o inferior.</p><div id="skillChoices"></div></div><div class="card"><h2>Árbol completo</h2><div id="skillTree"></div></div></section>
-
-<section id="actions" class="view">
-<div class="card"><h2>Acciones</h2><div class="actions"><button id="moveAction">Movimiento</button><button id="attackAction">Ataque</button><button id="defenseAction">Defensa</button><button data-action="Recuperación">Recuperación</button><button data-action="Intercambiar y equipar">Intercambiar y equipar</button><button data-action="Usar objeto">Usar objeto</button><button id="finishTurn" class="primary">Finalizar turno</button></div><p id="actionHelp" class="notice">Selecciona una acción.</p></div>
-<div class="card"><h2>Movimiento guiado</h2><div class="stats"><div><small>PM</small><b id="movePm">0</b></div></div><div class="actions"><button data-move="move">Mover 1 zona</button><button data-move="door">Abrir puerta</button><button data-move="interact">Interactuar</button><button id="finishMove">Finalizar</button></div></div>
-<div class="card"><h2>Ataque guiado</h2><div class="step active" id="s1"><b>1. Formar reserva</b><div class="grid top"><label>Tipo<select id="attackType"><option>Cuerpo a cuerpo</option><option>A distancia</option><option>Mágico</option></select></label><label>Dados<input id="heroDice" placeholder="Ej.: 2 amarillos + 1 naranja"></label><label>Dados negros<input id="blackDice" type="number" min="0" value="0"></label><label>Secuaces<input id="minions" type="number" min="0" value="1"></label></div><div id="shotBox" class="hidden top"><label>Flechas<select id="shot"><option value="fast">Rápido (&lt;7)</option><option value="perfect">Certero (=7)</option><option value="failed">Fallido (&gt;7)</option></select></label></div><button id="confirmPool" class="primary top">Confirmar</button></div>
-<div class="step" id="s2"><b>2. Lanzar dados físicos</b><button id="rolled" class="top">Ya lancé</button></div>
-<div class="step" id="s3"><b>3. Aplicar habilidades y efectos</b><div id="effects" class="notice"></div><button id="effectsDone" class="top">Efectos resueltos</button></div>
-<div class="step" id="s4"><b>4. Espadas menos escudos</b><div class="grid top"><label>Espadas<input id="swords" type="number" min="0" value="0"></label><label>Escudos<input id="shields" type="number" min="0" value="0"></label></div><button id="damage" class="primary top">Calcular</button><p id="damageResult" class="notice"></p></div></div>
-
-<div class="card"><h2>Defensa guiada</h2>
-<div class="step active" id="d1"><b>1. Formar reserva defensiva</b>
-<div class="grid top">
-<label>Dados azules<input id="blueDice" placeholder="Ej.: 2 azules"></label>
-<label>Espadas del enemigo<input id="enemySwords" type="number" min="0" value="0"></label>
-<label>Garras obtenidas<input id="enemyClaws" type="number" min="0" value="0"></label>
-</div>
-<button id="confirmDefense" class="primary top">Confirmar defensa</button></div>
-<div class="step" id="d2"><b>2. Lanzar dados físicos</b><button id="defenseRolled" class="top">Dados lanzados</button></div>
-<div class="step" id="d3"><b>3. Aplicar habilidades y efectos</b><div id="defenseEffects" class="notice">Confirma primero la reserva defensiva.</div><button id="defenseEffectsDone" class="top">Efectos resueltos</button></div>
-<div class="step" id="d4"><b>4. Calcular heridas</b>
-<div class="grid top"><label>Escudos<input id="defenseShields" type="number" min="0" value="0"></label></div>
-<button id="calculateDefense" class="primary top">Aplicar heridas</button>
-<p id="defenseResult" class="notice"></p></div></div>
-
+<section id="hero" class="view">
+  <div id="heroPage"></div>
 </section>
 
-<section id="more" class="view">
-<div class="card"><h2>Inventario</h2><div class="grid"><label>Objeto<input id="itemName"></label><label>Destino<select id="itemDest"><option value="equip">Equipar ahora</option><option value="inventory">Guardar</option></select></label></div><button id="addItem" class="top">Registrar</button><div id="inventory"></div></div>
-<div class="card"><div class="row between"><h2>Historial</h2><button id="clearHistory">Vaciar</button></div><div id="history"></div></div>
-<div class="card"><h2>Asistente de reglas</h2><textarea id="question"></textarea><div class="row"><button id="ask" class="primary">Preguntar</button><button id="dictate">🎤 Dictar</button><button id="read">🔊 Leer</button></div><div class="topicGrid"><button data-topic="ataque">Ataque</button><button data-topic="defensa">Defensa</button><button data-topic="movimiento">Movimiento</button><button data-topic="linea de vision">LdV</button><button data-topic="puertas">Puertas</button><button data-topic="oscuridad">Oscuridad</button><button data-topic="experiencia">Experiencia</button><button data-topic="inventario">Inventario</button><button data-topic="heroe">Héroe activo</button></div><p id="answer" class="notice">Sin respuesta.</p></div>
-<div class="card"><h2>Voz y partida</h2><div class="grid"><label>Voz<select id="voice"><option value="yes">Sí</option><option value="no">No</option></select></label><label>Velocidad<input id="rate" type="range" min=".7" max="1.3" step=".1" value="1"></label></div><div class="actions top"><button id="testVoice">Probar voz</button><button id="export">Exportar</button><label>Importar<input id="import" type="file" accept=".json"></label><button id="newGame" class="danger">Nueva partida</button></div></div>
+<section id="rules" class="view">
+  <div class="card">
+    <h2>Asistente de reglas</h2>
+    <textarea id="question" placeholder="Ej.: ¿Una puerta cerrada bloquea la línea de visión?"></textarea>
+    <div class="row"><button id="ask" class="primary">Preguntar</button><button id="dictate">🎤 Dictar</button><button id="read">🔊 Leer</button></div>
+    <div class="topicGrid">
+      <button data-topic="ataque">Ataque</button><button data-topic="defensa">Defensa</button>
+      <button data-topic="movimiento">Movimiento</button><button data-topic="linea de vision">LdV</button>
+      <button data-topic="puertas">Puertas</button><button data-topic="oscuridad">Oscuridad</button>
+      <button data-topic="experiencia">Experiencia</button><button data-topic="inventario">Inventario</button>
+    </div>
+    <p id="answer" class="notice">Sin respuesta.</p>
+  </div>
+
+  <div class="card">
+    <div class="row between"><h2>Historial</h2><button id="clearHistory">Vaciar</button></div>
+    <div id="history"></div>
+  </div>
+
+  <div class="card">
+    <h2>Voz y guardado</h2>
+    <div class="grid">
+      <label>Voz<select id="voice"><option value="yes">Sí</option><option value="no">No</option></select></label>
+      <label>Velocidad<input id="rate" type="range" min=".7" max="1.3" step=".1" value="1"></label>
+    </div>
+    <div class="actions top">
+      <button id="testVoice">Probar voz</button><button id="export">Exportar</button>
+      <label>Importar<input id="import" type="file" accept=".json"></label>
+      <button id="newGame" class="danger">Nueva partida</button>
+    </div>
+  </div>
 </section>
 </main>
-<nav><button data-tab="game" class="active">Partida</button><button data-tab="hero">Héroe</button><button data-tab="skills">Habilidades</button><button data-tab="actions">Acciones</button><button data-tab="more">Más</button></nav>
-<script src="data.js"></script><script src="app.js"></script></body></html>
+
+<nav>
+  <button data-tab="setup" class="active">Preparación</button>
+  <button data-tab="game">Partida</button>
+  <button data-tab="rules">Reglas</button>
+</nav>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body></html>

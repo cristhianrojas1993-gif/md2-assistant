@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111318">
+<link rel="manifest" href="manifest.webmanifest">
+<title>MD2 Assistant</title>
+<style>
+:root{--bg:#0f1115;--panel:#1a1d24;--panel2:#252933;--text:#f5f5f5;--muted:#b9bdc7;--accent:#d5aa35;--line:#383d48}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;min-height:100%;background:linear-gradient(#0d0f13,#171a20);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}body{padding-bottom:88px}header{position:sticky;top:0;z-index:10;background:#101218f2;border-bottom:1px solid var(--line);padding:12px 14px}h1{font-size:1.05rem;margin:0}small,.muted{color:var(--muted)}main{max-width:980px;margin:auto;padding:12px}.view{display:none}.view.active{display:block}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.space{justify-content:space-between}button,input,select,textarea{font:inherit}button{min-height:48px;border-radius:13px;border:1px solid #414753;background:var(--panel2);color:var(--text);padding:10px 12px;touch-action:manipulation}button.primary{background:var(--accent);color:#141414;font-weight:800}button.ok{background:#24482e;border-color:#3d7449}input,select,textarea{width:100%;min-height:46px;border-radius:11px;border:1px solid #3c424e;background:#11141a;color:var(--text);padding:10px}textarea{min-height:90px}.stat{background:#12151b;border:1px solid var(--line);border-radius:12px;padding:10px}.stat b{display:block;font-size:1.5rem}.notice{margin-top:10px;padding:11px;border-left:4px solid var(--accent);background:#17140d;border-radius:10px}.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.skill{display:flex;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#13161c}.skill input{width:22px;min-height:22px}.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:#101218f8;border-top:1px solid var(--line);padding:7px 7px calc(7px + env(safe-area-inset-bottom))}.bottomnav button{min-height:58px;padding:4px;font-size:.78rem}.bottomnav button.active{background:var(--accent);color:#111;font-weight:800}.history{max-height:280px;overflow:auto}.history div{padding:8px 0;border-bottom:1px solid var(--line)}@media(min-width:720px){.actions{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<header><h1>MD2 Assistant — PWA v0.3</h1><small>Massive Darkness 2 · Pícaro + Explorador</small></header>
+<main>
+<section id="partida" class="view active">
+<div class="card">
+<div class="grid">
+<label>Clase<select id="clase"><option value="rogue">Pícaro</option><option value="ranger">Explorador</option></select></label>
+<label>Nombre<input id="nombre" value="Héroe"></label>
+</div>
+<div class="grid" style="margin-top:10px">
+<div class="stat"><span class="muted">Ronda</span><b id="ronda">1</b></div>
+<div class="stat"><span class="muted">Acciones</span><b id="acciones">3</b></div>
+<div class="stat"><span class="muted">Vida</span><b><span id="vida">6</span>/<span id="vidaMax">6</span></b></div>
+<div class="stat"><span class="muted">Zona</span><b id="zona">Luz</b></div>
+</div>
+<div class="row" style="margin-top:10px"><button id="sigRonda" class="primary">Siguiente ronda</button><button id="cambiarZona">Luz/Oscuridad</button><button id="menosVida">− Vida</button><button id="masVida">+ Vida</button></div>
+</div>
+
+<div class="card">
+<div class="row space"><h2 style="font-size:1.05rem;margin:0">Turno</h2><button id="preparar" class="ok">Preparar turno</button></div>
+<div id="resumen" class="notice">Pulsa “Preparar turno”.</div>
+<div class="actions" style="margin-top:10px">
+<button data-act="Mover">Mover</button><button data-act="Atacar">Atacar</button><button data-act="Abrir puerta">Abrir puerta</button><button data-act="Interactuar">Interactuar</button><button data-act="Usar habilidad">Usar habilidad</button><button data-act="Usar objeto">Usar objeto</button><button id="olvido">¿Qué olvidé?</button><button id="fin" class="primary">Finalizar turno</button>
+</div>
+</div>
+<div id="panelClase" class="card"></div>
+</section>
+
+<section id="habilidades" class="view"><div class="card"><h2 style="font-size:1.05rem;margin-top:0">Árbol de habilidades</h2><div id="listaHab" style="display:grid;gap:8px"></div></div></section>
+
+<section id="ataque" class="view">
+<div class="card"><h2 style="font-size:1.05rem;margin-top:0">Asistente de ataque</h2>
+<div class="grid">
+<label>Objetivo<select id="objetivo"><option value="mob">Cuadrilla</option><option value="solo">Errante/Jefe</option></select></label>
+<label>Secuaces<input id="secuaces" type="number" min="0" value="1"></label>
+<label>Dados negros<input id="negros" type="number" min="0" value="1"></label>
+<label>Dados base<input id="dadosBase" placeholder="Ej.: 2 amarillos + 1 naranja"></label>
+</div>
+<button id="prepararAtaque" class="primary" style="margin-top:10px">Preparar ataque</button>
+<div id="ayudaAtaque" class="notice">La app no lanza dados.</div></div>
+<div id="panelFlechas" class="card" style="display:none">
+<h2 style="font-size:1.05rem;margin-top:0">Explorador · Flechas</h2>
+<p class="muted">Añade la cantidad de símbolos de flecha de cada carta robada.</p>
+<div id="cartasFlecha"></div>
+<div class="row" style="margin-top:10px"><button id="agregarCarta">Añadir carta</button><button id="limpiarCartas">Reiniciar</button></div>
+<div id="resultadoFlechas" class="notice">Total: 0</div>
+</div>
+</section>
+
+<section id="reglas" class="view"><div class="card">
+<h2 style="font-size:1.05rem;margin-top:0">Asistente de reglas</h2>
+<textarea id="pregunta" placeholder="Ej.: ¿El Pícaro debe gastar una ficha para atacar?"></textarea>
+<div class="row" style="margin-top:8px"><button id="preguntar" class="primary">Preguntar</button><button id="dictar">🎤 Dictar</button><button id="leer">🔊 Leer</button></div>
+<div id="respuesta" class="notice">Todavía no hay respuesta.</div>
+<small>La búsqueda escrita funciona sin internet. El dictado depende del navegador.</small>
+</div></section>
+
+<section id="mas" class="view">
+<div class="card"><div class="row space"><h2 style="font-size:1.05rem;margin:0">Historial</h2><button id="borrarHist">Vaciar</button></div><div id="historial" class="history"></div></div>
+<div class="card"><h2 style="font-size:1.05rem;margin-top:0">Voz</h2><div class="grid"><label>Narrador<select id="vozOn"><option value="yes">Sí</option><option value="no">No</option></select></label><label>Velocidad<input id="velocidad" type="range" min=".7" max="1.3" step=".1" value="1"></label></div><button id="probarVoz" style="margin-top:10px">Probar voz</button></div>
+<div class="card"><button id="exportar">Exportar partida</button><label style="margin-top:8px">Importar<input id="importar" type="file" accept=".json"></label><button id="nueva" style="margin-top:8px">Nueva partida</button></div>
+</section>
+</main>
+
+<nav class="bottomnav">
+<button data-tab="partida" class="active">Partida</button>
+<button data-tab="habilidades">Habilidades</button>
+<button data-tab="ataque">Ataque</button>
+<button data-tab="reglas">Reglas</button>
+<button data-tab="mas">Más</button>
+</nav>
+
+<script>
+const KEY='md2_pwa_v03';
+const rogueSkills=['Celeridad a Medida I','Forma Sombría I','Mixtura Mortal I','Kit de Herramientas I','Trucos Ensayados I','Forma Sombría II','Mixtura Mortal II','Celeridad a Medida II','Kit de Herramientas II','Trucos Ensayados II','Mixtura Mortal III','Celeridad a Medida III','Forma Sombría III'];
+const rangerSkills=['Volea de Flechas I','Flecha Perforante I','Flecha Incendiaria I','Flecha con Aire I','Cuerdas Mejoradas I','Volea de Flechas II','Flecha Perforante II','Flecha Incendiaria II','Flecha con Aire II','Cuerdas Mejoradas II','Volea de Flechas III','Flecha Perforante III','Flecha Incendiaria III'];
+const def=()=>({ronda:1,clase:'rogue',nombre:'Héroe',vida:6,vidaMax:6,zona:'light',acciones:3,rogue:{mano:3,gastadas:0,extra:0},ranger:{cards:[]},skills:{},hist:[],voz:'yes',rate:1});
+let s=JSON.parse(localStorage.getItem(KEY)||'null')||def();
+const $=x=>document.getElementById(x);
+function save(){localStorage.setItem(KEY,JSON.stringify(s))}
+function say(t){if(s.voz!=='yes'||!('speechSynthesis'in window))return;speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang='es-ES';u.rate=+s.rate||1;speechSynthesis.speak(u)}
+function log(t){s.hist.unshift({r:s.ronda,n:s.nombre,t});save();renderHist()}
+function render(){
+ $('clase').value=s.clase;$('nombre').value=s.nombre;$('ronda').textContent=s.ronda;$('acciones').textContent=s.acciones;$('vida').textContent=s.vida;$('vidaMax').textContent=s.vidaMax;$('zona').textContent=s.zona==='dark'?'Oscuridad':'Luz';$('vozOn').value=s.voz;$('velocidad').value=s.rate;
+ renderClass();renderSkills();renderHist();renderArrows();$('panelFlechas').style.display=s.clase==='ranger'?'block':'none'
+}
+function renderClass(){
+ if(s.clase==='rogue')$('panelClase').innerHTML=`<h2 style="font-size:1.05rem;margin-top:0">Pícaro · Fichas</h2><div class="grid"><div class="stat"><span class="muted">Fichas en mano</span><b>${s.rogue.mano}</b></div><div class="stat"><span class="muted">Gastadas</span><b>${s.rogue.gastadas}</b></div><div class="stat"><span class="muted">Acciones extra</span><b>${s.rogue.extra}</b></div></div><div class="actions" style="margin-top:10px"><button id="drawToken">Robar ficha</button><button id="spendToken">Gastar ficha</button><button id="extraToken">Ficha: roba + acción</button><button id="resetRogue">Nuevo turno</button></div><div class="notice">Cada acción requiere voltear una ficha, aunque su efecto no ayude a esa acción.</div>`;
+ else $('panelClase').innerHTML=`<h2 style="font-size:1.05rem;margin-top:0">Explorador</h2><div class="notice">Ataque a distancia: suma los símbolos de flecha de la parte superior.</div><p>≤ 6: rápido · 7: óptimo · ≥ 8: lento</p>`;
+ if(s.clase==='rogue'){
+  $('drawToken').onclick=()=>{s.rogue.mano++;s.acciones++;s.rogue.extra++;log('Robó una ficha y ganó una acción adicional.');render()};
+  $('spendToken').onclick=()=>{if(s.rogue.mano<=0)return alert('No quedan fichas.');s.rogue.mano--;s.rogue.gastadas++;s.acciones=Math.max(0,s.acciones-1);log('Gastó una ficha para realizar una acción.');render()};
+  $('extraToken').onclick=()=>{if(s.rogue.mano<=0)return alert('No quedan fichas.');s.rogue.mano--;s.rogue.gastadas++;s.rogue.mano++;s.rogue.extra++;log('Gastó una ficha y resolvió roba una ficha + acción.');render()};
+  $('resetRogue').onclick=()=>{s.rogue={mano:3,gastadas:0,extra:0};s.acciones=3;log('Preparó 3 fichas para el turno.');render()};
+ }
+}
+function renderSkills(){let arr=s.clase==='rogue'?rogueSkills:rangerSkills;$('listaHab').innerHTML=arr.map((x,i)=>`<label class="skill"><input type="checkbox" data-sk="${s.clase}_${i}" ${s.skills[s.clase+'_'+i]?'checked':''}><span><b>${x}</b><small>Activa recordatorios.</small></span></label>`).join('');document.querySelectorAll('[data-sk]').forEach(c=>c.onchange=()=>{s.skills[c.dataset.sk]=c.checked;save()})}
+function prepareTurn(){let m=[`Turno de ${s.nombre}.`];if(s.clase==='rogue'){s.rogue={mano:3,gastadas:0,extra:0};s.acciones=3;m.push('Roba tres fichas. Debes gastar una ficha por cada acción.')}else{s.acciones=3;m.push('Tienes tres acciones. Si atacas a distancia, controla el total de flechas.')}if(s.zona==='dark')m.push('Estás en oscuridad. Revisa Sombras.');$('resumen').textContent=m.join(' ');log('Turno preparado.');render();say(m.join(' '))}
+function action(name){if(s.clase==='rogue'){if(s.rogue.mano<=0)return alert('No tienes fichas.');if(!confirm(`Debes gastar una ficha para ${name}. ¿Confirmar?`))return;s.rogue.mano--;s.rogue.gastadas++}if(s.acciones<=0)return alert('No quedan acciones.');s.acciones--;log(name+' realizado.');render();say(`${name}. Te quedan ${s.acciones} acciones.`)}
+function renderHist(){$('historial').innerHTML=s.hist.length?s.hist.map(x=>`<div><b>Ronda ${x.r} · ${x.n}</b><br>${x.t}</div>`).join(''):'<p class="muted">Sin registros.</p>'}
+function prepAttack(){let a=[];let min=+$('secuaces').value||0,neg=+$('negros').value||0;a.push('Dados base: '+($('dadosBase').value||'no indicados')+'.');if(s.zona==='dark')a.push('Revisa Sombras.');if($('objetivo').value==='mob')a.push(min>0?`Quedan ${min} secuaces: añade ${neg} dados negros si corresponden.`:'No quedan secuaces: no uses dados negros aportados solo por ellos.');if(s.clase==='ranger')a.push('Si es a distancia, resuelve el mazo de flechas.');$('ayudaAtaque').textContent=a.join(' ')}
+function renderArrows(){if(s.clase!=='ranger')return;$('cartasFlecha').innerHTML=s.ranger.cards.map((v,i)=>`<div class="row" style="margin:7px 0"><span>Carta ${i+1}</span><input style="width:90px" type="number" min="1" max="4" value="${v}" data-ar="${i}"></div>`).join('');document.querySelectorAll('[data-ar]').forEach(x=>x.onchange=()=>{s.ranger.cards[+x.dataset.ar]=Math.max(1,+x.value||1);save();arrowResult()});arrowResult()}
+function arrowResult(){let t=s.ranger.cards.reduce((a,b)=>a+(+b||0),0),r='Sin cartas';if(t>0&&t<=6)r='Ataque rápido: fila central.';if(t===7)r='Ataque óptimo: fila superior.';if(t>=8)r='Ataque lento: fila inferior.';$('resultadoFlechas').innerHTML=`<b>Total: ${t}</b><br>${r}`}
+function rule(q){q=q.toLowerCase();if(q.includes('pícaro')||q.includes('picaro')||q.includes('ficha'))return 'El Pícaro roba 3 fichas al comenzar su turno y debe voltear una por cada acción. La bonificación no tiene que coincidir con la acción. Una ficha que indique robar otra ficha y realizar una acción concede una acción adicional.';if(q.includes('explorador')||q.includes('flecha')||q.includes('óptimo')||q.includes('optimo'))return 'En un ataque a distancia, el Explorador roba las cartas que decida y suma los símbolos de flecha de la parte superior: 6 o menos es rápido y usa la fila central; 7 es óptimo y usa la fila superior; 8 o más es lento y usa la fila inferior.';if(q.includes('secuaz')||q.includes('dados negros'))return 'Los dados negros de los secuaces se usan solo mientras queden secuaces en la cuadrilla.';if(q.includes('oscuridad')||q.includes('sombras'))return 'En oscuridad, revisa el efecto de Sombras de tu héroe o habilidad.';return 'No tengo una respuesta local segura para esa pregunta en este piloto.'}
+document.querySelectorAll('.bottomnav button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.bottomnav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));$(b.dataset.tab).classList.add('active');window.scrollTo(0,0)}))
+$('clase').onchange=e=>{s.clase=e.target.value;s.vidaMax=s.clase==='rogue'?6:5;s.vida=Math.min(s.vida,s.vidaMax);s.acciones=3;save();render()}
+$('nombre').onchange=e=>{s.nombre=e.target.value||'Héroe';save()}
+$('sigRonda').onclick=()=>{s.ronda++;s.acciones=3;log('Comenzó una nueva ronda.');render();say(`Ronda ${s.ronda}.`)}
+$('cambiarZona').onclick=()=>{s.zona=s.zona==='dark'?'light':'dark';log('Cambió a '+(s.zona==='dark'?'oscuridad':'luz')+'.');render();say(`Ahora estás en ${s.zona==='dark'?'oscuridad':'luz'}.`)}
+$('menosVida').onclick=()=>{s.vida=Math.max(0,s.vida-1);save();render()}
+$('masVida').onclick=()=>{s.vida=Math.min(s.vidaMax,s.vida+1);save();render()}
+$('preparar').onclick=prepareTurn;document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>action(b.dataset.act))
+$('olvido').onclick=()=>{let t=s.clase==='rogue'?`Te quedan ${s.rogue.mano} fichas. Cada acción requiere una ficha.`:'Si atacarás a distancia, suma las flechas y determina rápido, óptimo o lento.';if(s.zona==='dark')t+=' Estás en oscuridad.';$('resumen').textContent=t;say(t)}
+$('fin').onclick=()=>{s.acciones=0;log('Turno finalizado.');render();say('Turno finalizado.')}
+$('prepararAtaque').onclick=prepAttack;$('agregarCarta').onclick=()=>{s.ranger.cards.push(1);save();renderArrows()};$('limpiarCartas').onclick=()=>{s.ranger.cards=[];save();renderArrows()}
+$('preguntar').onclick=()=>{let a=rule($('pregunta').value);$('respuesta').textContent=a;window.lastAns=a}
+$('leer').onclick=()=>say(window.lastAns||$('respuesta').textContent)
+$('dictar').onclick=()=>{let R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return alert('Este navegador no permite dictado.');let r=new R();r.lang='es-ES';r.onresult=e=>{$('pregunta').value=e.results[0][0].transcript;$('preguntar').click()};r.start()}
+$('vozOn').onchange=e=>{s.voz=e.target.value;save()};$('velocidad').onchange=e=>{s.rate=e.target.value;save()};$('probarVoz').onclick=()=>say('Asistente de Massive Darkness 2 preparado.')
+$('borrarHist').onclick=()=>{s.hist=[];save();renderHist()}
+$('exportar').onclick=()=>{let b=new Blob([JSON.stringify(s,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='md2_partida.json';a.click()}
+$('importar').onchange=e=>{let f=e.target.files[0],r=new FileReader();r.onload=()=>{try{s=JSON.parse(r.result);save();render()}catch{alert('Archivo no válido')}};if(f)r.readAsText(f)}
+$('nueva').onclick=()=>{if(confirm('¿Nueva partida?')){s=def();save();render()}}
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+render();
+</script>
+</body>
+</html>

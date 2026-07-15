@@ -47,7 +47,7 @@ function makeHero(cls = 'rogue') {
     },
     mage: {
       amulet: 0,
-      slots: MD2.talismanDefaults.slice()
+      slots: MD2.talismanDefaults.map(q => ({ ...q }))
     },
     berserker: {
       fury: 0,
@@ -481,7 +481,7 @@ function classHtml(x) {
   if (x.cls === 'paladin')
     return `<div class="resource">Consagraciones registradas: <b>${ x.paladin.consecrations }</b><div class="row"><button id="conAdd">Consagrar (−1 maná)</button><button id="conRem">Retirar</button></div><small>Comprueba LdV y que la zona no tenga otra Consagración.</small></div><label class="top">Habilidad bendecida<select id="blessed"><option value="">Ninguna</option>${ activeSkills(x).map(q => `<option ${ x.paladin.blessed === q.name ? 'selected' : '' }>${ q.name }</option>`).join('') }</select></label>`;
   if (x.cls === 'mage')
-    return `<div class="talismanGrid">${ x.mage.slots.map((q, i) => `<div class="talismanSlot ${ i === x.mage.amulet ? 'active' : '' }"><b>Cara ${ i + 1 }</b><input data-slot="${ i }" value="${ q }"><small>${ i === x.mage.amulet ? 'Activa' : 'Inactiva' }</small></div>`).join('') }</div><button id="rotateTalisman" class="top">Girar Talismán</button>`;
+    return `<div class="talismanGrid">${ x.mage.slots.map((q, i) => `<div class="talismanSlot ${ i === x.mage.amulet ? 'active' : '' }"><b>Cara ${ i + 1 }${ i === x.mage.amulet ? ' · ACTIVA' : '' }</b><input data-slot="${ i }" value="${ q.name }"><small>Coste: ${ q.manaCost } maná · Tipo: ${ q.type }</small>${ i === x.mage.amulet ? `<button data-use-talisman="${ i }" ${ x.mana < q.manaCost ? 'disabled' : '' }>Usar capacidad</button>` : '' }</div>`).join('') }</div><button id="rotateTalisman" class="top" ${ x.mana < 1 ? 'disabled' : '' }>Girar forzado a la siguiente cara (1 maná)</button>`;
   const stances = {
     'Furia Sangrienta': 'Ataque: gasta 1 Furia para relanzar cualquier dado.',
     'Temerario': 'Movimiento: gasta 1 Furia para obtener +1 PM.',
@@ -658,7 +658,7 @@ function bindHero() {
     if (!confirm(`¿Confirmas ${ v }? La elección será permanente y solo podrá cambiarse con Deshacer.`))
       return;
     if (x.cls === 'mage' && (n === 1 || n === 5)) {
-      const options = x.mage.slots.map((slot, i) => `Cara ${ i + 1 }: ${ slot }`).join('\n');
+      const options = x.mage.slots.map((slot, i) => `Cara ${ i + 1 }: ${ slot.name }`).join('\n');
       let choice = prompt(`${ v } reemplaza una cara del Talismán. Escribe el número de la cara a reemplazar (1-4):\n${ options }`, '1');
       let idx = parseInt(choice, 10) - 1;
       while (isNaN(idx) || idx < 0 || idx > 3) {
@@ -669,9 +669,40 @@ function bindHero() {
         }
         idx = parseInt(choice, 10) - 1;
       }
+      let manaChoice = prompt(`¿Cuánto maná cuesta usar ${ v }?`, '1');
+      let manaCost = parseInt(manaChoice, 10);
+      while (isNaN(manaCost) || manaCost < 0) {
+        manaChoice = prompt('Escribe un número válido de maná (0 o más):', '1');
+        if (manaChoice === null) {
+          manaCost = 1;
+          break;
+        }
+        manaCost = parseInt(manaChoice, 10);
+      }
+      let typeChoice = prompt(`¿${ v } es de tipo Ataque, Defensa, Combate, Curación o Movimiento? Escribe una: ataque / defensa / combate / curacion / movimiento`, 'ataque');
+      const validTypes = [
+        'ataque',
+        'defensa',
+        'combate',
+        'curacion',
+        'movimiento'
+      ];
+      let type = (typeChoice || '').toLowerCase().trim();
+      while (!validTypes.includes(type)) {
+        typeChoice = prompt('Escribe exactamente una de estas opciones: ataque / defensa / combate / curacion / movimiento', 'ataque');
+        if (typeChoice === null) {
+          type = 'ataque';
+          break;
+        }
+        type = (typeChoice || '').toLowerCase().trim();
+      }
       const oldFace = x.mage.slots[idx];
-      x.mage.slots[idx] = v;
-      log(`${ x.name } reemplaza la Cara ${ idx + 1 } del Talismán (${ oldFace }) por ${ v }.`);
+      x.mage.slots[idx] = {
+        name: v,
+        manaCost,
+        type
+      };
+      log(`${ x.name } reemplaza la Cara ${ idx + 1 } del Talismán (${ oldFace.name }) por ${ v } (coste ${ manaCost } maná, tipo ${ type }).`);
     }
     x.lockedChoices[n] = true;
     log(`Habilidad bloqueada: ${ v }.`);
@@ -831,15 +862,35 @@ function bindClass(x) {
   }
   if (x.cls === 'mage') {
     document.querySelectorAll('[data-slot]').forEach(inp => inp.onchange = () => {
-      x.mage.slots[+inp.dataset.slot] = inp.value || 'Vacío';
+      x.mage.slots[+inp.dataset.slot].name = inp.value || 'Vacío';
       save();
     });
-    $('rotateTalisman').onclick = () => {
+    document.querySelectorAll('[data-use-talisman]').forEach(b => b.onclick = () => {
+      const i = +b.dataset.useTalisman, face = x.mage.slots[i];
+      if (x.mana < face.manaCost)
+        return alert('No tienes maná suficiente para usar esta capacidad.');
+      if (!confirm(`¿Usar ${ face.name }? Cuesta ${ face.manaCost } maná y el Talismán girará a la siguiente cara.`))
+        return;
+      x.mana -= face.manaCost;
+      log(`${ x.name } usa ${ face.name } (Cara ${ i + 1 }), gasta ${ face.manaCost } maná.`);
       x.mage.amulet = (x.mage.amulet + 1) % 4;
-      let a = x.mage.slots[x.mage.amulet];
+      const nextFace = x.mage.slots[x.mage.amulet];
       save();
       renderHero();
-      say(`Talismán girado. Activa: ${ a }.`);
+      say(`${ face.name }. ${ face.type === 'ataque' ? 'Recuerda que necesitas un arma con alcance mágico equipada para usar hechizos de ataque. ' : '' }El Talismán gira. Cara activa ahora: ${ nextFace.name }.`);
+    });
+    $('rotateTalisman').onclick = () => {
+      if (x.mana < 1)
+        return alert('No tienes maná suficiente para girar el Talismán.');
+      if (!confirm('¿Gastar 1 maná para girar el Talismán a la siguiente cara?'))
+        return;
+      x.mana--;
+      x.mage.amulet = (x.mage.amulet + 1) % 4;
+      let a = x.mage.slots[x.mage.amulet];
+      log(`${ x.name } gasta 1 maná para girar el Talismán.`);
+      save();
+      renderHero();
+      say(`Talismán girado. Activa: ${ a.name }.`);
     };
   }
   if (x.cls === 'berserker') {

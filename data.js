@@ -530,7 +530,7 @@ const MD2 = {
     'berserker': {
       'label': 'Berserker',
       'hp': 7,
-      'mana': 0,
+      'mana': 2,
       'ability': 'Las fichas de vida perdidas pueden pasar a la reserva de Furia (máximo 7).',
       'shadow': 'Sombras: revisa la habilidad de Sombras de la carta del héroe.',
       'skills': [
@@ -643,10 +643,26 @@ MD2.classColors = {
   berserker: '#ef4444'
 };
 MD2.talismanDefaults = [
-  'Ataque 1 (1 maná): +1 Espada',
-  '2 maná: Cura 3',
-  'Combate 1 (1 maná): relanza 1 dado',
-  '1 maná: Mueve 1'
+  {
+    name: 'Ataque 1: +1 Espada',
+    manaCost: 1,
+    type: 'ataque'
+  },
+  {
+    name: 'Cura 3',
+    manaCost: 2,
+    type: 'curacion'
+  },
+  {
+    name: 'Combate 1: relanza 1 dado',
+    manaCost: 1,
+    type: 'combate'
+  },
+  {
+    name: 'Mueve 1',
+    manaCost: 1,
+    type: 'movimiento'
+  }
 ];
 MD2.rules = {
   'linea de vision': 'La línea de visión se comprueba entre la Zona de origen y la Zona objetivo. Paredes y puertas cerradas bloquean la LdV. La app no conoce la geometría del escenario, por lo que el jugador debe verificarla en el tablero físico.',

@@ -5,3 +5,16 @@ MD2.shamanBlessings={
  air:{name:"Bendición de Aire",effect:"Movimiento: +1 PM."},
  nature:{name:"Bendición de Naturaleza",effect:"Los Espíritus tienen +1 Vida."}
 };
+
+MD2.classColors={rogue:"#8b5cf6",ranger:"#22c55e",shaman:"#f59e0b",paladin:"#3b82f6",mage:"#06b6d4",berserker:"#ef4444"};
+MD2.talismanDefaults=["+1 Espada","+1 Alcance","+1 PM","Cura 3"];
+MD2.rules={
+"linea de vision":"La línea de visión se comprueba entre la Zona de origen y la Zona objetivo. Paredes y puertas cerradas bloquean la LdV. La app no conoce la geometría del escenario, por lo que el jugador debe verificarla en el tablero físico.",
+"puertas":"Una puerta cerrada bloquea movimiento y línea de visión. Abrirla cuesta 1 PM durante una Acción de Movimiento, salvo una regla específica.",
+"ataque":"Orden: formar reserva, lanzar dados, aplicar habilidades y efectos —incluidos dados negros—, sumar espadas y restar escudos.",
+"defensa":"Forma la reserva de dados azules, lanza, aplica habilidades y efectos, y resta los escudos a las espadas enemigas.",
+"movimiento":"Una Acción de Movimiento entrega 2 PM. Cada PM permite moverse, abrir una puerta o interactuar. El Explorador obtiene +1 PM.",
+"inventario":"Al obtener un objeto puedes equiparlo inmediatamente. Si lo guardas, necesitas Intercambiar y equipar para colocarlo después. Los consumibles usados y objetos reemplazados pueden eliminarse.",
+"oscuridad":"Al atacar en Oscuridad añade el dado de Oscuridad y revisa la habilidad de Sombras.",
+"experiencia":"Secuaz: +1 XP al héroe que lo elimina. Líder: +2 XP a cada héroe. Errante: +4 XP a cada héroe."
+};

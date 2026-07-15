@@ -1,14 +1,19 @@
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111318"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css"><title>MD2 Assistant</title></head>
-<body><header><div><h1>MD2 Assistant — Alpha 0.6.1</h1><small>Director de partida · 6 héroes base</small></div><span id="phaseChip">Héroes</span></header>
+<body><header><div><h1>MD2 Assistant — Alpha 0.7</h1><small>Director de partida · 6 héroes base</small></div><span id="phaseChip">Héroes</span></header>
+<div id="heroTabs" class="heroTabs"></div>
 <main>
 <section id="game" class="view active">
+<div class="card setupCard" id="setupCard"><h2>Preparación de partida</h2>
+<p class="muted">Añade solo los héroes participantes. Confirma el grupo y elige una habilidad inicial para cada uno.</p>
+<div id="setupRoster"></div><div class="row"><button id="confirmParty" class="primary">Confirmar grupo</button><button id="editParty">Editar grupo</button></div>
+<p id="setupHelp" class="notice">La partida todavía no está preparada.</p></div>
 <div class="card"><div class="stats"><div><small>Ronda</small><b id="round">1</b></div><div><small>Fase</small><b id="phase">Héroes</b></div><div><small>Mazmorra</small><b id="dungeon">1</b></div><div><small>Oscuridad</small><b id="darkPos">A1</b></div></div><div class="row"><button id="nextPhase" class="primary">Siguiente fase</button><button id="undoPhase">Deshacer</button></div><p id="phaseHelp" class="notice"></p></div>
 <div class="card"><div class="row between"><h2>Grupo</h2><button id="addHero">Añadir héroe</button></div><div id="roster"></div></div>
 <div class="card"><h2>Experiencia automática</h2><div class="actions"><button id="minionXp">Secuaz +1</button><button id="leaderXp">Líder +2 grupo</button><button id="roamerXp">Errante +4 grupo</button><button id="undoXp">Deshacer XP</button></div><p class="notice">La XP del secuaz la recibe el héroe activo.</p></div>
 <div class="card"><h2>Medidor de Oscuridad</h2><div id="darkTrack" class="track"></div><p id="darkEvent" class="notice"></p><div class="row"><button id="advanceDark">Avanzar</button><button id="rewindDark">Retroceder</button></div></div>
 </section>
 
-<section id="hero" class="view">
+<section id="hero" class="view"><div class="heroTitle" id="heroTitle"></div>
 <div class="card"><div class="grid"><label>Héroe<select id="heroSelect"></select></label><label>Nombre<input id="heroName"></label><label>Clase<select id="heroClass"></select></label></div><button id="deleteHero" class="danger top">Eliminar héroe</button></div>
 <div class="card"><div class="stats"><div><small>Nivel</small><b id="level">1</b></div><div><small>XP</small><b id="xp">0</b></div><div><small>Acciones</small><b id="actionsLeft">3</b></div><div><small>Vida</small><b><span id="hp">0</span>/<span id="hpMax">0</span></b></div><div><small>Maná</small><b><span id="mana">0</span>/<span id="manaMax">0</span></b></div><div><small>Zona</small><b id="zone">Luz</b></div><div><small>Habilidad pendiente</small><b id="pendingSkill">Sí</b></div></div>
 <div class="row"><button id="hpDown">− Vida</button><button id="hpUp">+ Vida</button><button id="manaDown">− Maná</button><button id="manaUp">+ Maná</button><button id="toggleZone">Luz/Oscuridad</button></div>
@@ -47,7 +52,7 @@
 <section id="more" class="view">
 <div class="card"><h2>Inventario</h2><div class="grid"><label>Objeto<input id="itemName"></label><label>Destino<select id="itemDest"><option value="equip">Equipar ahora</option><option value="inventory">Guardar</option></select></label></div><button id="addItem" class="top">Registrar</button><div id="inventory"></div></div>
 <div class="card"><div class="row between"><h2>Historial</h2><button id="clearHistory">Vaciar</button></div><div id="history"></div></div>
-<div class="card"><h2>Asistente de reglas</h2><textarea id="question"></textarea><div class="row"><button id="ask" class="primary">Preguntar</button><button id="dictate">🎤 Dictar</button><button id="read">🔊 Leer</button></div><div class="row"><button data-topic="ataque">Ataque</button><button data-topic="defensa">Defensa</button><button data-topic="movimiento">Movimiento</button><button data-topic="oscuridad">Oscuridad</button><button data-topic="experiencia">Experiencia</button><button data-topic="heroe">Héroe activo</button></div><p id="answer" class="notice">Sin respuesta.</p></div>
+<div class="card"><h2>Asistente de reglas</h2><textarea id="question"></textarea><div class="row"><button id="ask" class="primary">Preguntar</button><button id="dictate">🎤 Dictar</button><button id="read">🔊 Leer</button></div><div class="topicGrid"><button data-topic="ataque">Ataque</button><button data-topic="defensa">Defensa</button><button data-topic="movimiento">Movimiento</button><button data-topic="linea de vision">LdV</button><button data-topic="puertas">Puertas</button><button data-topic="oscuridad">Oscuridad</button><button data-topic="experiencia">Experiencia</button><button data-topic="inventario">Inventario</button><button data-topic="heroe">Héroe activo</button></div><p id="answer" class="notice">Sin respuesta.</p></div>
 <div class="card"><h2>Voz y partida</h2><div class="grid"><label>Voz<select id="voice"><option value="yes">Sí</option><option value="no">No</option></select></label><label>Velocidad<input id="rate" type="range" min=".7" max="1.3" step=".1" value="1"></label></div><div class="actions top"><button id="testVoice">Probar voz</button><button id="export">Exportar</button><label>Importar<input id="import" type="file" accept=".json"></label><button id="newGame" class="danger">Nueva partida</button></div></div>
 </section>
 </main>

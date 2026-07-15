@@ -1,10 +1,3 @@
-# MD2 Assistant Alpha 0.6.1
+# MD2 Assistant Alpha 0.7
 
-Correcciones principales:
-- Bendiciones permanentes visibles del Chamán.
-- Navegación automática hacia Movimiento, Ataque, Defensa e Inventario.
-- Voz anuncia acciones restantes.
-- Habilidad inicial y nuevas habilidades obligatorias.
-- Habilidades contextuales durante ataque y defensa.
-- Nuevo motor de defensa con dados azules.
-- Asistente de reglas ampliado y contextual.
+Pestañas dinámicas, preparación de grupo, habilidades permanentes, Talismán del Mago, inventario mejorado, reglas ampliadas y rediseño visual.

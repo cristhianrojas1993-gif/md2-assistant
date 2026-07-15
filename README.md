@@ -1,13 +1,12 @@
-# MD2 Assistant Alpha 0.8.3.1 — Hotfix
+# MD2 Assistant Alpha 0.8.3.2 Stable
 
-Corrección urgente de la versión 0.8.3.
+Reconstruida desde la Alpha 0.8.2 funcional.
 
-- Reparado el error de sintaxis que impedía ejecutar cualquier botón o pestaña.
-- Restaurada la navegación completa.
-- Preparación ordenada:
-  1. Confirmar Solitario o 2–6 héroes.
-  2. Añadir héroes desde el listado.
-  3. Escribir nombres.
-  4. Confirmar grupo.
-- En solitario solo se permite un héroe y recibe 4 acciones.
-- En cooperativo se exigen entre 2 y 6 héroes.
+- Confirmación de grupo restaurada.
+- Confirmación y bloqueo de habilidades restaurados.
+- La navegación no depende de la voz.
+- Modo solitario oficial con 1 héroe y 4 acciones.
+- Cooperativo limitado a 2–6 héroes.
+- Música local para héroes, combate y Oscuridad.
+- Oscuridad se confirma únicamente después de resolver el efecto.
+- Se mantiene la revisión automática de todos los héroes al subir de nivel.

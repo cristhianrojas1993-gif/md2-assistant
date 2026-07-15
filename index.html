@@ -10,7 +10,7 @@
 </head>
 <body>
 <header>
-  <div><h1>MD2 Assistant — Alpha 0.8.3.1</h1><small>Asistente de partida · Massive Darkness 2</small></div>
+  <div><h1>MD2 Assistant — Alpha 0.8.3.2</h1><small>Asistente de partida · Massive Darkness 2</small></div>
   <span class="phaseChip" id="phaseChip">Preparación</span>
 </header>
 
@@ -19,23 +19,20 @@
 <main>
 <section id="setup" class="view active">
 
-<div class="card soloSetup">
-  <h2>1. Confirma cómo jugarás</h2>
-  <div class="grid">
-    <label>Número de jugadores
+  <div class="card">
+    <h2>1. Modo de partida</h2>
+    <p class="muted">Confirma primero cómo jugarás.</p>
+    <label>Modalidad
       <select id="playerMode">
-        <option value="coop">Jugaré con 2 a 6 héroes</option>
-        <option value="solo">Jugaré en solitario con 1 héroe</option>
+        <option value="coop">2 a 6 héroes</option>
+        <option value="solo">Solitario · 1 héroe</option>
       </select>
     </label>
+    <p id="soloRuleNotice" class="notice hidden">Modo solitario: eliges 1 héroe, dispone de 4 acciones por turno y las demás reglas se resuelven como una partida de 2 héroes.</p>
   </div>
-  <div id="soloRuleNotice" class="notice">
-    En solitario eliges 1 único héroe, dispone de 4 acciones y todas las demás reglas se tratan como una partida de 2 héroes.
-  </div>
-</div>
 
   <div class="card setupHero">
-    <h2>1. Elegir héroes</h2>
+    <h2>2. Elegir héroes</h2>
     <p class="muted">Añade las clases que participarán. Solo ellas aparecerán durante la partida.</p>
     <div id="classPicker" class="classPicker"></div>
     <div class="row"><button id="addSelectedClass">Añadir héroe</button></div>
@@ -43,7 +40,7 @@
   </div>
 
   <div class="card">
-    <h2>2. Confirmar grupo</h2>
+    <h2>3. Confirmar grupo</h2>
     <p class="muted">Asigna los nombres de los jugadores o personajes. Después la app guiará la elección inicial uno por uno.</p>
     <button id="confirmGroup" class="primary">Confirmar grupo y elegir habilidades</button>
     <p id="setupStatus" class="notice">Todavía no has confirmado el grupo.</p>
@@ -58,7 +55,7 @@
       <div><small>Mazmorra</small><b id="dungeon">1</b></div>
       <div><small>Oscuridad</small><b id="darkPos">A1</b></div>
     </div>
-    <div class="row"><button id="nextPhase" class="primary">Siguiente fase</button><button id="resolveDarkness" class="primary hidden">Efecto resuelto · comenzar nueva ronda</button><button id="undoPhase">Deshacer</button></div>
+    <div class="row"><button id="nextPhase" class="primary">Siguiente fase</button><button id="resolveDarkness" class="primary hidden">Efecto resuelto · nueva ronda</button><button id="undoPhase">Deshacer</button></div>
     <p id="phaseHelp" class="notice"></p>
   </div>
 
@@ -113,15 +110,9 @@
 
 <section id="settings" class="view">
 <div class="card"><h2>Audio</h2><div id="audioStatus" class="notice">Estado del audio: pendiente.</div>
-    <div id="audioDiagnostics" class="audioDiagnostics">
-      <div><b>Audio desbloqueado:</b> <span id="diagUnlocked">No</span></div>
-      <div><b>Pista cargada:</b> <span id="diagLoaded">No</span></div>
-      <div><b>Reproducción:</b> <span id="diagPlaying">Detenida</span></div>
-      <div><b>Pista actual:</b> <span id="diagTrack">Ninguna</span></div>
-    </div>
-    <audio id="musicHeroes" src="audio/heroes.wav" preload="auto" loop></audio>
-    <audio id="musicCombat" src="audio/combat.wav" preload="auto" loop></audio>
-    <audio id="musicDark" src="audio/darkness.wav" preload="auto" loop></audio><div class="actions"><button id="enableAudio" class="primary">Activar sonido</button><button id="testMusic">Probar música</button><button id="testVoiceSettings">Probar voz</button><button id="repeatLastAnnouncement">Repetir último anuncio</button></div></div>
+<audio id="musicHeroes" src="audio/heroes.wav" loop preload="auto"></audio>
+<audio id="musicCombat" src="audio/combat.wav" loop preload="auto"></audio>
+<audio id="musicDarkness" src="audio/darkness.wav" loop preload="auto"></audio><div class="actions"><button id="enableAudio" class="primary">Activar sonido</button><button id="testMusic">Probar música</button><button id="testVoiceSettings">Probar voz</button><button id="repeatLastAnnouncement">Repetir último anuncio</button></div></div>
 <div class="card"><h2>Música y efectos</h2><div class="grid"><label>Música ambiental<select id="musicSetting"><option value="yes">Activada</option><option value="no">Desactivada</option></select></label><label>Volumen música<input id="musicVolumeSetting" type="range" min="0" max="0.5" step="0.05" value="0.15"></label><label>Efectos de sonido<select id="sfxSetting"><option value="yes">Activados</option><option value="no">Desactivados</option></select></label></div></div>
 <div class="card"><h2>Asistente de voz</h2><div class="grid"><label>Narración<select id="voiceSetting"><option value="yes">Activada</option><option value="no">Desactivada</option></select></label><label>Velocidad<input id="voiceRateSetting" type="range" min=".7" max="1.3" step=".1" value="1"></label><label>Tono base<input id="voicePitchSetting" type="range" min=".7" max="1.3" step=".1" value="1"></label><label>Voz disponible<select id="voiceSelect"></select></label></div><p class="muted">Los perfiles por clase ajustan ligeramente velocidad y tono usando las voces disponibles en el dispositivo.</p></div>
 <div class="card"><h2>Partida y datos</h2><div class="actions"><button id="exportSettings">Exportar partida</button><label>Importar partida<input id="importSettings" type="file" accept=".json"></label><button id="newGameSettings" class="danger">Nueva partida</button></div></div>

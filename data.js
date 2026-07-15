@@ -18,3 +18,28 @@ MD2.rules={
 "oscuridad":"Al atacar en Oscuridad añade el dado de Oscuridad y revisa la habilidad de Sombras.",
 "experiencia":"Secuaz: +1 XP al héroe que lo elimina. Líder: +2 XP a cada héroe. Errante: +4 XP a cada héroe."
 };
+
+MD2.shamanElements={fire:"🔥 Fuego",water:"💧 Agua",air:"💨 Aire",nature:"🌿 Naturaleza"};
+MD2.shamanAbilities={
+ basicAttack:{name:"Hechizo básico de ataque",kind:"attack",cost:{fire:1,air:1},effect:"Añade 1 dado naranja al ataque."},
+ basicHeal:{name:"Hechizo básico de curación",kind:"heal",cost:{water:1,nature:1},effect:"Cura 2 a un Héroe."},
+ "Tormenta de Fuego I":{kind:"attack",cost:{fire:2,air:1},effect:"Lanza 1 dado naranja. Inflige a cada Enemigo en alcance mágico tantas Heridas como espadas; +1 espada por ficha de Fuego en el objetivo, máximo 3."},
+ "Tormenta de Fuego II":{kind:"attack",cost:{fire:2,air:1},effect:"Lanza 2 dados naranjas. Inflige a cada Enemigo en alcance mágico tantas Heridas como espadas; +1 espada por ficha de Fuego en el objetivo, máximo 3."},
+ "Tormenta de Fuego III":{kind:"attack",cost:{fire:2,air:1},optional:{air:2},effect:"Lanza 3 dados naranjas. Inflige a cada Enemigo en alcance mágico tantas Heridas como espadas; +1 espada por ficha de Fuego en el objetivo, máximo 3. Puedes gastar 2 Aire adicionales para usar alcance de línea de visión en su lugar."},
+ "Onda Curativa I":{kind:"heal",cost:{water:1,air:1},effect:"Lanza 1 dado naranja. Cura a cada Héroe en alcance mágico tantos puntos como espadas."},
+ "Onda Curativa II":{kind:"heal",cost:{water:1,air:1},effect:"Lanza 2 dados naranjas. Cura a cada Héroe en alcance mágico tantos puntos como espadas."},
+ "Onda Curativa III":{kind:"heal",cost:{water:1,air:2},optional:{nature:2},effect:"Lanza 3 dados naranjas. Cura a cada Héroe en alcance mágico tantos puntos como espadas. Puedes gastar 2 Naturaleza adicionales para curar en su lugar a cada Héroe de tu loseta."},
+ "Avalancha I":{kind:"attack",cost:{water:1,nature:2},effect:"Añade 1 ficha de Escarcha a 1 Enemigo en alcance mágico."},
+ "Avalancha II":{kind:"attack",cost:{water:1,nature:2},optional:{air:1},effect:"Añade 1 ficha de Escarcha a 1 Enemigo en alcance mágico. Puedes gastar 1 Aire adicional para infligir 2 Heridas a 1 Enemigo con Escarcha en alcance mágico."},
+ "Avalancha III":{kind:"attack",cost:{water:1,nature:2},optional:{air:2},effect:"Añade 1 ficha de Escarcha a 1 Enemigo en alcance mágico. Puedes gastar 2 Aire para infligir 3 Heridas a 1 Enemigo con Escarcha; o 3 Aire para que cada Enemigo con Escarcha sufra 3 Heridas."},
+ "Espíritu de Fuego I":{kind:"summon",cost:{fire:2,nature:2},spirit:"fire1",effect:"Coloca al Espíritu de Fuego I en tu Zona."},
+ "Espíritu de Fuego II":{kind:"summon",cost:{fire:2,nature:2},spirit:"fire2",effect:"Coloca al Espíritu de Fuego II en tu Zona. Después añade 1 ficha de Fuego a cada Enemigo de tu Zona."},
+ "Espíritu de Escarcha I":{kind:"summon",cost:{water:2,nature:2},spirit:"ice1",effect:"Coloca al Espíritu de Escarcha I en tu Zona."},
+ "Espíritu de Escarcha II":{kind:"summon",cost:{water:2,nature:2},spirit:"ice2",effect:"Coloca al Espíritu de Escarcha II en tu Zona. Después añade 1 ficha de Escarcha a cada Enemigo de tu Zona."}
+};
+MD2.shamanSpirits={
+ fire1:{name:"Espíritu de Fuego I",hp:3,defense:0,attack:"1 dado naranja",effect:"Ataque: el defensor recibe 1 ficha de Fuego."},
+ fire2:{name:"Espíritu de Fuego II",hp:5,defense:1,attack:"2 dados naranjas",effect:"Ataque: el defensor recibe 2 fichas de Fuego."},
+ ice1:{name:"Espíritu de Escarcha I",hp:3,defense:1,attack:"1 dado amarillo",effect:"Ataque: el defensor recibe 1 ficha de Escarcha."},
+ ice2:{name:"Espíritu de Escarcha II",hp:5,defense:2,attack:"3 dados amarillos",effect:"Ataque: el defensor recibe 1 ficha de Escarcha."}
+};

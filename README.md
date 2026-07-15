@@ -1,12 +1,11 @@
-# MD2 Assistant Alpha 0.8.3.2 Stable
+# MD2 Assistant Alpha 0.8.3.3 — Chamán
 
-Reconstruida desde la Alpha 0.8.2 funcional.
+Construida sobre la Alpha 0.8.3.2 estable.
 
-- Confirmación de grupo restaurada.
-- Confirmación y bloqueo de habilidades restaurados.
-- La navegación no depende de la voz.
-- Modo solitario oficial con 1 héroe y 4 acciones.
-- Cooperativo limitado a 2–6 héroes.
-- Música local para héroes, combate y Oscuridad.
-- Oscuridad se confirma únicamente después de resolver el efecto.
-- Se mantiene la revisión automática de todos los héroes al subir de nivel.
+- Conserva intactos todos los demás héroes.
+- Restaura elementos y consumo al máximo.
+- Muestra Bendiciones permanentes activas.
+- Detecta habilidades del Chamán disponibles según elementos.
+- Consume automáticamente los elementos al confirmar.
+- Integra Espíritus de Fuego y Escarcha I/II con vida, defensa, ataque y efectos.
+- Añade recordatorios del Chamán durante el ataque.

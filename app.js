@@ -411,7 +411,7 @@ function renderHero() {
   bindHero();
 }
 function summaryHtml(x) {
-  return `<div class="card"><h2>Estadísticas</h2><div class="row"><button id="hpDown">− Vida</button><button id="hpUp">+ Vida</button><button id="manaDown">− Maná</button><button id="manaUp">+ Maná</button><button id="toggleZone">Luz/Oscuridad</button></div><h3>Habilidad propia</h3><div class="passive">${ C[x.cls].ability }</div><h3>Sombras</h3><div class="passive">${ C[x.cls].shadow }</div></div><div class="card"><h2>Mecánica exclusiva</h2>${ classHtml(x) }</div><div class="card"><h2>Estados activos</h2><div class="statusChips">${ (x.statuses || []).map((st, i) => `<span class="statusChip">${ st }<button data-remove-status="${ i }">×</button></span>`).join('') || '<span class="muted">Sin estados activos.</span>' }</div><div class="row"><select id="statusPicker"><option>Quemado</option><option>Congelado</option><option>Envenenado</option><option>Aturdido</option><option>Maldito</option><option>Bendecido</option></select><button id="addStatus">Añadir estado</button></div></div>`;
+  return `<div class="card"><h2>Estadísticas</h2><div class="row"><button id="hpDown">− Vida</button><button id="hpUp">+ Vida</button><button id="manaDown">− Maná</button><button id="manaUp">+ Maná</button><button id="toggleZone">Luz/Oscuridad</button></div><div class="row"><button id="xpDown">− XP</button><button id="xpUp">+ XP</button></div><h3>Habilidad propia</h3><div class="passive">${ C[x.cls].ability }</div><h3>Sombras</h3><div class="passive">${ C[x.cls].shadow }</div></div><div class="card"><h2>Mecánica exclusiva</h2>${ classHtml(x) }</div><div class="card"><h2>Estados activos</h2><div class="statusChips">${ (x.statuses || []).map((st, i) => `<span class="statusChip">${ st }<button data-remove-status="${ i }">×</button></span>`).join('') || '<span class="muted">Sin estados activos.</span>' }</div><div class="row"><select id="statusPicker"><option>Quemado</option><option>Congelado</option><option>Envenenado</option><option>Aturdido</option><option>Maldito</option><option>Bendecido</option></select><button id="addStatus">Añadir estado</button></div></div>`;
 }
 function shamanCostText(cost) {
   return Object.entries(cost || {}).map(([k, v]) => `${ v } ${ MD2.shamanElements[k] }`).join(' + ');
@@ -537,7 +537,7 @@ function attackFlow(x) {
     'Habilidades',
     'Calcular',
     'Resumen'
-  ][i] }</span>`).join('') }</div>${ step === 1 ? `<div class="grid"><label>Tipo<select id="attackType"><option>Cuerpo a cuerpo</option><option>A distancia</option><option>Mágico</option></select></label><label>Dados del héroe<input id="heroDice" value="${ a.heroDice || '' }"></label><label>Dados negros<input id="blackDice" type="number" value="${ a.blackDice || 0 }"></label><label>Secuaces restantes<input id="minions" type="number" value="${ a.minions ?? 1 }"></label></div><button id="attackNext1" class="primary top">Confirmar reserva</button>` : '' }${ step === 2 ? `<p class="notice">Lanza físicamente todos los dados de la reserva.</p><button id="attackNext2" class="primary">Dados lanzados</button>` : '' }${ step === 3 ? `<div class="resultBox">${ attackReminders(x) }</div>${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<button id="attackNext3" class="primary top">Habilidades y efectos resueltos</button>` : '' }${ step === 4 ? `<div class="grid"><label>Espadas obtenidas<input id="attackSwords" type="number" value="${ a.swords || 0 }"></label><label>Escudos enemigos<input id="attackShields" type="number" value="${ a.shields || 0 }"></label><label>Secuaces eliminados<input id="killedMinions" type="number" value="${ a.killedMinions || 0 }"></label><label>Daño al líder<input id="leaderDamage" type="number" value="${ a.leaderDamage || 0 }"></label></div><button id="attackCalc" class="primary top">Calcular resultado</button>` : '' }${ step === 5 ? `<div class="resultBox"><b>Ataque resuelto</b><br>Heridas totales: ${ a.damage || 0 }<br>Secuaces eliminados: ${ a.killedMinions || 0 }<br>Daño al líder: ${ a.leaderDamage || 0 }</div><button id="finishAttack" class="primary top">Finalizar ataque</button>` : '' }</div>`;
+  ][i] }</span>`).join('') }</div>${ step === 1 ? `<div class="grid"><label>Tipo<select id="attackType"><option>Cuerpo a cuerpo</option><option>A distancia</option><option>Mágico</option></select></label><label>Dados del héroe<input id="heroDice" value="${ a.heroDice || '' }"></label><label>Dados negros<input id="blackDice" type="number" value="${ a.blackDice || 0 }"></label><label>Secuaces restantes<input id="minions" type="number" value="${ a.minions ?? 1 }"></label></div><button id="attackNext1" class="primary top">Confirmar reserva</button>` : '' }${ step === 2 ? `<p class="notice">Lanza físicamente todos los dados de la reserva.</p><button id="attackNext2" class="primary">Dados lanzados</button>` : '' }${ step === 3 ? `<div class="resultBox">${ attackReminders(x) }</div>${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<button id="attackNext3" class="primary top">Habilidades y efectos resueltos</button>` : '' }${ step === 4 ? `<div class="grid"><label>Espadas obtenidas<input id="attackSwords" type="number" value="${ a.swords || 0 }"></label><label>Escudos enemigos<input id="attackShields" type="number" value="${ a.shields || 0 }"></label><label>Secuaces eliminados<input id="killedMinions" type="number" value="${ a.killedMinions || 0 }"></label><label>Líder eliminado (0 = no, 1 = sí)<input id="leaderDamage" type="number" min="0" value="${ a.leaderDamage || 0 }"></label><label>Errante eliminado (0 = no, 1 = sí)<input id="killedRoamer" type="number" min="0" value="${ a.killedRoamer || 0 }"></label></div><button id="attackCalc" class="primary top">Calcular resultado</button>` : '' }${ step === 5 ? `<div class="resultBox"><b>Ataque resuelto</b><br>Heridas totales: ${ a.damage || 0 }<br>Secuaces eliminados: ${ a.killedMinions || 0 }<br>Líder eliminado: ${ a.leaderDamage ? 'Sí' : 'No' }<br>Errante eliminado: ${ a.killedRoamer ? 'Sí' : 'No' }</div><button id="finishAttack" class="primary top">Finalizar ataque</button>` : '' }</div>`;
 }
 function attackReminders(x) {
   let arr = [];
@@ -637,6 +637,18 @@ function bindHero() {
   };
   $('manaUp').onclick = () => {
     x.mana = Math.min(x.manaMax, x.mana + 1);
+    save();
+    renderHero();
+  };
+  $('xpDown').onclick = () => {
+    x.xp = Math.max(0, x.xp - 1);
+    log(`${ x.name } pierde 1 XP (ajuste manual).`);
+    save();
+    renderHero();
+  };
+  $('xpUp').onclick = () => {
+    x.xp++;
+    log(`${ x.name } gana 1 XP (ajuste manual).`);
     save();
     renderHero();
   };
@@ -1002,11 +1014,28 @@ function bindFlow(x) {
       a.damage = Math.max(0, a.swords - a.shields);
       a.killedMinions = +$('killedMinions').value || 0;
       a.leaderDamage = +$('leaderDamage').value || 0;
+      a.killedRoamer = +$('killedRoamer').value || 0;
+      let xpMsgs = [];
+      if (a.killedMinions > 0) {
+        x.xp += a.killedMinions;
+        log(`${ x.name } gana ${ a.killedMinions } XP por eliminar ${ a.killedMinions } secuaz${ a.killedMinions > 1 ? 'ces' : '' }.`);
+        xpMsgs.push(`Ganas ${ a.killedMinions } de experiencia por secuaces.`);
+      }
+      if (a.leaderDamage > 0) {
+        s.heroes.forEach(q => q.xp += 2);
+        log('Líder eliminado. Todo el grupo gana 2 XP.');
+        xpMsgs.push('El grupo gana 2 de experiencia por el líder eliminado.');
+      }
+      if (a.killedRoamer > 0) {
+        s.heroes.forEach(q => q.xp += 4);
+        log('Monstruo errante eliminado. Todo el grupo gana 4 XP.');
+        xpMsgs.push('El grupo gana 4 de experiencia por el errante eliminado.');
+      }
       x.flow.step = 5;
       log(`Ataque resuelto: ${ a.damage } heridas.`);
       save();
       renderHero();
-      duckAndSay(`Ataque resuelto. Infliges ${ a.damage } heridas. Secuaces eliminados: ${ a.killedMinions }. Daño al líder: ${ a.leaderDamage }.`);
+      duckAndSay(`Ataque resuelto. Infliges ${ a.damage } heridas. Secuaces eliminados: ${ a.killedMinions }. ${ xpMsgs.join(' ') }`);
     };
   if ($('finishAttack'))
     $('finishAttack').onclick = finishFlow;
@@ -1511,31 +1540,6 @@ function advanceDark(voice = true) {
   save();
   renderGame();
 }
-function award(kind) {
-  if (!s.heroes.length)
-    return;
-  const before = s.heroes.map(x => x.xp), x = h();
-  if (kind === 'm') {
-    if (!confirm(`El héroe activo es ${ x.name }. ¿Confirmas que eliminó al secuaz y recibe 1 XP?`))
-      return;
-    x.xp++;
-    say(`${ x.name } gana 1 punto de experiencia.`);
-    log(`${ x.name } gana 1 XP por eliminar un secuaz.`);
-  }
-  if (kind === 'l') {
-    s.heroes.forEach(q => q.xp += 2);
-    say('Líder eliminado. Todos los héroes ganan 2 puntos de experiencia.');
-    log('Todo el grupo gana 2 XP por eliminar un líder.');
-  }
-  if (kind === 'r') {
-    s.heroes.forEach(q => q.xp += 4);
-    say('Monstruo errante eliminado. Todos los héroes ganan 4 puntos de experiencia.');
-    log('Todo el grupo gana 4 XP por eliminar un errante.');
-  }
-  s.xpHistory.push(before);
-  save();
-  render();
-}
 function answerRule(q) {
   q = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   if (q.includes('linea') && q.includes('vision') || q.includes('ldv'))
@@ -1620,16 +1624,6 @@ $('rewindDark').onclick = () => {
     s.dark.i = Math.max(0, s.dark.i - 1);
   save();
   renderGame();
-};
-$('minionXp').onclick = () => award('m');
-$('leaderXp').onclick = () => award('l');
-$('roamerXp').onclick = () => award('r');
-$('undoXp').onclick = () => {
-  let a = s.xpHistory.pop();
-  if (a)
-    s.heroes.forEach((x, i) => x.xp = a[i]);
-  save();
-  render();
 };
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => tab(b.dataset.tab));
 $('ask').onclick = () => {

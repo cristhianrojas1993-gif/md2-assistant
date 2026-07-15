@@ -3,8 +3,8 @@
   "short_name": "MD2 1.0",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#0f1115",
-  "theme_color": "#111318",
+  "background_color": "#0d0a0f",
+  "theme_color": "#0d0a0f",
   "icons": [
     {
       "src": "icons/icon.svg",

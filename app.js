@@ -222,6 +222,13 @@ function classVoiceProfile(x = h()) {
 }
 const speechQueue = [];
 let speechBusy = false;
+let speechWatchdog = null;
+function clearSpeechWatchdog() {
+  if (speechWatchdog) {
+    clearTimeout(speechWatchdog);
+    speechWatchdog = null;
+  }
+}
 function processSpeech() {
   if (speechBusy || !speechQueue.length || s.voice !== 'yes' || !('speechSynthesis' in window))
     return;
@@ -235,13 +242,37 @@ function processSpeech() {
   if (chosen)
     u.voice = chosen;
   const done = () => {
+    clearSpeechWatchdog();
     speechBusy = false;
     setTimeout(processSpeech, 100);
   };
   u.onend = done;
   u.onerror = done;
-  speechSynthesis.speak(u);
+  clearSpeechWatchdog();
+  speechWatchdog = setTimeout(done, 15000);
+  try {
+    speechSynthesis.speak(u);
+  } catch (err) {
+    done();
+  }
 }
+function resetSpeech() {
+  clearSpeechWatchdog();
+  speechBusy = false;
+  speechQueue.length = 0;
+  if ('speechSynthesis' in window) {
+    try {
+      speechSynthesis.cancel();
+    } catch (err) {
+    }
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && 'speechSynthesis' in window && !speechSynthesis.speaking && speechBusy) {
+    speechBusy = false;
+    processSpeech();
+  }
+});
 function say(t, profileHero = h()) {
   s.lastAnnouncement = t || s.lastAnnouncement;
   save();
@@ -1657,6 +1688,7 @@ if ('speechSynthesis' in window)
 $('enableAudio').onclick = () => {
   s.voice = 'yes';
   s.audioUnlocked = true;
+  resetSpeech();
   save();
   renderAudioStatus();
   say('Asistente de voz activada correctamente.');

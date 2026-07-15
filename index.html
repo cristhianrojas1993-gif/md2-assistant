@@ -8,134 +8,108 @@
 <title>MD2 Assistant</title>
 <style>
 :root{--bg:#0f1115;--panel:#1a1d24;--panel2:#252933;--text:#f5f5f5;--muted:#b9bdc7;--accent:#d5aa35;--line:#383d48}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;min-height:100%;background:linear-gradient(#0d0f13,#171a20);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}body{padding-bottom:88px}header{position:sticky;top:0;z-index:10;background:#101218f2;border-bottom:1px solid var(--line);padding:12px 14px}h1{font-size:1.05rem;margin:0}small,.muted{color:var(--muted)}main{max-width:980px;margin:auto;padding:12px}.view{display:none}.view.active{display:block}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.space{justify-content:space-between}button,input,select,textarea{font:inherit}button{min-height:48px;border-radius:13px;border:1px solid #414753;background:var(--panel2);color:var(--text);padding:10px 12px;touch-action:manipulation}button.primary{background:var(--accent);color:#141414;font-weight:800}button.ok{background:#24482e;border-color:#3d7449}input,select,textarea{width:100%;min-height:46px;border-radius:11px;border:1px solid #3c424e;background:#11141a;color:var(--text);padding:10px}textarea{min-height:90px}.stat{background:#12151b;border:1px solid var(--line);border-radius:12px;padding:10px}.stat b{display:block;font-size:1.5rem}.notice{margin-top:10px;padding:11px;border-left:4px solid var(--accent);background:#17140d;border-radius:10px}.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.skill{display:flex;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#13161c}.skill input{width:22px;min-height:22px}.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:#101218f8;border-top:1px solid var(--line);padding:7px 7px calc(7px + env(safe-area-inset-bottom))}.bottomnav button{min-height:58px;padding:4px;font-size:.78rem}.bottomnav button.active{background:var(--accent);color:#111;font-weight:800}.history{max-height:280px;overflow:auto}.history div{padding:8px 0;border-bottom:1px solid var(--line)}@media(min-width:720px){.actions{grid-template-columns:repeat(4,1fr)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:linear-gradient(#0d0f13,#171a20);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:88px}
+header{position:sticky;top:0;z-index:10;background:#101218f2;border-bottom:1px solid var(--line);padding:12px 14px}
+h1{font-size:1.05rem;margin:0}small,.muted{color:var(--muted)}
+main{max-width:980px;margin:auto;padding:12px}.view{display:none}.view.active{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.space{justify-content:space-between}
+button,input,select,textarea{font:inherit}
+button{min-height:48px;border-radius:13px;border:1px solid #414753;background:var(--panel2);color:var(--text);padding:10px 12px}
+button.primary{background:var(--accent);color:#141414;font-weight:800}
+input,select,textarea{width:100%;min-height:46px;border-radius:11px;border:1px solid #3c424e;background:#11141a;color:var(--text);padding:10px}
+textarea{min-height:90px}.stat{background:#12151b;border:1px solid var(--line);border-radius:12px;padding:10px}.stat b{display:block;font-size:1.5rem}
+.notice{margin-top:10px;padding:11px;border-left:4px solid var(--accent);background:#17140d;border-radius:10px}
+.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.skill{display:flex;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#13161c}.skill input{width:22px;min-height:22px}
+.levelHeader{width:100%;text-align:left;font-weight:800;margin-top:8px}.levelBody{display:grid;gap:8px;padding-top:8px}.levelBody.hidden{display:none}
+.heroCard{border:1px solid var(--line);border-radius:13px;padding:11px;background:#13161c;margin-top:9px}.heroCard.active{border-color:var(--accent)}
+.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:#101218f8;border-top:1px solid var(--line);padding:7px 7px calc(7px + env(safe-area-inset-bottom))}
+.bottomnav button{min-height:58px;padding:4px;font-size:.78rem}.bottomnav button.active{background:var(--accent);color:#111;font-weight:800}
+.history{max-height:280px;overflow:auto}.history div{padding:8px 0;border-bottom:1px solid var(--line)}
+@media(min-width:720px){.actions{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
-<header><h1>MD2 Assistant — PWA v0.3</h1><small>Massive Darkness 2 · Pícaro + Explorador</small></header>
+<header><h1>MD2 Assistant — Alpha 0.4</h1><small>Pícaro + Explorador</small></header>
 <main>
 <section id="partida" class="view active">
+<div class="card"><span class="muted">Nivel de mazmorra</span><div style="font-size:2rem;font-weight:900" id="dungeonLevel">1</div><small>Se calcula usando el héroe de mayor nivel.</small></div>
 <div class="card">
 <div class="grid">
+<label>Héroe activo<select id="heroSelect"></select></label>
+<label>Nombre<input id="nombre"></label>
 <label>Clase<select id="clase"><option value="rogue">Pícaro</option><option value="ranger">Explorador</option></select></label>
-<label>Nombre<input id="nombre" value="Héroe"></label>
 </div>
-<div class="grid" style="margin-top:10px">
+<div class="row" style="margin-top:10px"><button id="addHero">Añadir héroe</button><button id="deleteHero">Eliminar héroe</button></div>
+</div>
+<div class="card">
+<div class="grid">
 <div class="stat"><span class="muted">Ronda</span><b id="ronda">1</b></div>
+<div class="stat"><span class="muted">Nivel</span><b id="nivel">1</b></div>
+<div class="stat"><span class="muted">Experiencia</span><b id="xp">0</b></div>
 <div class="stat"><span class="muted">Acciones</span><b id="acciones">3</b></div>
 <div class="stat"><span class="muted">Vida</span><b><span id="vida">6</span>/<span id="vidaMax">6</span></b></div>
+<div class="stat"><span class="muted">Maná</span><b><span id="mana">0</span>/<span id="manaMax">0</span></b></div>
 <div class="stat"><span class="muted">Zona</span><b id="zona">Luz</b></div>
 </div>
-<div class="row" style="margin-top:10px"><button id="sigRonda" class="primary">Siguiente ronda</button><button id="cambiarZona">Luz/Oscuridad</button><button id="menosVida">− Vida</button><button id="masVida">+ Vida</button></div>
+<div class="row" style="margin-top:10px"><button id="sigRonda" class="primary">Siguiente ronda</button><button id="cambiarZona">Luz/Oscuridad</button></div>
+<h3>Experiencia y nivel</h3>
+<div class="row"><button data-xp="-5">−5 XP</button><button data-xp="-1">−1 XP</button><button data-xp="1">+1 XP</button><button data-xp="5">+5 XP</button><button id="levelDown">− Nivel</button><button id="levelUp">+ Nivel</button></div>
+<h3>Vida y maná</h3>
+<div class="row"><button id="menosVida">− Vida</button><button id="masVida">+ Vida</button><button id="menosVidaMax">− Vida máxima</button><button id="masVidaMax">+ Vida máxima</button><button id="menosMana">− Maná</button><button id="masMana">+ Maná</button><button id="menosManaMax">− Maná máximo</button><button id="masManaMax">+ Maná máximo</button></div>
 </div>
-
-<div class="card">
-<div class="row space"><h2 style="font-size:1.05rem;margin:0">Turno</h2><button id="preparar" class="ok">Preparar turno</button></div>
-<div id="resumen" class="notice">Pulsa “Preparar turno”.</div>
-<div class="actions" style="margin-top:10px">
-<button data-act="Mover">Mover</button><button data-act="Atacar">Atacar</button><button data-act="Abrir puerta">Abrir puerta</button><button data-act="Interactuar">Interactuar</button><button data-act="Usar habilidad">Usar habilidad</button><button data-act="Usar objeto">Usar objeto</button><button id="olvido">¿Qué olvidé?</button><button id="fin" class="primary">Finalizar turno</button>
-</div>
-</div>
+<div class="card"><div class="row space"><h2 style="font-size:1.05rem;margin:0">Turno</h2><button id="preparar">Preparar turno</button></div><div id="resumen" class="notice">Pulsa “Preparar turno”.</div><div class="actions" style="margin-top:10px"><button data-act="Mover">Mover</button><button data-act="Atacar">Atacar</button><button data-act="Abrir puerta">Abrir puerta</button><button data-act="Interactuar">Interactuar</button><button data-act="Usar habilidad">Usar habilidad</button><button data-act="Usar objeto">Usar objeto</button><button id="olvido">¿Qué olvidé?</button><button id="fin" class="primary">Finalizar turno</button></div></div>
 <div id="panelClase" class="card"></div>
+<div class="card"><h2 style="font-size:1.05rem;margin-top:0">Grupo</h2><div id="heroRoster"></div></div>
 </section>
 
-<section id="habilidades" class="view"><div class="card"><h2 style="font-size:1.05rem;margin-top:0">Árbol de habilidades</h2><div id="listaHab" style="display:grid;gap:8px"></div></div></section>
+<section id="habilidades" class="view"><div class="card"><h2 style="font-size:1.05rem;margin-top:0">Árbol de habilidades</h2><p class="muted">Separado por niveles 1 a 5.</p><div id="skillsByLevel"></div></div></section>
 
 <section id="ataque" class="view">
-<div class="card"><h2 style="font-size:1.05rem;margin-top:0">Asistente de ataque</h2>
-<div class="grid">
-<label>Objetivo<select id="objetivo"><option value="mob">Cuadrilla</option><option value="solo">Errante/Jefe</option></select></label>
-<label>Secuaces<input id="secuaces" type="number" min="0" value="1"></label>
-<label>Dados negros<input id="negros" type="number" min="0" value="1"></label>
-<label>Dados base<input id="dadosBase" placeholder="Ej.: 2 amarillos + 1 naranja"></label>
-</div>
-<button id="prepararAtaque" class="primary" style="margin-top:10px">Preparar ataque</button>
-<div id="ayudaAtaque" class="notice">La app no lanza dados.</div></div>
-<div id="panelFlechas" class="card" style="display:none">
-<h2 style="font-size:1.05rem;margin-top:0">Explorador · Flechas</h2>
-<p class="muted">Añade la cantidad de símbolos de flecha de cada carta robada.</p>
-<div id="cartasFlecha"></div>
-<div class="row" style="margin-top:10px"><button id="agregarCarta">Añadir carta</button><button id="limpiarCartas">Reiniciar</button></div>
-<div id="resultadoFlechas" class="notice">Total: 0</div>
-</div>
+<div class="card"><h2 style="font-size:1.05rem;margin-top:0">Asistente de ataque</h2><div class="grid"><label>Objetivo<select id="objetivo"><option value="mob">Cuadrilla</option><option value="solo">Errante/Jefe</option></select></label><label>Secuaces<input id="secuaces" type="number" min="0" value="1"></label><label>Dados negros<input id="negros" type="number" min="0" value="1"></label><label>Dados base<input id="dadosBase" placeholder="Ej.: 2 amarillos + 1 naranja"></label></div><button id="prepararAtaque" class="primary" style="margin-top:10px">Preparar ataque</button><div id="ayudaAtaque" class="notice">La aplicación no lanza dados.</div></div>
+<div id="panelFlechas" class="card" style="display:none"><h2 style="font-size:1.05rem;margin-top:0">Explorador · Flechas</h2><div id="cartasFlecha"></div><div class="row" style="margin-top:10px"><button id="agregarCarta">Añadir carta</button><button id="limpiarCartas">Reiniciar</button></div><div id="resultadoFlechas" class="notice">Total: 0</div></div>
 </section>
 
-<section id="reglas" class="view"><div class="card">
-<h2 style="font-size:1.05rem;margin-top:0">Asistente de reglas</h2>
-<textarea id="pregunta" placeholder="Ej.: ¿El Pícaro debe gastar una ficha para atacar?"></textarea>
-<div class="row" style="margin-top:8px"><button id="preguntar" class="primary">Preguntar</button><button id="dictar">🎤 Dictar</button><button id="leer">🔊 Leer</button></div>
-<div id="respuesta" class="notice">Todavía no hay respuesta.</div>
-<small>La búsqueda escrita funciona sin internet. El dictado depende del navegador.</small>
-</div></section>
+<section id="reglas" class="view"><div class="card"><h2 style="font-size:1.05rem;margin-top:0">Asistente de reglas</h2><textarea id="pregunta" placeholder="Ej.: ¿Cómo se calcula el nivel de mazmorra?"></textarea><div class="row" style="margin-top:8px"><button id="preguntar" class="primary">Preguntar</button><button id="dictar">🎤 Dictar</button><button id="leer">🔊 Leer</button></div><div id="respuesta" class="notice">Todavía no hay respuesta.</div></div></section>
 
-<section id="mas" class="view">
-<div class="card"><div class="row space"><h2 style="font-size:1.05rem;margin:0">Historial</h2><button id="borrarHist">Vaciar</button></div><div id="historial" class="history"></div></div>
-<div class="card"><h2 style="font-size:1.05rem;margin-top:0">Voz</h2><div class="grid"><label>Narrador<select id="vozOn"><option value="yes">Sí</option><option value="no">No</option></select></label><label>Velocidad<input id="velocidad" type="range" min=".7" max="1.3" step=".1" value="1"></label></div><button id="probarVoz" style="margin-top:10px">Probar voz</button></div>
-<div class="card"><button id="exportar">Exportar partida</button><label style="margin-top:8px">Importar<input id="importar" type="file" accept=".json"></label><button id="nueva" style="margin-top:8px">Nueva partida</button></div>
-</section>
+<section id="mas" class="view"><div class="card"><div class="row space"><h2 style="font-size:1.05rem;margin:0">Historial</h2><button id="borrarHist">Vaciar</button></div><div id="historial" class="history"></div></div><div class="card"><h2 style="font-size:1.05rem;margin-top:0">Voz</h2><div class="grid"><label>Narrador<select id="vozOn"><option value="yes">Sí</option><option value="no">No</option></select></label><label>Velocidad<input id="velocidad" type="range" min=".7" max="1.3" step=".1" value="1"></label></div><button id="probarVoz" style="margin-top:10px">Probar voz</button></div><div class="card"><button id="exportar">Exportar partida</button><label style="margin-top:8px">Importar<input id="importar" type="file" accept=".json"></label><button id="nueva" style="margin-top:8px">Nueva partida</button></div></section>
 </main>
-
-<nav class="bottomnav">
-<button data-tab="partida" class="active">Partida</button>
-<button data-tab="habilidades">Habilidades</button>
-<button data-tab="ataque">Ataque</button>
-<button data-tab="reglas">Reglas</button>
-<button data-tab="mas">Más</button>
-</nav>
-
+<nav class="bottomnav"><button data-tab="partida" class="active">Partida</button><button data-tab="habilidades">Habilidades</button><button data-tab="ataque">Ataque</button><button data-tab="reglas">Reglas</button><button data-tab="mas">Más</button></nav>
 <script>
-const KEY='md2_pwa_v03';
-const rogueSkills=['Celeridad a Medida I','Forma Sombría I','Mixtura Mortal I','Kit de Herramientas I','Trucos Ensayados I','Forma Sombría II','Mixtura Mortal II','Celeridad a Medida II','Kit de Herramientas II','Trucos Ensayados II','Mixtura Mortal III','Celeridad a Medida III','Forma Sombría III'];
-const rangerSkills=['Volea de Flechas I','Flecha Perforante I','Flecha Incendiaria I','Flecha con Aire I','Cuerdas Mejoradas I','Volea de Flechas II','Flecha Perforante II','Flecha Incendiaria II','Flecha con Aire II','Cuerdas Mejoradas II','Volea de Flechas III','Flecha Perforante III','Flecha Incendiaria III'];
-const def=()=>({ronda:1,clase:'rogue',nombre:'Héroe',vida:6,vidaMax:6,zona:'light',acciones:3,rogue:{mano:3,gastadas:0,extra:0},ranger:{cards:[]},skills:{},hist:[],voz:'yes',rate:1});
-let s=JSON.parse(localStorage.getItem(KEY)||'null')||def();
-const $=x=>document.getElementById(x);
+const KEY='md2_pwa_v04';
+const rogueSkills=[['Celeridad a Medida I',1],['Forma Sombría I',1],['Mixtura Mortal I',1],['Kit de Herramientas I',1],['Trucos Ensayados I',1],['Forma Sombría II',2],['Mixtura Mortal II',2],['Celeridad a Medida II',2],['Kit de Herramientas II',2],['Trucos Ensayados II',2],['Mixtura Mortal III',3],['Celeridad a Medida III',3],['Forma Sombría III',5]];
+const rangerSkills=[['Volea de Flechas I',1],['Flecha Perforante I',1],['Flecha Incendiaria I',1],['Flecha con Aire I',2],['Cuerdas Mejoradas I',2],['Volea de Flechas II',3],['Flecha Perforante II',3],['Flecha Incendiaria II',3],['Flecha con Aire II',4],['Cuerdas Mejoradas II',4],['Volea de Flechas III',5],['Flecha Perforante III',5],['Flecha Incendiaria III',5]];
+function makeHero(name='Héroe',cls='rogue'){return{id:Date.now()+Math.random(),name,cls,level:1,xp:0,hp:cls==='rogue'?6:5,hpMax:cls==='rogue'?6:5,mana:0,manaMax:0,zone:'light',actions:3,rogue:{hand:3,spent:0,extra:0},ranger:{cards:[]},skills:{}}}
+function defaultState(){return{round:1,heroes:[makeHero('Pícaro','rogue')],active:0,history:[],voice:'yes',rate:1}}
+let s=JSON.parse(localStorage.getItem(KEY)||'null')||defaultState();const $=id=>document.getElementById(id);const hero=()=>s.heroes[s.active];
 function save(){localStorage.setItem(KEY,JSON.stringify(s))}
-function say(t){if(s.voz!=='yes'||!('speechSynthesis'in window))return;speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang='es-ES';u.rate=+s.rate||1;speechSynthesis.speak(u)}
-function log(t){s.hist.unshift({r:s.ronda,n:s.nombre,t});save();renderHist()}
-function render(){
- $('clase').value=s.clase;$('nombre').value=s.nombre;$('ronda').textContent=s.ronda;$('acciones').textContent=s.acciones;$('vida').textContent=s.vida;$('vidaMax').textContent=s.vidaMax;$('zona').textContent=s.zona==='dark'?'Oscuridad':'Luz';$('vozOn').value=s.voz;$('velocidad').value=s.rate;
- renderClass();renderSkills();renderHist();renderArrows();$('panelFlechas').style.display=s.clase==='ranger'?'block':'none'
-}
-function renderClass(){
- if(s.clase==='rogue')$('panelClase').innerHTML=`<h2 style="font-size:1.05rem;margin-top:0">Pícaro · Fichas</h2><div class="grid"><div class="stat"><span class="muted">Fichas en mano</span><b>${s.rogue.mano}</b></div><div class="stat"><span class="muted">Gastadas</span><b>${s.rogue.gastadas}</b></div><div class="stat"><span class="muted">Acciones extra</span><b>${s.rogue.extra}</b></div></div><div class="actions" style="margin-top:10px"><button id="drawToken">Robar ficha</button><button id="spendToken">Gastar ficha</button><button id="extraToken">Ficha: roba + acción</button><button id="resetRogue">Nuevo turno</button></div><div class="notice">Cada acción requiere voltear una ficha, aunque su efecto no ayude a esa acción.</div>`;
- else $('panelClase').innerHTML=`<h2 style="font-size:1.05rem;margin-top:0">Explorador</h2><div class="notice">Ataque a distancia: suma los símbolos de flecha de la parte superior.</div><p>≤ 6: rápido · 7: óptimo · ≥ 8: lento</p>`;
- if(s.clase==='rogue'){
-  $('drawToken').onclick=()=>{s.rogue.mano++;s.acciones++;s.rogue.extra++;log('Robó una ficha y ganó una acción adicional.');render()};
-  $('spendToken').onclick=()=>{if(s.rogue.mano<=0)return alert('No quedan fichas.');s.rogue.mano--;s.rogue.gastadas++;s.acciones=Math.max(0,s.acciones-1);log('Gastó una ficha para realizar una acción.');render()};
-  $('extraToken').onclick=()=>{if(s.rogue.mano<=0)return alert('No quedan fichas.');s.rogue.mano--;s.rogue.gastadas++;s.rogue.mano++;s.rogue.extra++;log('Gastó una ficha y resolvió roba una ficha + acción.');render()};
-  $('resetRogue').onclick=()=>{s.rogue={mano:3,gastadas:0,extra:0};s.acciones=3;log('Preparó 3 fichas para el turno.');render()};
- }
-}
-function renderSkills(){let arr=s.clase==='rogue'?rogueSkills:rangerSkills;$('listaHab').innerHTML=arr.map((x,i)=>`<label class="skill"><input type="checkbox" data-sk="${s.clase}_${i}" ${s.skills[s.clase+'_'+i]?'checked':''}><span><b>${x}</b><small>Activa recordatorios.</small></span></label>`).join('');document.querySelectorAll('[data-sk]').forEach(c=>c.onchange=()=>{s.skills[c.dataset.sk]=c.checked;save()})}
-function prepareTurn(){let m=[`Turno de ${s.nombre}.`];if(s.clase==='rogue'){s.rogue={mano:3,gastadas:0,extra:0};s.acciones=3;m.push('Roba tres fichas. Debes gastar una ficha por cada acción.')}else{s.acciones=3;m.push('Tienes tres acciones. Si atacas a distancia, controla el total de flechas.')}if(s.zona==='dark')m.push('Estás en oscuridad. Revisa Sombras.');$('resumen').textContent=m.join(' ');log('Turno preparado.');render();say(m.join(' '))}
-function action(name){if(s.clase==='rogue'){if(s.rogue.mano<=0)return alert('No tienes fichas.');if(!confirm(`Debes gastar una ficha para ${name}. ¿Confirmar?`))return;s.rogue.mano--;s.rogue.gastadas++}if(s.acciones<=0)return alert('No quedan acciones.');s.acciones--;log(name+' realizado.');render();say(`${name}. Te quedan ${s.acciones} acciones.`)}
-function renderHist(){$('historial').innerHTML=s.hist.length?s.hist.map(x=>`<div><b>Ronda ${x.r} · ${x.n}</b><br>${x.t}</div>`).join(''):'<p class="muted">Sin registros.</p>'}
-function prepAttack(){let a=[];let min=+$('secuaces').value||0,neg=+$('negros').value||0;a.push('Dados base: '+($('dadosBase').value||'no indicados')+'.');if(s.zona==='dark')a.push('Revisa Sombras.');if($('objetivo').value==='mob')a.push(min>0?`Quedan ${min} secuaces: añade ${neg} dados negros si corresponden.`:'No quedan secuaces: no uses dados negros aportados solo por ellos.');if(s.clase==='ranger')a.push('Si es a distancia, resuelve el mazo de flechas.');$('ayudaAtaque').textContent=a.join(' ')}
-function renderArrows(){if(s.clase!=='ranger')return;$('cartasFlecha').innerHTML=s.ranger.cards.map((v,i)=>`<div class="row" style="margin:7px 0"><span>Carta ${i+1}</span><input style="width:90px" type="number" min="1" max="4" value="${v}" data-ar="${i}"></div>`).join('');document.querySelectorAll('[data-ar]').forEach(x=>x.onchange=()=>{s.ranger.cards[+x.dataset.ar]=Math.max(1,+x.value||1);save();arrowResult()});arrowResult()}
-function arrowResult(){let t=s.ranger.cards.reduce((a,b)=>a+(+b||0),0),r='Sin cartas';if(t>0&&t<=6)r='Ataque rápido: fila central.';if(t===7)r='Ataque óptimo: fila superior.';if(t>=8)r='Ataque lento: fila inferior.';$('resultadoFlechas').innerHTML=`<b>Total: ${t}</b><br>${r}`}
-function rule(q){q=q.toLowerCase();if(q.includes('pícaro')||q.includes('picaro')||q.includes('ficha'))return 'El Pícaro roba 3 fichas al comenzar su turno y debe voltear una por cada acción. La bonificación no tiene que coincidir con la acción. Una ficha que indique robar otra ficha y realizar una acción concede una acción adicional.';if(q.includes('explorador')||q.includes('flecha')||q.includes('óptimo')||q.includes('optimo'))return 'En un ataque a distancia, el Explorador roba las cartas que decida y suma los símbolos de flecha de la parte superior: 6 o menos es rápido y usa la fila central; 7 es óptimo y usa la fila superior; 8 o más es lento y usa la fila inferior.';if(q.includes('secuaz')||q.includes('dados negros'))return 'Los dados negros de los secuaces se usan solo mientras queden secuaces en la cuadrilla.';if(q.includes('oscuridad')||q.includes('sombras'))return 'En oscuridad, revisa el efecto de Sombras de tu héroe o habilidad.';return 'No tengo una respuesta local segura para esa pregunta en este piloto.'}
-document.querySelectorAll('.bottomnav button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.bottomnav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));$(b.dataset.tab).classList.add('active');window.scrollTo(0,0)}))
-$('clase').onchange=e=>{s.clase=e.target.value;s.vidaMax=s.clase==='rogue'?6:5;s.vida=Math.min(s.vida,s.vidaMax);s.acciones=3;save();render()}
-$('nombre').onchange=e=>{s.nombre=e.target.value||'Héroe';save()}
-$('sigRonda').onclick=()=>{s.ronda++;s.acciones=3;log('Comenzó una nueva ronda.');render();say(`Ronda ${s.ronda}.`)}
-$('cambiarZona').onclick=()=>{s.zona=s.zona==='dark'?'light':'dark';log('Cambió a '+(s.zona==='dark'?'oscuridad':'luz')+'.');render();say(`Ahora estás en ${s.zona==='dark'?'oscuridad':'luz'}.`)}
-$('menosVida').onclick=()=>{s.vida=Math.max(0,s.vida-1);save();render()}
-$('masVida').onclick=()=>{s.vida=Math.min(s.vidaMax,s.vida+1);save();render()}
-$('preparar').onclick=prepareTurn;document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>action(b.dataset.act))
-$('olvido').onclick=()=>{let t=s.clase==='rogue'?`Te quedan ${s.rogue.mano} fichas. Cada acción requiere una ficha.`:'Si atacarás a distancia, suma las flechas y determina rápido, óptimo o lento.';if(s.zona==='dark')t+=' Estás en oscuridad.';$('resumen').textContent=t;say(t)}
-$('fin').onclick=()=>{s.acciones=0;log('Turno finalizado.');render();say('Turno finalizado.')}
-$('prepararAtaque').onclick=prepAttack;$('agregarCarta').onclick=()=>{s.ranger.cards.push(1);save();renderArrows()};$('limpiarCartas').onclick=()=>{s.ranger.cards=[];save();renderArrows()}
-$('preguntar').onclick=()=>{let a=rule($('pregunta').value);$('respuesta').textContent=a;window.lastAns=a}
-$('leer').onclick=()=>say(window.lastAns||$('respuesta').textContent)
-$('dictar').onclick=()=>{let R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return alert('Este navegador no permite dictado.');let r=new R();r.lang='es-ES';r.onresult=e=>{$('pregunta').value=e.results[0][0].transcript;$('preguntar').click()};r.start()}
-$('vozOn').onchange=e=>{s.voz=e.target.value;save()};$('velocidad').onchange=e=>{s.rate=e.target.value;save()};$('probarVoz').onclick=()=>say('Asistente de Massive Darkness 2 preparado.')
-$('borrarHist').onclick=()=>{s.hist=[];save();renderHist()}
-$('exportar').onclick=()=>{let b=new Blob([JSON.stringify(s,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='md2_partida.json';a.click()}
-$('importar').onchange=e=>{let f=e.target.files[0],r=new FileReader();r.onload=()=>{try{s=JSON.parse(r.result);save();render()}catch{alert('Archivo no válido')}};if(f)r.readAsText(f)}
-$('nueva').onclick=()=>{if(confirm('¿Nueva partida?')){s=def();save();render()}}
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
-render();
+function say(t){if(s.voice!=='yes'||!('speechSynthesis'in window))return;speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang='es-ES';u.rate=+s.rate||1;speechSynthesis.speak(u)}
+function log(t){s.history.unshift({r:s.round,n:hero().name,t});save();renderHistory()}
+function dungeonLevel(){return Math.max(...s.heroes.map(h=>h.level||1),1)}
+function render(){const h=hero();$('heroSelect').innerHTML=s.heroes.map((x,i)=>`<option value="${i}" ${i===s.active?'selected':''}>${x.name} · Nivel ${x.level}</option>`).join('');$('nombre').value=h.name;$('clase').value=h.cls;$('ronda').textContent=s.round;$('nivel').textContent=h.level;$('xp').textContent=h.xp;$('acciones').textContent=h.actions;$('vida').textContent=h.hp;$('vidaMax').textContent=h.hpMax;$('mana').textContent=h.mana;$('manaMax').textContent=h.manaMax;$('zona').textContent=h.zone==='dark'?'Oscuridad':'Luz';$('dungeonLevel').textContent=dungeonLevel();$('vozOn').value=s.voice;$('velocidad').value=s.rate;renderClass();renderSkills();renderRoster();renderHistory();renderArrows();$('panelFlechas').style.display=h.cls==='ranger'?'block':'none'}
+function renderRoster(){$('heroRoster').innerHTML=s.heroes.map((h,i)=>`<div class="heroCard ${i===s.active?'active':''}"><b>${h.name}</b> · ${h.cls==='rogue'?'Pícaro':'Explorador'} · Nivel ${h.level}<br><small>XP ${h.xp} · Vida ${h.hp}/${h.hpMax} · Maná ${h.mana}/${h.manaMax}</small></div>`).join('')}
+function renderClass(){const h=hero();if(h.cls==='rogue'){$('panelClase').innerHTML=`<h2 style="font-size:1.05rem;margin-top:0">Pícaro · Fichas</h2><div class="grid"><div class="stat"><span class="muted">Fichas en mano</span><b>${h.rogue.hand}</b></div><div class="stat"><span class="muted">Gastadas</span><b>${h.rogue.spent}</b></div><div class="stat"><span class="muted">Acciones extra</span><b>${h.rogue.extra}</b></div></div><div class="actions" style="margin-top:10px"><button id="drawToken">Robar ficha</button><button id="spendToken">Gastar ficha</button><button id="extraToken">Ficha: roba + acción</button><button id="resetRogue">Nuevo turno</button></div><div class="notice">Cada acción requiere voltear una ficha, aunque su efecto no ayude.</div>`;$('drawToken').onclick=()=>{h.rogue.hand++;h.actions++;h.rogue.extra++;log('Robó una ficha y ganó una acción.');render()};$('spendToken').onclick=()=>{if(h.rogue.hand<=0)return alert('No quedan fichas.');h.rogue.hand--;h.rogue.spent++;h.actions=Math.max(0,h.actions-1);log('Gastó una ficha.');render()};$('extraToken').onclick=()=>{if(h.rogue.hand<=0)return alert('No quedan fichas.');h.rogue.hand--;h.rogue.spent++;h.rogue.hand++;h.rogue.extra++;log('Resolvió roba una ficha + acción.');render()};$('resetRogue').onclick=()=>{h.rogue={hand:3,spent:0,extra:0};h.actions=3;log('Preparó 3 fichas.');render()}}else{$('panelClase').innerHTML=`<h2 style="font-size:1.05rem;margin-top:0">Explorador</h2><div class="notice">Ataque a distancia: suma los símbolos de flecha.</div><p>≤ 6 rápido · 7 óptimo · ≥ 8 lento</p>`}}
+function renderSkills(){const h=hero(),arr=h.cls==='rogue'?rogueSkills:rangerSkills;let html='';for(let lvl=1;lvl<=5;lvl++){const list=arr.filter(x=>x[1]===lvl);html+=`<button class="levelHeader" data-level="${lvl}">Nivel ${lvl} ${list.length?`(${list.length})`:'(sin habilidades)'}</button><div class="levelBody" id="levelBody${lvl}">${list.map(x=>{const key=h.cls+'_'+x[0];return`<label class="skill"><input type="checkbox" data-skill="${key}" ${h.skills[key]?'checked':''}><span><b>${x[0]}</b><small>Activa recordatorios.</small></span></label>`}).join('')||'<small class="muted">No hay habilidades cargadas.</small>'}</div>`}$('skillsByLevel').innerHTML=html;document.querySelectorAll('[data-level]').forEach(b=>b.onclick=()=>$('levelBody'+b.dataset.level).classList.toggle('hidden'));document.querySelectorAll('[data-skill]').forEach(c=>c.onchange=()=>{h.skills[c.dataset.skill]=c.checked;save()})}
+function prepareTurn(){const h=hero();let m=[`Turno de ${h.name}, nivel ${h.level}.`];if(h.cls==='rogue'){h.rogue={hand:3,spent:0,extra:0};h.actions=3;m.push('Roba tres fichas. Debes gastar una ficha por cada acción.')}else{h.actions=3;m.push('Tienes tres acciones. Si atacas a distancia, controla el total de flechas.')}if(h.zone==='dark')m.push('Estás en oscuridad.');m.push(`Vida ${h.hp} de ${h.hpMax}. Maná ${h.mana} de ${h.manaMax}.`);$('resumen').textContent=m.join(' ');log('Turno preparado.');render();say(m.join(' '))}
+function action(name){const h=hero();if(h.cls==='rogue'){if(h.rogue.hand<=0)return alert('No tienes fichas.');if(!confirm(`Debes gastar una ficha para ${name}. ¿Confirmar?`))return;h.rogue.hand--;h.rogue.spent++}if(h.actions<=0)return alert('No quedan acciones.');h.actions--;log(name+' realizado.');render();say(`${name}. Te quedan ${h.actions} acciones.`)}
+function renderHistory(){$('historial').innerHTML=s.history.length?s.history.map(x=>`<div><b>Ronda ${x.r} · ${x.n}</b><br>${x.t}</div>`).join(''):'<p class="muted">Sin registros.</p>'}
+function prepAttack(){const h=hero();let a=[];let min=+$('secuaces').value||0,neg=+$('negros').value||0;a.push('Dados base: '+($('dadosBase').value||'no indicados')+'.');if(h.zone==='dark')a.push('Revisa Sombras.');if($('objetivo').value==='mob')a.push(min>0?`Quedan ${min} secuaces: añade ${neg} dados negros si corresponden.`:'No quedan secuaces: no uses dados negros aportados solo por ellos.');if(h.cls==='ranger')a.push('Si es a distancia, resuelve el mazo de flechas.');$('ayudaAtaque').textContent=a.join(' ')}
+function renderArrows(){const h=hero();if(h.cls!=='ranger')return;$('cartasFlecha').innerHTML=h.ranger.cards.map((v,i)=>`<div class="row" style="margin:7px 0"><span>Carta ${i+1}</span><input style="width:90px" type="number" min="1" max="4" value="${v}" data-ar="${i}"></div>`).join('');document.querySelectorAll('[data-ar]').forEach(x=>x.onchange=()=>{h.ranger.cards[+x.dataset.ar]=Math.max(1,+x.value||1);save();arrowResult()});arrowResult()}
+function arrowResult(){const h=hero();let t=h.ranger.cards.reduce((a,b)=>a+(+b||0),0),r='Sin cartas';if(t>0&&t<=6)r='Ataque rápido: fila central.';if(t===7)r='Ataque óptimo: fila superior.';if(t>=8)r='Ataque lento: fila inferior.';$('resultadoFlechas').innerHTML=`<b>Total: ${t}</b><br>${r}`}
+function rule(q){q=q.toLowerCase();if(q.includes('mazmorra')||q.includes('mayor nivel'))return`El nivel de mazmorra es igual al nivel más alto entre los héroes. Con el grupo actual es nivel ${dungeonLevel()}.`;if(q.includes('pícaro')||q.includes('picaro')||q.includes('ficha'))return'El Pícaro roba 3 fichas al comenzar su turno y debe voltear una por cada acción. La bonificación no tiene que coincidir con la acción.';if(q.includes('explorador')||q.includes('flecha')||q.includes('óptimo')||q.includes('optimo'))return'En un ataque a distancia, 6 o menos es rápido, 7 es óptimo y 8 o más es lento.';if(q.includes('secuaz')||q.includes('dados negros'))return'Los dados negros de los secuaces se usan solo mientras queden secuaces.';return'No tengo una respuesta local segura para esa pregunta.'}
+document.querySelectorAll('.bottomnav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.bottomnav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));$(b.dataset.tab).classList.add('active');scrollTo(0,0)})
+$('heroSelect').onchange=e=>{s.active=+e.target.value;save();render()};$('nombre').onchange=e=>{hero().name=e.target.value||'Héroe';save();render()};$('clase').onchange=e=>{const h=hero();h.cls=e.target.value;if(h.cls==='rogue'){h.rogue=h.rogue||{hand:3,spent:0,extra:0};h.hpMax=Math.max(h.hpMax,6)}else{h.ranger=h.ranger||{cards:[]};h.hpMax=Math.max(h.hpMax,5)}save();render()};$('addHero').onclick=()=>{s.heroes.push(makeHero('Nuevo héroe','rogue'));s.active=s.heroes.length-1;save();render()};$('deleteHero').onclick=()=>{if(s.heroes.length===1)return alert('Debe quedar al menos un héroe.');if(confirm('¿Eliminar héroe?')){s.heroes.splice(s.active,1);s.active=0;save();render()}}
+$('sigRonda').onclick=()=>{s.round++;s.heroes.forEach(h=>h.actions=3);log('Comenzó una nueva ronda.');render();say(`Ronda ${s.round}. Nivel de mazmorra ${dungeonLevel()}.`)};$('cambiarZona').onclick=()=>{const h=hero();h.zone=h.zone==='dark'?'light':'dark';log('Cambió de zona.');render();say(`Ahora estás en ${h.zone==='dark'?'oscuridad':'luz'}.`)}
+document.querySelectorAll('[data-xp]').forEach(b=>b.onclick=()=>{hero().xp=Math.max(0,hero().xp+(+b.dataset.xp));log(`Experiencia ${hero().xp}.`);render()});$('levelDown').onclick=()=>{hero().level=Math.max(1,hero().level-1);render();save()};$('levelUp').onclick=()=>{hero().level=Math.min(5,hero().level+1);render();save()}
+$('menosVida').onclick=()=>{hero().hp=Math.max(0,hero().hp-1);save();render()};$('masVida').onclick=()=>{hero().hp=Math.min(hero().hpMax,hero().hp+1);save();render()};$('menosVidaMax').onclick=()=>{hero().hpMax=Math.max(1,hero().hpMax-1);hero().hp=Math.min(hero().hp,hero().hpMax);save();render()};$('masVidaMax').onclick=()=>{hero().hpMax++;save();render()};$('menosMana').onclick=()=>{hero().mana=Math.max(0,hero().mana-1);save();render()};$('masMana').onclick=()=>{hero().mana=Math.min(hero().manaMax,hero().mana+1);save();render()};$('menosManaMax').onclick=()=>{hero().manaMax=Math.max(0,hero().manaMax-1);hero().mana=Math.min(hero().mana,hero().manaMax);save();render()};$('masManaMax').onclick=()=>{hero().manaMax++;save();render()}
+$('preparar').onclick=prepareTurn;document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>action(b.dataset.act));$('olvido').onclick=()=>{const h=hero();let t=h.cls==='rogue'?`Te quedan ${h.rogue.hand} fichas.`:'Revisa el total de flechas.';if(h.zone==='dark')t+=' Estás en oscuridad.';$('resumen').textContent=t;say(t)};$('fin').onclick=()=>{hero().actions=0;log('Turno finalizado.');render();say('Turno finalizado.')}
+$('prepararAtaque').onclick=prepAttack;$('agregarCarta').onclick=()=>{hero().ranger.cards.push(1);save();renderArrows()};$('limpiarCartas').onclick=()=>{hero().ranger.cards=[];save();renderArrows()}
+$('preguntar').onclick=()=>{let a=rule($('pregunta').value);$('respuesta').textContent=a;window.lastAns=a};$('leer').onclick=()=>say(window.lastAns||$('respuesta').textContent);$('dictar').onclick=()=>{let R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return alert('Este navegador no permite dictado.');let r=new R();r.lang='es-ES';r.onresult=e=>{$('pregunta').value=e.results[0][0].transcript;$('preguntar').click()};r.start()}
+$('vozOn').onchange=e=>{s.voice=e.target.value;save()};$('velocidad').onchange=e=>{s.rate=e.target.value;save()};$('probarVoz').onclick=()=>say(`Asistente preparado. Nivel de mazmorra ${dungeonLevel()}.`);$('borrarHist').onclick=()=>{s.history=[];save();renderHistory()};$('exportar').onclick=()=>{let b=new Blob([JSON.stringify(s,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='md2_partida.json';a.click()};$('importar').onchange=e=>{let f=e.target.files[0],r=new FileReader();r.onload=()=>{try{s=JSON.parse(r.result);save();render()}catch{alert('Archivo no válido')}};if(f)r.readAsText(f)};$('nueva').onclick=()=>{if(confirm('¿Nueva partida?')){s=defaultState();save();render()}}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});render();
 </script>
 </body>
 </html>

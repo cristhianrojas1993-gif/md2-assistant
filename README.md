@@ -1,10 +1,9 @@
-# MD2 Assistant Alpha 0.8
+# MD2 Assistant Alpha 0.8.1
 
-- Flujo de turno por héroe.
-- Movimiento, ataque y defensa permanecen abiertos hasta finalizar.
-- Ataque completo en cinco pasos.
-- Defensa completa en cinco pasos.
-- Confirmación de XP de secuaz para el héroe activo.
-- XP grupal para líderes y errantes.
-- Subida automática durante la fase correspondiente.
-- Aumento de máximo y recuperación inmediata de vida/maná.
+- Revisión completa de todos los héroes durante Subida de nivel.
+- Subida obligatoria y elección de habilidad antes de continuar.
+- Héroes inconscientes: bloqueo, resurrección y conservación de maná.
+- Fichas de Resurrección según tamaño del grupo y recordatorio de relanzamiento negro.
+- Narración completa de ataque y Oscuridad.
+- Nombre personalizado leído como “Cristhian, el Mago”.
+- Audio ambiental procedural opcional con volumen independiente.

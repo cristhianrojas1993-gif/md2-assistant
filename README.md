@@ -1,10 +1,13 @@
-# MD2 Assistant Alpha 0.8.3
+# MD2 Assistant Alpha 0.8.3.1 — Hotfix
 
-## Cambios principales
-- Modo solitario oficial: 1 héroe, 4 acciones por turno y demás reglas calculadas como 2 héroes.
-- Subida de nivel totalmente secuencial y automática, sin panel de pendientes.
-- La app abre directamente la elección de habilidad y espera a que la voz termine antes de revisar al siguiente héroe.
-- Narración mediante cola: los anuncios ya no se cancelan entre sí.
-- Oscuridad: el medidor avanza al entrar en la fase; el botón de resolución aparece únicamente después del anuncio.
-- Música real incluida localmente: héroes, combate y oscuridad, disponible sin conexión.
-- Diagnóstico de audio: desbloqueo, carga, reproducción y pista actual.
+Corrección urgente de la versión 0.8.3.
+
+- Reparado el error de sintaxis que impedía ejecutar cualquier botón o pestaña.
+- Restaurada la navegación completa.
+- Preparación ordenada:
+  1. Confirmar Solitario o 2–6 héroes.
+  2. Añadir héroes desde el listado.
+  3. Escribir nombres.
+  4. Confirmar grupo.
+- En solitario solo se permite un héroe y recibe 4 acciones.
+- En cooperativo se exigen entre 2 y 6 héroes.

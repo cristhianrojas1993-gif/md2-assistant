@@ -36,57 +36,57 @@ const MD2 = {
   'darkness': {
     'front': [
       [
-        'A1',
+        '1',
         'Sin efecto.'
       ],
       [
-        'A2',
+        '2',
         'Sin efecto.'
       ],
       [
-        'A3',
+        '3',
         'Aparece 1 monstruo errante en el portal del nivel de mazmorra.'
       ],
       [
-        'A4',
+        '4',
         'Añade 1 Tesoro Raro.'
       ],
       [
-        'A5',
+        '5',
         'Aparece 1 cuadrilla en el portal del nivel de mazmorra.'
       ],
       [
-        'A6',
+        '6',
         'Añade 1 Tesoro Épico.'
       ],
       [
-        'A7',
+        '7',
         'Aparece 1 cuadrilla en el portal del nivel de mazmorra.'
       ],
       [
-        'A8',
+        '8',
         'Añade 1 Tesoro Épico.'
       ],
       [
-        'A9',
+        '9',
         'Aparece 1 monstruo errante en el portal del nivel de mazmorra.'
       ]
     ],
     'back': [
       [
-        'R1',
+        '1',
         'Sin efecto.'
       ],
       [
-        'R2',
+        '2',
         'Aparece 1 cuadrilla en el portal del nivel de mazmorra.'
       ],
       [
-        'R3',
+        '3',
         'Sin efecto.'
       ],
       [
-        'R4',
+        '4',
         'Aparece 1 monstruo errante en el portal del nivel de mazmorra.'
       ]
     ]

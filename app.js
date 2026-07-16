@@ -149,6 +149,8 @@ if (s.levelPhaseResolved === undefined)
   s.levelPhaseResolved = false;
 if (s.darknessPending === undefined)
   s.darknessPending = false;
+if (s.turnPrompt === undefined)
+  s.turnPrompt = false;
 if (s.music === undefined)
   s.music = 'yes';
 if (s.musicVolume === undefined)
@@ -418,10 +420,10 @@ function renderGame() {
   $('round').textContent = s.round;
   $('phase').textContent = MD2.phases[s.phase];
   $('dungeon').textContent = dungeon();
-  $('darkPos').textContent = s.heroes.length ? darkNow()[0] : '\u2014';
+  $('darkPos').textContent = s.heroes.length ? `${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' } ${ darkNow()[0] }` : '\u2014';
   $('phaseHelp').textContent = s.phase === 3 && s.darknessPending ? 'Resuelve el efecto anunciado y luego pulsa Siguiente fase para confirmarlo.' : phaseHelp();
-  $('darkTrack').innerHTML = darkArr().map((x, i) => `<div class="cell ${ i === s.dark.i ? 'active' : '' }">${ x[0] }</div>`).join('');
-  $('darkEvent').textContent = `${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' } · ${ darkNow()[0] }: ${ darkNow()[1] }`;
+  $('darkTrack').innerHTML = `<div class="badge top">${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' }</div>` + darkArr().map((x, i) => `<div class="cell ${ i === s.dark.i ? 'active' : '' }">${ x[0] }</div>`).join('');
+  $('darkEvent').textContent = `${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' } · Casilla ${ darkNow()[0] }: ${ darkNow()[1] }`;
   $('resolveDarkness').classList.toggle('hidden', !(s.phase === 3 && s.darknessPending));
   $('nextPhase').classList.toggle('hidden', s.phase === 3 && s.darknessPending);
 }
@@ -432,6 +434,27 @@ function renderHero() {
   }
   const x = h();
   document.documentElement.style.setProperty('--hero', COLORS[x.cls]);
+  if (s.turnPrompt) {
+    const options = s.heroes.filter(q => !q.unconscious && q !== x);
+    if (options.length <= 1) {
+      s.turnPrompt = false;
+      if (options.length === 1)
+        s.active = s.heroes.indexOf(options[0]);
+      save();
+      renderHeroTabs();
+      renderHero();
+      return;
+    }
+    $('heroPage').innerHTML = `<div class="card"><h2>¿Quién juega a continuación?</h2><p class="notice">El turno de ${ x.name } ha terminado. El grupo decide libremente qué héroe actúa ahora.</p><div class="actions">${ options.map(q => `<button data-next-hero="${ s.heroes.indexOf(q) }" class="primary">${ q.name }</button>`).join('') }</div></div>`;
+    document.querySelectorAll('[data-next-hero]').forEach(b => b.onclick = () => {
+      s.active = +b.dataset.nextHero;
+      s.turnPrompt = false;
+      save();
+      render();
+      duckAndSay(`Héroe activo: ${ heroSpoken(h()) }.`);
+    });
+    return;
+  }
   $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader"><div class="row between"><div><h2>${ x.name }</h2><small>${ C[x.cls].label }</small></div><span class="badge">Nivel ${ x.level }</span></div><div class="stats top"><div><small>Vida</small><b>${ x.hp }/${ x.hpMax }</b></div><div><small>Maná</small><b>${ x.mana }/${ x.manaMax }</b></div><div><small>XP</small><b>${ x.xp }</b></div><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div></div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type ? 'active' : '' }">Resumen</button><button data-sec="skills">Habilidades</button><button data-sec="actions" class="${ x.flow.type ? 'active' : '' }">Turno</button><button data-sec="inventory">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type ? 'active' : '' }">${ actionsHtml(x) }</div><div id="sec-inventory" class="heroSection">${ inventoryHtml(x) }</div>`;
   document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
     document.querySelectorAll('[data-sec]').forEach(q => q.classList.remove('active'));
@@ -547,28 +570,31 @@ function flowHtml(x) {
   return `<div class="card"><p class="notice">${ x.flow.type } registrada.</p><button id="finishFlow">Finalizar acción</button></div>`;
 }
 function moveFlow(x) {
-  return `<div class="card actionFlow active"><h2>Movimiento</h2><div class="flowSteps"><span class="flowStep active">Gastar PM</span><span class="flowStep">Finalizar</span></div><p class="notice">PM disponibles: <b>${ x.move.pm }</b></p><div class="actions"><button data-move="move">Mover 1 zona</button><button data-move="door">Abrir puerta</button><button data-move="interact">Interactuar</button>${ x.cls === 'berserker' && x.berserker.stance === 'Temerario' ? `<button id="furyExtraPm" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: +1 PM (${ x.berserker.fury }/7)</button>` : '' }<button id="finishMove" class="primary">Finalizar movimiento</button></div></div>`;
+  const suggestion = berserkerStanceSuggestion(x, 'move');
+  return `<div class="card actionFlow active"><h2>Movimiento</h2><div class="flowSteps"><span class="flowStep active">Gastar PM</span><span class="flowStep">Finalizar</span></div><p class="notice">PM disponibles: <b>${ x.move.pm }</b></p>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }<div class="actions"><button data-move="move">Mover 1 zona</button><button data-move="door">Abrir puerta</button><button data-move="interact">Interactuar</button>${ x.cls === 'berserker' && x.berserker.stance === 'Temerario' ? `<button id="furyExtraPm" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: +1 PM (${ x.berserker.fury }/7)</button>` : '' }<button id="finishMove" class="primary">Finalizar movimiento</button></div></div>`;
 }
 function arrowFlow(x) {
   return `<div class="card actionFlow active"><h2>Mazo de Flechas</h2><p class="notice">Saca cartas del mazo de Flechas e indica el resultado obtenido.</p><div class="actions"><button data-arrow="rapido">Disparo rápido (menos de 7)</button><button data-arrow="certero">Disparo certero (7 justas)</button><button data-arrow="lento">Disparo lento o fallido (más de 7)</button></div></div>`;
 }
 function attackFlow(x) {
-  const a = x.flow.attack || {}, step = x.flow.step || 1;
+  const a = x.flow.attack || {};
   if (x.cls === 'ranger' && !x.flow.arrowResult)
     return arrowFlow(x);
-  return `<div class="card actionFlow active"><h2>Ataque guiado</h2><div class="flowSteps">${ [
-    1,
-    2,
-    3,
-    4,
-    5
-  ].map((n, i) => `<span class="flowStep ${ n === step ? 'active' : '' }">${ [
-    'Reserva',
-    'Lanzar',
-    'Habilidades',
-    'Calcular',
-    'Resumen'
-  ][i] }</span>`).join('') }</div>${ step === 1 ? `<div class="grid"><label>Tipo<select id="attackType"><option>Cuerpo a cuerpo</option><option>A distancia</option><option>Mágico</option></select></label><label>Dados del héroe<input id="heroDice" value="${ a.heroDice || '' }"></label><label>Dados negros<input id="blackDice" type="number" value="${ a.blackDice || 0 }"></label><label>Secuaces restantes<input id="minions" type="number" value="${ a.minions ?? 1 }"></label></div><button id="attackNext1" class="primary top">Confirmar reserva</button>` : '' }${ step === 2 ? `<p class="notice">Lanza físicamente todos los dados de la reserva.</p><button id="attackNext2" class="primary">Dados lanzados</button>` : '' }${ step === 3 ? `<div class="resultBox">${ attackReminders(x) }</div>${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<button id="attackNext3" class="primary top">Habilidades y efectos resueltos</button>` : '' }${ step === 4 ? `<div class="grid"><label>Espadas obtenidas<input id="attackSwords" type="number" value="${ a.swords || 0 }"></label><label>Escudos enemigos<input id="attackShields" type="number" value="${ a.shields || 0 }"></label><label>Secuaces eliminados<input id="killedMinions" type="number" value="${ a.killedMinions || 0 }"></label><label>Líder eliminado (0 = no, 1 = sí)<input id="leaderDamage" type="number" min="0" value="${ a.leaderDamage || 0 }"></label><label>Errante eliminado (0 = no, 1 = sí)<input id="killedRoamer" type="number" min="0" value="${ a.killedRoamer || 0 }"></label></div><button id="attackCalc" class="primary top">Calcular resultado</button>` : '' }${ step === 5 ? `<div class="resultBox"><b>Ataque resuelto</b><br>Heridas totales: ${ a.damage || 0 }<br>Secuaces eliminados: ${ a.killedMinions || 0 }<br>Líder eliminado: ${ a.leaderDamage ? 'Sí' : 'No' }<br>Errante eliminado: ${ a.killedRoamer ? 'Sí' : 'No' }</div><button id="finishAttack" class="primary top">Finalizar ataque</button>` : '' }</div>`;
+  const suggestion = berserkerStanceSuggestion(x, 'attack');
+  return `<div class="card actionFlow active"><h2>Ataque</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><div class="grid top"><label>Tipo<select id="attackType"><option>Cuerpo a cuerpo</option><option>A distancia</option><option>Mágico</option></select></label><label>Objetivo<select id="targetType"><option value="mob" ${ a.targetType !== 'roamer' ? 'selected' : '' }>Cuadrilla</option><option value="roamer" ${ a.targetType === 'roamer' ? 'selected' : '' }>Monstruo errante</option></select></label><label>Dados del héroe<input id="heroDice" value="${ a.heroDice || '' }"></label><label>Dados negros<input id="blackDice" type="number" value="${ a.blackDice || 0 }"></label>${ a.targetType !== 'roamer' ? `<label>Secuaces restantes<input id="minions" type="number" value="${ a.minions ?? 1 }"></label>` : '' }</div><p class="notice top">Lanza físicamente todos los dados de la reserva.</p><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<label class="top">Resultado del ataque (puedes marcar varias)<select id="attackResult" multiple size="${ a.targetType === 'roamer' ? 2 : 4 }">${ a.targetType === 'roamer' ? `<option value="roamer">Errante eliminado</option><option value="leader">Líder eliminado (si aplica)</option>` : `<option value="m1">1 secuaz eliminado</option><option value="m2">2 secuaces eliminados</option><option value="m3">3 secuaces eliminados</option><option value="leader">Líder eliminado</option>` }</select></label><button id="attackCalc" class="primary top">Ataque resuelto</button></div>`;
+}
+function berserkerStanceSuggestion(x, action) {
+  if (x.cls !== 'berserker' || x.berserker.fury < 1)
+    return null;
+  const map = {
+    attack: 'Furia Sangrienta',
+    move: 'Temerario',
+    defense: 'Provocador'
+  };
+  const wanted = map[action];
+  if (!wanted || x.berserker.stance === wanted)
+    return null;
+  return { stance: wanted, label: `¿Cambiar a la postura ${ wanted } para potenciar esta acción? (cuesta 1 Furia)` };
 }
 function attackReminders(x) {
   let arr = [];
@@ -590,7 +616,7 @@ function attackReminders(x) {
   return '<ol>' + arr.map(q => `<li>${ q }</li>`).join('') + '</ol>';
 }
 function defenseFlow(x) {
-  const d = x.flow.defense || {}, step = x.flow.step || 1;
+  const d = x.flow.defense || {}, step = x.flow.step || 1, suggestion = berserkerStanceSuggestion(x, 'defense');
   return `<div class="card actionFlow active"><h2>Defensa guiada</h2><div class="flowSteps">${ [
     1,
     2,
@@ -603,7 +629,7 @@ function defenseFlow(x) {
     'Habilidades',
     'Calcular',
     'Resumen'
-  ][i] }</span>`).join('') }</div>${ step === 1 ? `<div class="grid"><label>Dados azules<input id="blueDice" value="${ d.blueDice || '' }"></label><label>Espadas enemigas<input id="enemySwords" type="number" value="${ d.enemySwords || 0 }"></label></div><button id="defNext1" class="primary top">Confirmar reserva</button>` : '' }${ step === 2 ? `<p class="notice">Lanza físicamente los dados azules.</p><button id="defNext2" class="primary">Dados lanzados</button>` : '' }${ step === 3 ? `<div class="resultBox">${ defenseReminders(x) }</div>${ x.cls === 'berserker' && x.berserker.stance === 'Provocador' ? `<button id="provokeWound" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: infligir 1 Herida al atacante (${ x.berserker.fury }/7)</button>` : '' }<button id="defNext3" class="primary top">Efectos resueltos</button>` : '' }${ step === 4 ? `<label>Escudos obtenidos<input id="defShields" type="number" value="${ d.shields || 0 }"></label><button id="defCalc" class="primary top">Calcular heridas</button>` : '' }${ step === 5 ? `<div class="resultBox"><b>Defensa resuelta</b><br>Heridas recibidas: ${ d.wounds || 0 }</div><button id="finishDefense" class="primary top">Finalizar defensa</button>` : '' }</div>`;
+  ][i] }</span>`).join('') }</div>${ step === 1 ? `${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }<div class="grid"><label>Dados azules<input id="blueDice" value="${ d.blueDice || '' }"></label><label>Espadas enemigas<input id="enemySwords" type="number" value="${ d.enemySwords || 0 }"></label></div><button id="defNext1" class="primary top">Confirmar reserva</button>` : '' }${ step === 2 ? `<p class="notice">Lanza físicamente los dados azules.</p><button id="defNext2" class="primary">Dados lanzados</button>` : '' }${ step === 3 ? `<div class="resultBox">${ defenseReminders(x) }</div>${ x.cls === 'berserker' && x.berserker.stance === 'Provocador' ? `<button id="provokeWound" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: infligir 1 Herida al atacante (${ x.berserker.fury }/7)</button>` : '' }<button id="defNext3" class="primary top">Efectos resueltos</button>` : '' }${ step === 4 ? `<label>Escudos obtenidos<input id="defShields" type="number" value="${ d.shields || 0 }"></label><button id="defCalc" class="primary top">Calcular heridas</button>` : '' }${ step === 5 ? `<div class="resultBox"><b>Defensa resuelta</b><br>Heridas recibidas: ${ d.wounds || 0 }</div><button id="finishDefense" class="primary top">Finalizar defensa</button>` : '' }</div>`;
 }
 function defenseReminders(x) {
   let arr = [];
@@ -779,9 +805,10 @@ function bindHero() {
       attack: {},
       defense: {}
     };
+    s.turnPrompt = true;
     save();
     renderHero();
-    say('Turno finalizado.');
+    say('Turno finalizado. ¿Quién juega a continuación?');
   };
   bindFlow(x);
   bindInventory(x);
@@ -999,24 +1026,33 @@ function bindFlow(x) {
     $('finishMove').onclick = finishFlow;
   if ($('finishFlow'))
     $('finishFlow').onclick = finishFlow;
-  if ($('attackNext1'))
-    $('attackNext1').onclick = () => {
-      x.flow.attack = {
-        heroDice: $('heroDice').value,
-        blackDice: +$('blackDice').value || 0,
-        minions: +$('minions').value || 0
-      };
-      x.flow.step = 2;
-      save();
+  if ($('targetType'))
+    $('targetType').onchange = e => {
+      x.flow.attack = x.flow.attack || {};
+      x.flow.attack.targetType = e.target.value;
       renderHero();
-      duckAndSay('Reserva de dados confirmada. Lanza los dados.');
     };
-  if ($('attackNext2'))
-    $('attackNext2').onclick = () => {
-      x.flow.step = 3;
+  if ($('targetType'))
+    $('targetType').onchange = e => {
+      x.flow.attack = x.flow.attack || {};
+      x.flow.attack.targetType = e.target.value;
+      renderHero();
+    };
+  if ($('repeatAttackSteps'))
+    $('repeatAttackSteps').onclick = () => duckAndSay('Pasos del ataque: primero arma tu reserva de dados y elige el objetivo. Segundo, lanza físicamente los dados. Tercero, revisa habilidades y efectos disponibles. Cuarto, marca el resultado del ataque y confirma.');
+  if ($('berserkerStanceSuggest'))
+    $('berserkerStanceSuggest').onclick = () => {
+      const suggestion = berserkerStanceSuggestion(x, x.flow.type);
+      if (!suggestion || x.berserker.fury < 1)
+        return;
+      if (!confirm(`¿Gastar 1 Furia para cambiar a la postura ${ suggestion.stance }?`))
+        return;
+      x.berserker.fury--;
+      x.berserker.stance = suggestion.stance;
+      log(`${ x.name } gasta 1 Furia para cambiar a la postura ${ suggestion.stance }.`);
       save();
       renderHero();
-      duckAndSay('Dados lanzados. Aplica habilidades, efectos y dados adicionales.');
+      say(`Cambia a la postura ${ suggestion.stance }.`);
     };
   if ($('furyReroll'))
     $('furyReroll').onclick = () => {
@@ -1030,22 +1066,17 @@ function bindFlow(x) {
       renderHero();
       say('Relanza el dado que elijas.');
     };
-  if ($('attackNext3'))
-    $('attackNext3').onclick = () => {
-      x.flow.step = 4;
-      save();
-      renderHero();
-      duckAndSay('Habilidades y efectos resueltos. Introduce las espadas y escudos finales.');
-    };
   if ($('attackCalc'))
     $('attackCalc').onclick = () => {
-      let a = x.flow.attack;
-      a.swords = +$('attackSwords').value || 0;
-      a.shields = +$('attackShields').value || 0;
-      a.damage = Math.max(0, a.swords - a.shields);
-      a.killedMinions = +$('killedMinions').value || 0;
-      a.leaderDamage = +$('leaderDamage').value || 0;
-      a.killedRoamer = +$('killedRoamer').value || 0;
+      let a = x.flow.attack = x.flow.attack || {};
+      a.targetType = $('targetType') ? $('targetType').value : 'mob';
+      a.heroDice = $('heroDice') ? $('heroDice').value : '';
+      a.blackDice = $('blackDice') ? +$('blackDice').value || 0 : 0;
+      a.minions = $('minions') ? +$('minions').value || 0 : 0;
+      const selected = Array.from($('attackResult').selectedOptions).map(o => o.value);
+      a.killedMinions = selected.includes('m3') ? 3 : selected.includes('m2') ? 2 : selected.includes('m1') ? 1 : 0;
+      a.leaderDamage = selected.includes('leader') ? 1 : 0;
+      a.killedRoamer = selected.includes('roamer') ? 1 : 0;
       let xpMsgs = [];
       if (a.killedMinions > 0) {
         x.xp += a.killedMinions;
@@ -1062,14 +1093,10 @@ function bindFlow(x) {
         log('Monstruo errante eliminado. Todo el grupo gana 4 XP.');
         xpMsgs.push('El grupo gana 4 de experiencia por el errante eliminado.');
       }
-      x.flow.step = 5;
-      log(`Ataque resuelto: ${ a.damage } heridas.`);
-      save();
-      renderHero();
-      duckAndSay(`Ataque resuelto. Infliges ${ a.damage } heridas. Secuaces eliminados: ${ a.killedMinions }. ${ xpMsgs.join(' ') }`);
+      log('Ataque resuelto.');
+      duckAndSay(`Ataque resuelto. ${ xpMsgs.length ? xpMsgs.join(' ') : 'Sin eliminaciones registradas.' }`);
+      finishFlow(true);
     };
-  if ($('finishAttack'))
-    $('finishAttack').onclick = finishFlow;
   if ($('defNext1'))
     $('defNext1').onclick = () => {
       x.flow.defense = {
@@ -1221,7 +1248,7 @@ function startAction(type) {
   save();
   renderHero();
   setTimeout(() => document.querySelector('.actionFlow')?.scrollIntoView({ behavior: 'smooth' }), 30);
-  duckAndSay(`Héroe activo ${ heroSpoken(x) }. ${ type === 'move' ? 'Movimiento' : type === 'attack' ? 'Ataque' : type === 'defense' ? 'Defensa' : type }. ${ x.actions } acciones restantes.${ x.cls === 'shaman' && type === 'attack' ? ' Revisa tus Bendiciones y las habilidades del Chamán disponibles según tus elementos.' : '' }${ x.cls === 'ranger' && type === 'attack' ? ' Explorador, saca cartas del mazo de Flechas e indícame el resultado.' : '' }`);
+  duckAndSay(`Héroe activo ${ heroSpoken(x) }. ${ type === 'move' ? 'Movimiento' : type === 'attack' ? 'Ataque' : type === 'defense' ? 'Defensa' : type }. ${ x.actions } acciones restantes.${ x.cls === 'shaman' && type === 'attack' ? ' Revisa tus Bendiciones y las habilidades del Chamán disponibles según tus elementos.' : '' }${ x.cls === 'ranger' && type === 'attack' ? ' Explorador, saca cartas del mazo de Flechas e indícame el resultado.' : '' }${ type === 'attack' && x.cls !== 'ranger' ? ' Pasos del ataque: primero arma tu reserva de dados y elige el objetivo. Segundo, lanza físicamente los dados. Tercero, revisa habilidades y efectos disponibles. Cuarto, marca el resultado del ataque y confirma. Puedes repetir estos pasos con el botón de abajo si lo necesitas.' : '' }`);
 }
 function useMove(k) {
   const x = h();
@@ -1235,7 +1262,7 @@ function useMove(k) {
   renderHero();
   say(`Quedan ${ x.move.pm } puntos de movimiento.`);
 }
-function finishFlow() {
+function finishFlow(skipGenericVoice = false) {
   const x = h();
   x.flow = {
     type: null,
@@ -1247,9 +1274,17 @@ function finishFlow() {
     on: false,
     pm: 0
   };
+  if (x.actions <= 0) {
+    s.turnPrompt = true;
+    save();
+    renderHero();
+    say('Sin acciones restantes. Turno finalizado automáticamente. ¿Quién juega a continuación?');
+    return;
+  }
   save();
   renderHero();
-  say(`Acción finalizada. Te quedan ${ x.actions } acciones.`);
+  if (!skipGenericVoice)
+    say(`Acción finalizada. Te quedan ${ x.actions } acciones.`);
 }
 function resurrectionCount() {
   return s.heroes.length <= 2 ? 1 : s.heroes.length <= 4 ? 2 : 3;
@@ -1551,18 +1586,18 @@ function advanceDark(voice = true) {
     else {
       s.dark.side = 'back';
       s.dark.i = 0;
-      transition = 'El medidor ha llegado al final del anverso. Da vuelta el medidor y colócalo en R1. ';
+      transition = 'El medidor ha llegado al final del anverso. Da vuelta el medidor y colócalo en el reverso, casilla 1. ';
     }
   } else {
     if (s.dark.i < 3)
       s.dark.i++;
     else {
       s.dark.i = 0;
-      transition = 'El medidor vuelve a R1 en el mismo reverso. ';
+      transition = 'El medidor vuelve a la casilla 1 del mismo reverso. ';
     }
   }
-  const effect = darkNow()[1];
-  let t = `Fase de Oscuridad. ${ transition }El medidor avanza a ${ darkNow()[0] }. ${ effect }`;
+  const effect = darkNow()[1], sideLabel = s.dark.side === 'front' ? 'Anverso' : 'Reverso';
+  let t = `Fase de Oscuridad. ${ transition }El medidor avanza a ${ sideLabel }, casilla ${ darkNow()[0] }. ${ effect }`;
   s.darknessPending = true;
   log(t);
   darknessSfx(effect);

@@ -22,6 +22,7 @@ function makeHero(cls = 'rogue') {
     zone: 'light',
     actions: s.mode === 'solo' ? 4 : 3,
     lastActiveRound: 0,
+    turnDone: false,
     choices: { 1: null },
     lockedChoices: {},
     move: {
@@ -140,6 +141,8 @@ s.heroes.forEach(x => {
     x.reviveNextRound = false;
   if (x.manaAtKO === undefined)
     x.manaAtKO = null;
+  if (typeof x.turnDone !== 'boolean')
+    x.turnDone = false;
 });
 if (!s.resurrection)
   s.resurrection = {
@@ -594,12 +597,22 @@ function renderHero() {
     x.lastActiveRound = s.round;
     startHeroTurn(x);
   }
+  if (s.turnPrompt && s.phase !== 0) {
+    s.turnPrompt = false;
+    save();
+  }
   if (s.turnPrompt) {
-    const options = s.heroes.filter(q => !q.unconscious && q !== x);
-    if (options.length <= 1) {
+    const options = s.heroes.filter(q => !q.unconscious && !q.turnDone && q !== x);
+    if (options.length === 0) {
       s.turnPrompt = false;
-      if (options.length === 1)
-        s.active = s.heroes.indexOf(options[0]);
+      save();
+      renderHeroTabs();
+      renderHero();
+      return;
+    }
+    if (options.length === 1) {
+      s.turnPrompt = false;
+      s.active = s.heroes.indexOf(options[0]);
       save();
       renderHeroTabs();
       renderHero();
@@ -864,6 +877,31 @@ function bindHero() {
     renderHero();
   };
   $('manaUp').onclick = () => {
+    const askElement = () => {
+      const el = prompt('¿Qué elemento aumentas? Escribe: fuego, agua, aire o naturaleza', 'fuego');
+      const map = { fuego: 'fire', agua: 'water', aire: 'air', naturaleza: 'nature' };
+      const key = map[(el || '').toLowerCase().trim()];
+      if (!key) {
+        alert('Elemento no reconocido. Inténtalo de nuevo desde el botón + Maná.');
+        return;
+      }
+      x.shaman[key] = Math.min(4, x.shaman[key] + 1);
+      log(`${ x.name } convierte 1 maná en +1 ${ MD2.shamanElements[key] } (${ x.shaman[key] }/4).`);
+      say(`${ MD2.shamanElements[key] } aumenta a ${ x.shaman[key] } de 4.`);
+      save();
+      renderHero();
+    };
+    if (x.cls === 'shaman') {
+      if (x.mana >= x.manaMax) {
+        say('Maná ya al máximo. Este punto se convierte automáticamente en un elemento.');
+        askElement();
+        return;
+      }
+      if (confirm('¿Quieres usar este punto para aumentar 1 Elemento en vez de recuperar maná?')) {
+        askElement();
+        return;
+      }
+    }
     x.mana = Math.min(x.manaMax, x.mana + 1);
     save();
     renderHero();
@@ -1223,9 +1261,28 @@ function bindFlow(x) {
       if (r.hp + r.mana !== 2)
         return;
       x.hp = Math.min(x.hpMax, x.hp + r.hp);
-      x.mana = Math.min(x.manaMax, x.mana + r.mana);
-      log(`${ x.name } se recupera: +${ r.hp } Vida, +${ r.mana } Maná.`);
-      say(`Recuperas ${ r.hp } de vida y ${ r.mana } de maná.`);
+      let manaGained = 0, elementMsgs = [];
+      const askElement = () => {
+        const el = prompt('¿Qué elemento aumentas con este punto? Escribe: fuego, agua, aire o naturaleza', 'fuego');
+        const map = { fuego: 'fire', agua: 'water', aire: 'air', naturaleza: 'nature' };
+        const key = map[(el || '').toLowerCase().trim()];
+        if (!key) {
+          alert('Elemento no reconocido, este punto se pierde. Puedes repartir de nuevo en Recuperación la próxima vez.');
+          return;
+        }
+        x.shaman[key] = Math.min(4, x.shaman[key] + 1);
+        elementMsgs.push(`${ MD2.shamanElements[key] } a ${ x.shaman[key] } de 4`);
+      };
+      for (let i = 0; i < r.mana; i++) {
+        if (x.cls === 'shaman' && (x.mana + manaGained >= x.manaMax || confirm(`Punto de maná ${ i + 1 } de ${ r.mana }: ¿usarlo para aumentar 1 Elemento en vez de recuperar maná?`))) {
+          askElement();
+        } else {
+          manaGained++;
+        }
+      }
+      x.mana = Math.min(x.manaMax, x.mana + manaGained);
+      log(`${ x.name } se recupera: +${ r.hp } Vida, +${ manaGained } Maná.${ elementMsgs.length ? ' Elementos: ' + elementMsgs.join(', ') + '.' : '' }`);
+      say(`Recuperas ${ r.hp } de vida${ manaGained ? ` y ${ manaGained } de maná` : '' }.${ elementMsgs.length ? ' ' + elementMsgs.join('. ') + '.' : '' }`);
       finishFlow(true);
     };
   if ($('repeatAttackSteps'))
@@ -1336,8 +1393,10 @@ function advancePending() {
     setTimeout(() => document.querySelector('[data-sec="skills"]').click(), 30);
     say(`Ahora debes elegir la habilidad de ${ s.heroes[i].name }.`);
   } else {
-    say('Todos los héroes tienen sus habilidades pendientes confirmadas.');
-    tab('game');
+    save();
+    render();
+    tab('hero');
+    say('Todos los héroes tienen sus habilidades pendientes confirmadas. Comienza la partida.');
   }
 }
 function startAction(type) {
@@ -1383,7 +1442,14 @@ function startAction(type) {
   save();
   renderHero();
   setTimeout(() => document.querySelector('.actionFlow')?.scrollIntoView({ behavior: 'smooth' }), 30);
-  duckAndSay(`Héroe activo ${ heroSpoken(x) }. ${ type === 'move' ? 'Movimiento' : type === 'attack' ? 'Ataque' : type === 'defense' ? 'Defensa' : type }. ${ x.actions } acciones restantes.${ x.cls === 'shaman' && type === 'attack' ? ' Revisa tus Bendiciones y las habilidades del Chamán disponibles según tus elementos.' : '' }${ x.cls === 'ranger' && type === 'attack' ? ' Explorador, saca cartas del mazo de Flechas e indícame el resultado.' : '' }${ type === 'attack' && x.cls !== 'ranger' ? ' Pasos del ataque: primero arma tu reserva de dados y elige el objetivo. Segundo, lanza físicamente los dados. Tercero, revisa habilidades y efectos disponibles. Cuarto, marca el resultado del ataque y confirma. Puedes repetir estos pasos con el botón de abajo si lo necesitas.' : '' }`);
+  const baseAnnouncement = `Héroe activo ${ heroSpoken(x) }. ${ type === 'move' ? 'Movimiento' : type === 'attack' ? 'Ataque' : type === 'defense' ? 'Defensa' : type }. ${ x.actions } acciones restantes.${ x.cls === 'shaman' && type === 'attack' ? ' Revisa tus Bendiciones y las habilidades del Chamán disponibles según tus elementos.' : '' }${ x.cls === 'ranger' && type === 'attack' ? ' Explorador, saca cartas del mazo de Flechas e indícame el resultado.' : '' }`;
+  if (type === 'attack' && x.cls !== 'ranger') {
+    duckAndSay(baseAnnouncement);
+    if (s.voice === 'yes' && confirm('¿Quieres que el asistente de voz lea los pasos del ataque?'))
+      duckAndSay('Pasos del ataque: primero arma tu reserva de dados y elige el objetivo. Segundo, lanza físicamente los dados. Tercero, revisa habilidades y efectos disponibles. Cuarto, marca el resultado del ataque y confirma.');
+    return;
+  }
+  duckAndSay(baseAnnouncement);
 }
 function useMove(k) {
   const x = h();
@@ -1410,8 +1476,12 @@ function finishFlow(skipGenericVoice = false) {
     pm: 0
   };
   if (x.actions <= 0) {
-    if (s.mode === 'solo') {
-      say('Sin acciones restantes. Tu turno ha terminado. Comienza la fase de enemigos.');
+    x.turnDone = true;
+    const pendingHeroes = s.heroes.filter(q => !q.unconscious && !q.turnDone);
+    if (s.mode === 'solo' || pendingHeroes.length === 0) {
+      save();
+      renderHero();
+      say('Sin acciones restantes. Todos los héroes han jugado su turno. Comienza la fase de enemigos.');
       nextPhase();
       return;
     }
@@ -1439,6 +1509,7 @@ function knockOut(x) {
   x.unconscious = true;
   x.manaAtKO = x.mana;
   x.actions = 0;
+  x.turnDone = true;
   x.flow = {
     type: null,
     step: 0,
@@ -1597,6 +1668,7 @@ function finishDarkness() {
   reviveScheduled();
   s.heroes.forEach(x => {
     x.actions = x.unconscious ? 0 : s.mode === 'solo' ? 4 : 3;
+    x.turnDone = false;
     x.flow = {
       type: null,
       step: 0,

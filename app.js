@@ -597,16 +597,6 @@ function renderHero() {
     x.lastActiveRound = s.round;
     startHeroTurn(x);
   }
-  if (s.phase === 0 && s.confirmed) {
-    const stillPlaying = s.heroes.filter(q => !q.unconscious && !q.turnDone);
-    if (stillPlaying.length === 0 && s.heroes.some(q => !q.unconscious)) {
-      s.turnPrompt = false;
-      save();
-      say('Todos los héroes han jugado su turno. Comienza la fase de enemigos.');
-      nextPhase();
-      return;
-    }
-  }
   if (s.turnPrompt && s.phase !== 0) {
     s.turnPrompt = false;
     save();
@@ -1741,16 +1731,16 @@ function beginLevelPhase() {
   }));
   s.levelCursor = 0;
   s.levelPhaseResolved = false;
-  duckAndSay('Comienza la fase de subida de nivel. Se revisará a todos los héroes uno por uno.');
-  processNextLevelHero();
+  duckAndSay('Fase de subida de nivel. Reviso a cada héroe.');
+  setTimeout(processNextLevelHero, 1800);
 }
 function processNextLevelHero() {
   if (s.levelCursor >= s.levelQueue.length) {
     s.levelPhaseResolved = true;
     save();
     render();
-    duckAndSay('Todos los héroes han sido revisados. Avanzamos a la fase de Oscuridad.');
-    nextPhase();
+    duckAndSay('Revisión completa. Nadie más sube de nivel. Avanzamos a Oscuridad.');
+    setTimeout(nextPhase, 3000);
     return;
   }
   const entry = s.levelQueue[s.levelCursor], x = s.heroes[entry.i];
@@ -1759,11 +1749,11 @@ function processNextLevelHero() {
   if (!cost || x.xp < cost) {
     entry.status = 'no-level';
     log(`${ x.name } fue revisado y no sube de nivel.`);
-    duckAndSay(`${ heroSpoken(x) } no tiene experiencia suficiente para subir de nivel.`);
+    duckAndSay(`${ heroSpoken(x) }: sin nivel.`);
     s.levelCursor++;
     save();
     render();
-    setTimeout(processNextLevelHero, 1200);
+    setTimeout(processNextLevelHero, 1800);
     return;
   }
   x.xp -= cost;
@@ -1783,8 +1773,7 @@ function processNextLevelHero() {
   render();
   tab('hero');
   setTimeout(() => document.querySelector('[data-sec="skills"]')?.click(), 30);
-  const recovery = x.unconscious ? 'Permanece inconsciente y no recupera vida ni maná por la subida.' : `Recupera ${ g.hp } vida y ${ g.mana } maná.`;
-  duckAndSay(`${ heroSpoken(x) } tiene experiencia suficiente y sube obligatoriamente a nivel ${ x.level }. Su vida máxima aumenta en ${ g.hp } y su maná máximo aumenta en ${ g.mana }. ${ recovery } ${ g.treasure } Debes elegir una nueva habilidad.`);
+  duckAndSay(`${ heroSpoken(x) } sube a nivel ${ x.level }. Elige nueva habilidad.`);
 }
 function continueLevelQueueAfterSkill() {
   if (s.phase !== 2)
@@ -1796,7 +1785,7 @@ function continueLevelQueueAfterSkill() {
   s.levelCursor++;
   save();
   render();
-  setTimeout(processNextLevelHero, 500);
+  setTimeout(processNextLevelHero, 800);
 }
 function darknessSfx(effect) {
   if (s.sfx !== 'yes' || !s.audioUnlocked)

@@ -21,6 +21,7 @@ function makeHero(cls = 'rogue') {
     manaMax: c.mana,
     zone: 'light',
     actions: s.mode === 'solo' ? 4 : 3,
+    lastActiveRound: 0,
     choices: { 1: null },
     lockedChoices: {},
     move: {
@@ -343,7 +344,18 @@ function phaseHelp() {
     'Avanza el medidor y resuelve su efecto.'
   ][s.phase];
 }
+function hasPendingChoice() {
+  if (s.phase === 2 && !s.levelPhaseResolved)
+    return true;
+  if (s.confirmed && s.heroes.some(x => !x.unconscious && pending(x)))
+    return true;
+  return false;
+}
 function tab(id) {
+  if (id !== 'hero' && hasPendingChoice()) {
+    alert('Debes terminar de elegir la habilidad pendiente antes de continuar.');
+    id = 'hero';
+  }
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === id));
   renderHeroTabs();
@@ -487,7 +499,7 @@ function renderEnemyDefense() {
     return;
   }
   const available = s.heroes.filter(x => !x.unconscious);
-  panel.innerHTML = `<h2>Defensa del grupo</h2><p class="notice">¿Hay enemigos atacando a los héroes en esta fase?</p><div class="actions"><button id="enemyAttackYes" class="primary">Sí, un héroe es atacado</button><button id="enemyAttackNo">No, ningún ataque pendiente</button></div><div id="enemyDefenseForm"></div>`;
+  panel.innerHTML = `<h2>Defensa del grupo</h2><p class="notice">¿Hay enemigos atacando a los héroes en esta fase?</p><div class="actions"><button id="enemyAttackYes" class="primary">Sí, un héroe es atacado</button><button id="enemyAttackNo">No hay más ataques, continuar</button></div><div id="enemyDefenseForm"></div>`;
   $('enemyAttackYes').onclick = () => {
     s.enemyPhaseAsked = true;
     renderDefenseForm(available);
@@ -496,7 +508,8 @@ function renderEnemyDefense() {
     s.enemyPhaseAsked = true;
     $('enemyDefenseForm').innerHTML = '';
     save();
-    say('De acuerdo, sin ataques pendientes.');
+    say('De acuerdo, sin más ataques. Avanzamos a la fase de subida de nivel.');
+    nextPhase();
   };
 }
 function renderDefenseForm(available) {
@@ -532,10 +545,12 @@ function renderDefenseForm(available) {
     let finalTarget = target;
     if (paladin) {
       const hasVinculo = activeSkills(paladin).some(q => q.branch === 'vinculo');
-      const zoneConsecrated = paladin.paladin.consecrations > 0;
-      if (hasVinculo && zoneConsecrated) {
-        if (confirm(`${ paladin.name } tiene Vínculo Vital activo y la zona está consagrada. ¿Quieres que el Paladín reciba el daño en lugar de ${ target.name }?`))
-          finalTarget = paladin;
+      if (hasVinculo) {
+        const zoneConsecrated = confirm(`${ paladin.name } tiene Vínculo Vital activo. ¿La zona donde ocurre este ataque está consagrada?`);
+        if (zoneConsecrated) {
+          if (confirm(`¿Quieres que ${ paladin.name } reciba el daño en lugar de ${ target.name }?`))
+            finalTarget = paladin;
+        }
       }
     }
     finalTarget.hp = Math.max(0, finalTarget.hp - dmg);
@@ -575,14 +590,16 @@ function renderHero() {
   }
   const x = h();
   document.documentElement.style.setProperty('--hero', COLORS[x.cls]);
+  if (x.lastActiveRound !== s.round && !x.unconscious) {
+    x.lastActiveRound = s.round;
+    startHeroTurn(x);
+  }
   if (s.turnPrompt) {
     const options = s.heroes.filter(q => !q.unconscious && q !== x);
     if (options.length <= 1) {
       s.turnPrompt = false;
-      if (options.length === 1) {
+      if (options.length === 1)
         s.active = s.heroes.indexOf(options[0]);
-        startHeroTurn(h());
-      }
       save();
       renderHeroTabs();
       renderHero();
@@ -592,7 +609,6 @@ function renderHero() {
     document.querySelectorAll('[data-next-hero]').forEach(b => b.onclick = () => {
       s.active = +b.dataset.nextHero;
       s.turnPrompt = false;
-      startHeroTurn(h());
       save();
       render();
       duckAndSay(`Héroe activo: ${ heroSpoken(h()) }.`);
@@ -714,7 +730,7 @@ function skillsHtml(x) {
   return html;
 }
 function actionsHtml(x) {
-  return `<div class="card"><h2>Turno de ${ x.name }</h2><p class="notice">Acciones restantes: <b>${ x.actions }</b></p><div class="actions"><button id="moveAction">Movimiento</button><button id="attackAction">Ataque</button><button data-action="Recuperación">Recuperación</button><button data-action="Intercambiar y equipar">Intercambiar y equipar</button><button data-action="Usar objeto">Usar objeto</button><button id="finishTurn" class="primary">Finalizar turno</button></div></div>${ flowHtml(x) }`;
+  return `<div class="card"><h2>Turno de ${ x.name }</h2><p class="notice">Acciones restantes: <b>${ x.actions }</b></p><div class="actions"><button id="moveAction">Movimiento</button><button id="attackAction">Ataque</button><button data-action="Recuperación">Recuperación</button><button data-action="Intercambiar y equipar">Intercambiar y equipar</button><button id="finishTurn" class="primary">Finalizar turno</button></div></div>${ flowHtml(x) }`;
 }
 function flowHtml(x) {
   if (!x.flow.type)
@@ -723,7 +739,14 @@ function flowHtml(x) {
     return moveFlow(x);
   if (x.flow.type === 'attack')
     return attackFlow(x);
+  if (x.flow.type === 'Recuperación')
+    return recoveryFlow(x);
   return `<div class="card"><p class="notice">${ x.flow.type } registrada.</p><button id="finishFlow">Finalizar acción</button></div>`;
+}
+function recoveryFlow(x) {
+  const r = x.flow.recovery || { hp: 0, mana: 0 };
+  const remaining = 2 - r.hp - r.mana;
+  return `<div class="card actionFlow active"><h2>Recuperación</h2><p class="notice">Reparte 2 puntos entre Vida y Maná como prefieras.</p><div class="grid top"><div class="elementRow"><span class="badge">Vida: +${ r.hp }</span><button data-rec="hp" data-d="-1" ${ r.hp <= 0 ? 'disabled' : '' }>−</button><button data-rec="hp" data-d="1" ${ remaining <= 0 ? 'disabled' : '' }>+</button></div><div class="elementRow"><span class="badge">Maná: +${ r.mana }</span><button data-rec="mana" data-d="-1" ${ r.mana <= 0 ? 'disabled' : '' }>−</button><button data-rec="mana" data-d="1" ${ remaining <= 0 ? 'disabled' : '' }>+</button></div></div><p class="muted top">Puntos restantes por repartir: ${ remaining }</p><button id="confirmRecovery" class="primary top" ${ remaining !== 0 ? 'disabled' : '' }>Confirmar Recuperación</button></div>`;
 }
 function moveFlow(x) {
   const suggestion = berserkerStanceSuggestion(x, 'move');
@@ -946,16 +969,7 @@ function bindHero() {
   document.querySelectorAll('[data-action]').forEach(b => b.onclick = () => startAction(b.dataset.action));
   $('finishTurn').onclick = () => {
     x.actions = 0;
-    x.flow = {
-      type: null,
-      step: 0,
-      attack: {},
-      defense: {}
-    };
-    s.turnPrompt = true;
-    save();
-    renderHero();
-    say('Turno finalizado. ¿Quién juega a continuación?');
+    finishFlow(true);
   };
   bindFlow(x);
   bindInventory(x);
@@ -1191,6 +1205,29 @@ function bindFlow(x) {
     $('finishMove').onclick = finishFlow;
   if ($('finishFlow'))
     $('finishFlow').onclick = finishFlow;
+  document.querySelectorAll('[data-rec]').forEach(b => b.onclick = () => {
+    x.flow.recovery = x.flow.recovery || { hp: 0, mana: 0 };
+    const field = b.dataset.rec, d = +b.dataset.d, r = x.flow.recovery;
+    const remaining = 2 - r.hp - r.mana;
+    if (d > 0 && remaining <= 0)
+      return;
+    if (d < 0 && r[field] <= 0)
+      return;
+    r[field] += d;
+    save();
+    renderHero();
+  });
+  if ($('confirmRecovery'))
+    $('confirmRecovery').onclick = () => {
+      const r = x.flow.recovery || { hp: 0, mana: 0 };
+      if (r.hp + r.mana !== 2)
+        return;
+      x.hp = Math.min(x.hpMax, x.hp + r.hp);
+      x.mana = Math.min(x.manaMax, x.mana + r.mana);
+      log(`${ x.name } se recupera: +${ r.hp } Vida, +${ r.mana } Maná.`);
+      say(`Recuperas ${ r.hp } de vida y ${ r.mana } de maná.`);
+      finishFlow(true);
+    };
   if ($('repeatAttackSteps'))
     $('repeatAttackSteps').onclick = () => duckAndSay('Pasos del ataque: primero arma tu reserva de dados y elige el objetivo. Segundo, lanza físicamente los dados. Tercero, revisa habilidades y efectos disponibles. Cuarto, marca el resultado del ataque y confirma.');
   if ($('berserkerStanceSuggest'))
@@ -1315,8 +1352,7 @@ function startAction(type) {
       'move',
       'attack',
       'Recuperación',
-      'Intercambiar y equipar',
-      'Usar objeto'
+      'Intercambiar y equipar'
     ].includes(type)) {
     if (x.actions <= 0)
       return alert('No quedan acciones.');
@@ -1334,7 +1370,8 @@ function startAction(type) {
     type,
     step: 1,
     attack: {},
-    defense: {}
+    defense: {},
+    recovery: { hp: 0, mana: 0 }
   };
   if (type === 'move')
     x.move = {
@@ -1373,6 +1410,11 @@ function finishFlow(skipGenericVoice = false) {
     pm: 0
   };
   if (x.actions <= 0) {
+    if (s.mode === 'solo') {
+      say('Sin acciones restantes. Tu turno ha terminado. Comienza la fase de enemigos.');
+      nextPhase();
+      return;
+    }
     s.turnPrompt = true;
     save();
     renderHero();
@@ -1409,7 +1451,10 @@ function knockOut(x) {
     triggerGameOver(x);
     return;
   }
-  duckAndSay(`${ heroSpoken(x) } ha quedado inconsciente. Tumba su miniatura. No puede actuar ni ser objetivo. Quedan ${ s.resurrection.blue } fichas de Resurrección disponibles.`);
+  x.reviveNextRound = true;
+  syncResurrectionTokens();
+  log(`${ x.name } usará una Ficha de Resurrección: revivirá al comienzo de la siguiente ronda con 3 de vida.`);
+  duckAndSay(`${ heroSpoken(x) } ha quedado inconsciente. Tumba su miniatura. No puede actuar ni ser objetivo. Usará una Ficha de Resurrección y revivirá con 3 de vida al comienzo de la siguiente ronda.`);
 }
 function triggerGameOver(x) {
   s.gameOver = true;
@@ -1422,23 +1467,8 @@ function renderResurrection() {
   if (!$('resurrectionPanel'))
     return;
   syncResurrectionTokens();
-  const total = resurrectionCount(), uncon = s.heroes.filter(x => x.unconscious && !x.reviveNextRound);
-  $('resurrectionPanel').innerHTML = `<p>Fichas totales según el grupo: <b>${ total }</b></p><div>${ Array.from({ length: s.resurrection.blue }, () => '<span class="resToken resBlue">Azul disponible</span>').join('') }${ Array.from({ length: s.resurrection.grey }, () => '<span class="resToken resGrey">Gris \xB7 relanzar 1 dado negro</span>').join('') }</div>${ uncon.map(x => `<div class="resource"><b>${ heroSpoken(x) }</b> está inconsciente.<button data-res="${ x.id }" ${ s.resurrection.blue <= 0 ? 'disabled' : '' }>Usar ficha para próxima ronda</button></div>`).join('') || '<p class="muted">No hay héroes inconscientes pendientes.</p>' }`;
-  document.querySelectorAll('[data-res]').forEach(b => b.onclick = () => scheduleResurrection(b.dataset.res));
-}
-function scheduleResurrection(id) {
-  syncResurrectionTokens();
-  if (s.resurrection.blue <= 0)
-    return alert('No quedan fichas azules disponibles.');
-  const x = s.heroes.find(q => String(q.id) === String(id));
-  if (!x)
-    return;
-  x.reviveNextRound = true;
-  syncResurrectionTokens();
-  log(`${ x.name } será resucitado al comienzo de la siguiente ronda.`);
-  duckAndSay(`Ficha de Resurrección asignada a ${ heroSpoken(x) }. Revivirá al comienzo de la siguiente ronda con 3 de vida.`);
-  save();
-  render();
+  const total = resurrectionCount(), pending = s.heroes.filter(x => x.unconscious && x.reviveNextRound);
+  $('resurrectionPanel').innerHTML = `<p>Fichas totales según el grupo: <b>${ total }</b></p><div>${ Array.from({ length: s.resurrection.blue }, () => '<span class="resToken resBlue">Azul disponible</span>').join('') }${ Array.from({ length: s.resurrection.grey }, () => '<span class="resToken resGrey">Gris \xB7 relanzar 1 dado negro</span>').join('') }</div>${ pending.map(x => `<div class="resource"><b>${ heroSpoken(x) }</b> está inconsciente y revivirá automáticamente al comienzo de la próxima ronda con 3 de vida.</div>`).join('') || '<p class="muted">No hay héroes inconscientes pendientes.</p>' }`;
 }
 function reviveScheduled() {
   s.heroes.forEach(x => {
@@ -1635,7 +1665,8 @@ function processNextLevelHero() {
     s.levelPhaseResolved = true;
     save();
     render();
-    duckAndSay('Todos los héroes han sido revisados. Finaliza la fase de subida de nivel.');
+    duckAndSay('Todos los héroes han sido revisados. Avanzamos a la fase de Oscuridad.');
+    nextPhase();
     return;
   }
   const entry = s.levelQueue[s.levelCursor], x = s.heroes[entry.i];
@@ -1708,7 +1739,7 @@ function advanceDark(voice = true) {
     }
   }
   const effect = darkNow()[1], sideLabel = s.dark.side === 'front' ? 'Anverso' : 'Reverso';
-  let t = `Fase de Oscuridad. ${ transition }El medidor avanza a ${ sideLabel }, casilla ${ darkNow()[0] }. ${ effect }`;
+  let t = transition ? `Fase de Oscuridad. ${ transition }El medidor avanza a ${ sideLabel }, casilla ${ darkNow()[0] }. ${ effect }` : `Fase de Oscuridad. El medidor avanza al ${ darkNow()[0] }. ${ effect }`;
   s.darknessPending = true;
   log(t);
   darknessSfx(effect);

@@ -137,3 +137,9 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   #splash *{animation-duration:.01ms!important;animation-iteration-count:1!important}
   #splash{animation:splashOut .01ms ease 1.2s forwards}
 }
+
+/* ============ GAME OVER SCREEN ============ */
+#gameOverScreen{position:fixed;inset:0;z-index:998;background:radial-gradient(ellipse at 50% 40%,rgba(199,62,29,.16),var(--void) 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+#gameOverScreen h1{font-size:1.8rem;color:var(--ember-bright);text-shadow:0 0 22px rgba(255,107,53,.4);margin-bottom:10px}
+#gameOverScreen p{color:var(--parchment,var(--text));max-width:340px;margin-bottom:22px;line-height:1.5}
+#gameOverScreen .actions{display:flex;flex-direction:column;gap:10px;width:100%;max-width:280px}

@@ -39,7 +39,8 @@ function makeHero(cls = 'rogue') {
       air: 0,
       nature: 0,
       unlocked: {},
-      spirits: []
+      spirits: [],
+      elementBoostDone: false
     },
     paladin: {
       consecrations: 0,
@@ -97,6 +98,9 @@ function fresh() {
     levelCursor: 0,
     levelPhaseResolved: false,
     darknessPending: false,
+    turnPrompt: false,
+    enemyPhaseAsked: false,
+    gameOver: false,
     mission: {
       name: '',
       objective: '',
@@ -151,6 +155,10 @@ if (s.darknessPending === undefined)
   s.darknessPending = false;
 if (s.turnPrompt === undefined)
   s.turnPrompt = false;
+if (s.enemyPhaseAsked === undefined)
+  s.enemyPhaseAsked = false;
+if (s.gameOver === undefined)
+  s.gameOver = false;
 if (s.music === undefined)
   s.music = 'yes';
 if (s.musicVolume === undefined)
@@ -363,6 +371,61 @@ function renderSettings() {
   loadVoiceOptions();
   renderAudioStatus();
 }
+function renderGameOver() {
+  const el = $('gameOverScreen');
+  if (!el)
+    return;
+  if (!s.gameOver) {
+    el.classList.add('hidden');
+    el.innerHTML = '';
+    return;
+  }
+  el.classList.remove('hidden');
+  el.innerHTML = `<h1>Derrota</h1><p>El grupo ha sido derrotado: no quedan Fichas de Resurrección disponibles y un héroe ha vuelto a quedar inconsciente.</p><div class="actions"><button id="restartSameHeroes" class="primary">Reiniciar con los mismos héroes</button><button id="restartNewGame">Iniciar partida nueva</button></div>`;
+  $('restartSameHeroes').onclick = () => {
+    if (!confirm('¿Reiniciar la partida manteniendo los mismos héroes y clases? Se restablecerán vida, XP, nivel e inventario.'))
+      return;
+    const classes = s.heroes.map(x => x.cls);
+    const keepVoice = {
+      voice: s.voice,
+      rate: s.rate,
+      music: s.music,
+      musicVolume: s.musicVolume,
+      sfx: s.sfx,
+      voicePitch: s.voicePitch,
+      voiceName: s.voiceName,
+      audioUnlocked: s.audioUnlocked
+    };
+    s = fresh();
+    Object.assign(s, keepVoice);
+    classes.forEach(c => s.heroes.push(makeHero(c)));
+    s.mode = classes.length <= 1 ? 'solo' : 'coop';
+    save();
+    render();
+    tab('setup');
+    say('Partida reiniciada con los mismos héroes. Prepara el grupo para comenzar de nuevo.');
+  };
+  $('restartNewGame').onclick = () => {
+    if (!confirm('¿Iniciar una partida completamente nueva? Se perderá todo el progreso actual.'))
+      return;
+    const keepVoice = {
+      voice: s.voice,
+      rate: s.rate,
+      music: s.music,
+      musicVolume: s.musicVolume,
+      sfx: s.sfx,
+      voicePitch: s.voicePitch,
+      voiceName: s.voiceName,
+      audioUnlocked: s.audioUnlocked
+    };
+    s = fresh();
+    Object.assign(s, keepVoice);
+    save();
+    render();
+    tab('setup');
+    say('Lista para preparar una partida nueva.');
+  };
+}
 function render() {
   renderHeroTabs();
   renderSetup();
@@ -372,6 +435,7 @@ function render() {
   renderResurrection();
   renderSettings();
   renderDirector();
+  renderGameOver();
   updateAmbient();
   $('phaseChip').textContent = s.confirmed ? MD2.phases[s.phase] : 'Preparación';
 }
@@ -414,6 +478,82 @@ function renderSetup() {
   $('playerMode').value = s.mode;
   $('soloRuleNotice').classList.toggle('hidden', s.mode !== 'solo');
 }
+function renderEnemyDefense() {
+  const panel = $('enemyDefensePanel');
+  if (!panel)
+    return;
+  if (s.phase !== 1 || !s.heroes.length) {
+    panel.innerHTML = '';
+    return;
+  }
+  const available = s.heroes.filter(x => !x.unconscious);
+  panel.innerHTML = `<h2>Defensa del grupo</h2><p class="notice">¿Hay enemigos atacando a los héroes en esta fase?</p><div class="actions"><button id="enemyAttackYes" class="primary">Sí, un héroe es atacado</button><button id="enemyAttackNo">No, ningún ataque pendiente</button></div><div id="enemyDefenseForm"></div>`;
+  $('enemyAttackYes').onclick = () => {
+    s.enemyPhaseAsked = true;
+    renderDefenseForm(available);
+  };
+  $('enemyAttackNo').onclick = () => {
+    s.enemyPhaseAsked = true;
+    $('enemyDefenseForm').innerHTML = '';
+    save();
+    say('De acuerdo, sin ataques pendientes.');
+  };
+}
+function renderDefenseForm(available) {
+  const form = $('enemyDefenseForm');
+  if (!form)
+    return;
+  form.innerHTML = `<div class="grid top"><label>Héroe atacado<select id="defendedHero">${ available.map((x, i) => `<option value="${ s.heroes.indexOf(x) }">${ x.name }</option>`).join('') }</select></label><label>Daño recibido<select id="damageAmount">${ Array.from({ length: 10 }, (_, i) => i + 1).map(n => `<option value="${ n }">${ n }</option>`).join('') }</select></label></div><div id="provokeSlot"></div><button id="confirmDamage" class="primary top">Confirmar daño</button>`;
+  function renderProvokeSlot() {
+    const idx = +$('defendedHero').value, target = s.heroes[idx];
+    const slot = $('provokeSlot');
+    if (target.cls === 'berserker' && target.berserker.stance === 'Provocador')
+      slot.innerHTML = `<button id="provokeWound" class="top" ${ target.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: infligir 1 Herida al atacante (${ target.berserker.fury }/7)</button>`;
+    else
+      slot.innerHTML = '';
+    if ($('provokeWound'))
+      $('provokeWound').onclick = () => {
+        if (target.berserker.fury < 1)
+          return;
+        if (!confirm('¿Gastar 1 Furia para infligir 1 Herida al atacante?'))
+          return;
+        target.berserker.fury--;
+        log(`${ target.name } gasta 1 Furia (Provocador) para infligir 1 Herida al atacante.`);
+        save();
+        renderProvokeSlot();
+        say('Infliges 1 Herida al atacante.');
+      };
+  }
+  renderProvokeSlot();
+  $('defendedHero').onchange = renderProvokeSlot;
+  $('confirmDamage').onclick = () => {
+    const targetIdx = +$('defendedHero').value, dmg = +$('damageAmount').value, target = s.heroes[targetIdx];
+    const paladin = s.heroes.find(q => q.cls === 'paladin' && !q.unconscious && q !== target);
+    let finalTarget = target;
+    if (paladin) {
+      const hasVinculo = activeSkills(paladin).some(q => q.branch === 'vinculo');
+      const zoneConsecrated = paladin.paladin.consecrations > 0;
+      if (hasVinculo && zoneConsecrated) {
+        if (confirm(`${ paladin.name } tiene Vínculo Vital activo y la zona está consagrada. ¿Quieres que el Paladín reciba el daño en lugar de ${ target.name }?`))
+          finalTarget = paladin;
+      }
+    }
+    finalTarget.hp = Math.max(0, finalTarget.hp - dmg);
+    log(`${ finalTarget.name } recibe ${ dmg } de daño en la fase de Enemigos${ finalTarget !== target ? ` (redirigido desde ${ target.name } por Vínculo Vital)` : '' }.`);
+    if (finalTarget.hp === 0 && !finalTarget.unconscious)
+      knockOut(finalTarget);
+    if (finalTarget.cls === 'berserker' && dmg > 0) {
+      let gain = Math.min(dmg, 7 - finalTarget.berserker.fury);
+      if (gain > 0) {
+        finalTarget.berserker.fury += gain;
+        log(`${ finalTarget.name } gana ${ gain } punto${ gain > 1 ? 's' : '' } de Furia por recibir daño. Furia: ${ finalTarget.berserker.fury }/7.`);
+      }
+    }
+    save();
+    render();
+    say(`${ finalTarget.name } recibe ${ dmg } de daño. ¿Hay más enemigos atacando a los héroes?`);
+  };
+}
 function renderGame() {
   if (!$('round'))
     return;
@@ -426,6 +566,7 @@ function renderGame() {
   $('darkEvent').textContent = `${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' } · Casilla ${ darkNow()[0] }: ${ darkNow()[1] }`;
   $('resolveDarkness').classList.toggle('hidden', !(s.phase === 3 && s.darknessPending));
   $('nextPhase').classList.toggle('hidden', s.phase === 3 && s.darknessPending);
+  renderEnemyDefense();
 }
 function renderHero() {
   if (!s.heroes.length) {
@@ -438,8 +579,10 @@ function renderHero() {
     const options = s.heroes.filter(q => !q.unconscious && q !== x);
     if (options.length <= 1) {
       s.turnPrompt = false;
-      if (options.length === 1)
+      if (options.length === 1) {
         s.active = s.heroes.indexOf(options[0]);
+        startHeroTurn(h());
+      }
       save();
       renderHeroTabs();
       renderHero();
@@ -449,13 +592,27 @@ function renderHero() {
     document.querySelectorAll('[data-next-hero]').forEach(b => b.onclick = () => {
       s.active = +b.dataset.nextHero;
       s.turnPrompt = false;
+      startHeroTurn(h());
       save();
       render();
       duckAndSay(`Héroe activo: ${ heroSpoken(h()) }.`);
     });
     return;
   }
-  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader"><div class="row between"><div><h2>${ x.name }</h2><small>${ C[x.cls].label }</small></div><span class="badge">Nivel ${ x.level }</span></div><div class="stats top"><div><small>Vida</small><b>${ x.hp }/${ x.hpMax }</b></div><div><small>Maná</small><b>${ x.mana }/${ x.manaMax }</b></div><div><small>XP</small><b>${ x.xp }</b></div><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div></div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type ? 'active' : '' }">Resumen</button><button data-sec="skills">Habilidades</button><button data-sec="actions" class="${ x.flow.type ? 'active' : '' }">Turno</button><button data-sec="inventory">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type ? 'active' : '' }">${ actionsHtml(x) }</div><div id="sec-inventory" class="heroSection">${ inventoryHtml(x) }</div>`;
+  if (x.cls === 'shaman' && !x.shaman.elementBoostDone && !x.unconscious && !pending(x)) {
+    $('heroPage').innerHTML = `<div class="card"><h2>Aumenta un Elemento</h2><p class="notice">Al inicio de tu turno debes aumentar cualquier Elemento en 1. Elige uno para continuar.</p><div class="resource">${ shamanElementControls(x, true) }</div></div>`;
+    document.querySelectorAll('[data-boost-el]').forEach(b => b.onclick = () => {
+      x.shaman[b.dataset.boostEl] = Math.min(4, x.shaman[b.dataset.boostEl] + 1);
+      x.shaman.elementBoostDone = true;
+      log(`${ x.name } aumenta ${ MD2.shamanElements[b.dataset.boostEl] } en 1 (obligatorio de inicio de turno).`);
+      save();
+      renderHero();
+      say(`Aumentas ${ MD2.shamanElements[b.dataset.boostEl] }.`);
+    });
+    return;
+  }
+  const activeSec = document.querySelector('.sectionTabs [data-sec].active')?.dataset.sec;
+  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader"><div class="row between"><div><h2>${ x.name }</h2><small>${ C[x.cls].label }</small></div><span class="badge">Nivel ${ x.level }</span></div><div class="stats top"><div><small>Vida</small><b>${ x.hp }/${ x.hpMax }</b></div><div><small>Maná</small><b>${ x.mana }/${ x.manaMax }</b></div><div><small>XP</small><b>${ x.xp }</b></div><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div></div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }<button data-sec="inventory" class="${ activeSec === 'inventory' ? 'active' : '' }">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }<div id="sec-inventory" class="heroSection ${ activeSec === 'inventory' ? 'active' : '' }">${ inventoryHtml(x) }</div>`;
   document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
     document.querySelectorAll('[data-sec]').forEach(q => q.classList.remove('active'));
     b.classList.add('active');
@@ -499,17 +656,21 @@ function shamanKnownAbilities(x) {
   return list;
 }
 function shamanSpiritHtml(x) {
-  if (!x.shaman.spirits.length)
-    return '<p class="muted">No hay Espíritus invocados.</p>';
-  return x.shaman.spirits.map((p, i) => `<div class="spiritCard"><div class="row between"><b>${ p.name }</b><span class="badge">Vida ${ p.hp }/${ p.hpMax }</span></div><p>🛡 Defensa ${ p.defense } · ⚔ ${ p.attack }</p><p>${ p.effect }</p><div class="row"><button data-spirit-dmg="${ i }">− Vida</button><button data-spirit-heal="${ i }">+ Vida</button><button data-spirit-turn="${ i }">Resolver turno</button><button data-spirit-remove="${ i }">Retirar</button></div></div>`).join('');
+  const families = [
+    { key: 'fire', label: 'Espíritu de Fuego' },
+    { key: 'ice', label: 'Espíritu de Escarcha' }
+  ];
+  return families.map(fam => {
+    const p = x.shaman.spirits.find(q => q.type.startsWith(fam.key));
+    if (!p)
+      return `<div class="spiritCard"><div class="row between"><b>${ fam.label }</b><span class="badge">No invocado</span></div><p class="muted">Invoca este Espíritu usando el hechizo correspondiente en Hechizos disponibles.</p></div>`;
+    if (p.defeated)
+      return `<div class="spiritCard"><div class="row between"><b>${ p.name }</b><span class="badge">Derrotado</span></div><p class="muted">Este Espíritu fue derrotado. Invócalo de nuevo para reactivarlo.</p></div>`;
+    return `<div class="spiritCard"><div class="row between"><b>${ p.name }</b><span class="badge">Vida ${ p.hp }/${ p.hpMax }</span></div><p>🛡 Defensa ${ p.defense } · ⚔ ${ p.attack }</p><p>${ p.effect }</p><p class="muted">${ p.usedFreeAction ? 'Su próxima acción este turno costará 1 acción del Chamán.' : 'Su próxima acción este turno es gratuita.' }</p><div class="row"><button data-spirit-dmg="${ x.shaman.spirits.indexOf(p) }">− Vida</button><button data-spirit-heal="${ x.shaman.spirits.indexOf(p) }">+ Vida</button><button data-spirit-turn="${ x.shaman.spirits.indexOf(p) }">Actuar (${ p.usedFreeAction ? '1 acción' : 'gratis' })</button></div></div>`;
+  }).join('');
 }
 function shamanHtml(x) {
-  const elements = [
-    'fire',
-    'water',
-    'air',
-    'nature'
-  ].map(k => `<div class="elementRow ${ x.shaman[k] === 4 && !x.shaman.unlocked[k] ? 'elementMax' : '' }"><span class="badge">${ MD2.shamanElements[k] } ${ x.shaman[k] }/4</span><button data-el="${ k }" data-d="-1">−</button><button data-el="${ k }" data-d="1">+</button><button data-max="${ k }">Máx.</button><button data-use="${ k }" ${ x.shaman.unlocked[k] || x.shaman[k] < 4 ? 'disabled' : '' }>${ x.shaman.unlocked[k] ? 'Activa' : x.shaman[k] === 4 ? 'Consumir' : 'Requiere 4' }</button></div>`).join('');
+  const inFlow = x.flow.type === 'attack' || x.flow.type === 'defense';
   const blessings = [
     'fire',
     'water',
@@ -519,11 +680,8 @@ function shamanHtml(x) {
     let b = MD2.shamanBlessings[k], on = x.shaman.unlocked[k];
     return `<div class="blessingCard ${ on ? 'active' : '' }"><b>${ on ? '\u2726 ACTIVA \xB7 ' : '' }${ b.name }</b><p>${ b.effect }</p></div>`;
   }).join('');
-  const abilities = shamanKnownAbilities(x).map(a => {
-    let can = shamanCanPay(x, a.cost);
-    return `<div class="shamanAbility ${ can ? 'available' : 'unavailable' }"><div class="row between"><b>${ a.name || a.key }</b><span>${ can ? 'Disponible' : 'Faltan elementos' }</span></div><small>Coste: ${ shamanCostText(a.cost) }</small><p>${ a.effect }</p><button data-shaman-cast="${ a.key }" ${ can ? '' : 'disabled' }>${ a.kind === 'summon' ? 'Invocar y consumir' : 'Usar y consumir' }</button></div>`;
-  }).join('');
-  return `<div class="resource"><p class="notice">Al inicio de tu turno, aumenta cualquier Elemento en 1.</p>${ elements }</div><h3>Bendiciones permanentes</h3><div class="blessingGrid">${ blessings }</div><h3>Hechizos disponibles</h3>${ abilities }<h3>Invocaciones activas</h3>${ shamanSpiritHtml(x) }`;
+  const elementsBlock = inFlow ? `<p class="notice">Estás en tu Turno (${ x.flow.type === 'attack' ? 'Ataque' : 'Defensa' }). Los controles de Elementos y Hechizos están disponibles ahí, en la pestaña Turno.</p>` : `<div class="resource"><p class="notice">Al inicio de tu turno, aumenta cualquier Elemento en 1.</p>${ shamanElementControls(x) }</div><h3>Hechizos disponibles</h3>${ shamanAbilityControls(x) }`;
+  return `${ elementsBlock }<h3>Bendiciones permanentes</h3><div class="blessingGrid">${ blessings }</div><p class="notice">Revisa la pestaña Espíritus para ver y gestionar tus invocaciones.</p>`;
 }
 function classHtml(x) {
   if (x.cls === 'rogue')
@@ -556,7 +714,7 @@ function skillsHtml(x) {
   return html;
 }
 function actionsHtml(x) {
-  return `<div class="card"><h2>Turno de ${ x.name }</h2><p class="notice">Acciones restantes: <b>${ x.actions }</b></p><div class="actions"><button id="moveAction">Movimiento</button><button id="attackAction">Ataque</button><button id="defenseAction">Defensa</button><button data-action="Recuperación">Recuperación</button><button data-action="Intercambiar y equipar">Intercambiar y equipar</button><button data-action="Usar objeto">Usar objeto</button><button id="finishTurn" class="primary">Finalizar turno</button></div></div>${ flowHtml(x) }`;
+  return `<div class="card"><h2>Turno de ${ x.name }</h2><p class="notice">Acciones restantes: <b>${ x.actions }</b></p><div class="actions"><button id="moveAction">Movimiento</button><button id="attackAction">Ataque</button><button data-action="Recuperación">Recuperación</button><button data-action="Intercambiar y equipar">Intercambiar y equipar</button><button data-action="Usar objeto">Usar objeto</button><button id="finishTurn" class="primary">Finalizar turno</button></div></div>${ flowHtml(x) }`;
 }
 function flowHtml(x) {
   if (!x.flow.type)
@@ -565,8 +723,6 @@ function flowHtml(x) {
     return moveFlow(x);
   if (x.flow.type === 'attack')
     return attackFlow(x);
-  if (x.flow.type === 'defense')
-    return defenseFlow(x);
   return `<div class="card"><p class="notice">${ x.flow.type } registrada.</p><button id="finishFlow">Finalizar acción</button></div>`;
 }
 function moveFlow(x) {
@@ -581,7 +737,7 @@ function attackFlow(x) {
   if (x.cls === 'ranger' && !x.flow.arrowResult)
     return arrowFlow(x);
   const suggestion = berserkerStanceSuggestion(x, 'attack');
-  return `<div class="card actionFlow active"><h2>Ataque</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><div class="grid top"><label>Tipo<select id="attackType"><option>Cuerpo a cuerpo</option><option>A distancia</option><option>Mágico</option></select></label><label>Objetivo<select id="targetType"><option value="mob" ${ a.targetType !== 'roamer' ? 'selected' : '' }>Cuadrilla</option><option value="roamer" ${ a.targetType === 'roamer' ? 'selected' : '' }>Monstruo errante</option></select></label><label>Dados del héroe<input id="heroDice" value="${ a.heroDice || '' }"></label><label>Dados negros<input id="blackDice" type="number" value="${ a.blackDice || 0 }"></label>${ a.targetType !== 'roamer' ? `<label>Secuaces restantes<input id="minions" type="number" value="${ a.minions ?? 1 }"></label>` : '' }</div><p class="notice top">Lanza físicamente todos los dados de la reserva.</p><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<label class="top">Resultado del ataque (puedes marcar varias)<select id="attackResult" multiple size="${ a.targetType === 'roamer' ? 2 : 4 }">${ a.targetType === 'roamer' ? `<option value="roamer">Errante eliminado</option><option value="leader">Líder eliminado (si aplica)</option>` : `<option value="m1">1 secuaz eliminado</option><option value="m2">2 secuaces eliminados</option><option value="m3">3 secuaces eliminados</option><option value="leader">Líder eliminado</option>` }</select></label><button id="attackCalc" class="primary top">Ataque resuelto</button></div>`;
+  return `<div class="card actionFlow active"><h2>Ataque</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><ol class="notice top"><li>Arma tu reserva de dados según tu tipo de ataque.</li><li>Lanza físicamente los dados.</li><li>Revisa habilidades y efectos disponibles.</li><li>Marca el resultado del ataque y confirma.</li></ol><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<label class="top">Resultado del ataque (puedes marcar varias)<select id="attackResult" multiple size="5"><option value="m1">1 secuaz eliminado</option><option value="m2">2 secuaces eliminados</option><option value="m3">3 secuaces eliminados</option><option value="leader">Líder eliminado</option><option value="roamer">Errante eliminado</option></select></label><button id="attackCalc" class="primary top">Ataque resuelto</button></div>`;
 }
 function berserkerStanceSuggestion(x, action) {
   if (x.cls !== 'berserker' || x.berserker.fury < 1)
@@ -596,6 +752,20 @@ function berserkerStanceSuggestion(x, action) {
     return null;
   return { stance: wanted, label: `¿Cambiar a la postura ${ wanted } para potenciar esta acción? (cuesta 1 Furia)` };
 }
+function shamanElementControls(x, boostMode = false) {
+  return [
+    'fire',
+    'water',
+    'air',
+    'nature'
+  ].map(k => boostMode ? `<div class="elementRow"><span class="badge">${ MD2.shamanElements[k] } ${ x.shaman[k] }/4</span><button data-boost-el="${ k }" class="primary">Elegir este</button></div>` : `<div class="elementRow ${ x.shaman[k] === 4 && !x.shaman.unlocked[k] ? 'elementMax' : '' }"><span class="badge">${ MD2.shamanElements[k] } ${ x.shaman[k] }/4</span><button data-el="${ k }" data-d="-1">−</button><button data-el="${ k }" data-d="1">+</button><button data-max="${ k }">Máx.</button><button data-use="${ k }" ${ x.shaman.unlocked[k] || x.shaman[k] < 4 ? 'disabled' : '' }>${ x.shaman.unlocked[k] ? 'Activa' : x.shaman[k] === 4 ? 'Consumir' : 'Requiere 4' }</button></div>`).join('');
+}
+function shamanAbilityControls(x, kindFilter) {
+  return shamanKnownAbilities(x).filter(a => !kindFilter || a.kind === kindFilter).map(a => {
+    let can = shamanCanPay(x, a.cost);
+    return `<div class="shamanAbility ${ can ? 'available' : 'unavailable' }"><div class="row between"><b>${ a.name || a.key }</b><span>${ can ? 'Disponible' : 'Faltan elementos' }</span></div><small>Coste: ${ shamanCostText(a.cost) }</small><p>${ a.effect }</p><button data-shaman-cast="${ a.key }" ${ can ? '' : 'disabled' }>${ a.kind === 'summon' ? 'Invocar y consumir' : 'Usar y consumir' }</button></div>`;
+  }).join('');
+}
 function attackReminders(x) {
   let arr = [];
   if (x.zone === 'dark')
@@ -605,7 +775,6 @@ function attackReminders(x) {
       arr.push('Bendición de Fuego activa: añade 1 dado amarillo.');
     if (x.shaman.unlocked.water)
       arr.push('Bendición de Agua activa: después del ataque puedes mover al defensor 1 Zona.');
-    shamanKnownAbilities(x).filter(a => a.kind === 'attack').forEach(a => arr.push(`${ a.name || a.key }: ${ shamanCanPay(x, a.cost) ? 'tienes elementos suficientes' : 'no tienes elementos suficientes' }. Coste ${ shamanCostText(a.cost) }. ${ a.effect }`));
     if (x.shaman.spirits.length)
       arr.push(`Invocaciones activas: ${ x.shaman.spirits.map(p => p.name).join(', ') }.`);
   } else
@@ -613,33 +782,12 @@ function attackReminders(x) {
   arr.push(`Habilidad propia: ${ C[x.cls].ability }`);
   if (greyRerollReminder())
     arr.push(greyRerollReminder());
-  return '<ol>' + arr.map(q => `<li>${ q }</li>`).join('') + '</ol>';
-}
-function defenseFlow(x) {
-  const d = x.flow.defense || {}, step = x.flow.step || 1, suggestion = berserkerStanceSuggestion(x, 'defense');
-  return `<div class="card actionFlow active"><h2>Defensa guiada</h2><div class="flowSteps">${ [
-    1,
-    2,
-    3,
-    4,
-    5
-  ].map((n, i) => `<span class="flowStep ${ n === step ? 'active' : '' }">${ [
-    'Reserva',
-    'Lanzar',
-    'Habilidades',
-    'Calcular',
-    'Resumen'
-  ][i] }</span>`).join('') }</div>${ step === 1 ? `${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }<div class="grid"><label>Dados azules<input id="blueDice" value="${ d.blueDice || '' }"></label><label>Espadas enemigas<input id="enemySwords" type="number" value="${ d.enemySwords || 0 }"></label></div><button id="defNext1" class="primary top">Confirmar reserva</button>` : '' }${ step === 2 ? `<p class="notice">Lanza físicamente los dados azules.</p><button id="defNext2" class="primary">Dados lanzados</button>` : '' }${ step === 3 ? `<div class="resultBox">${ defenseReminders(x) }</div>${ x.cls === 'berserker' && x.berserker.stance === 'Provocador' ? `<button id="provokeWound" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: infligir 1 Herida al atacante (${ x.berserker.fury }/7)</button>` : '' }<button id="defNext3" class="primary top">Efectos resueltos</button>` : '' }${ step === 4 ? `<label>Escudos obtenidos<input id="defShields" type="number" value="${ d.shields || 0 }"></label><button id="defCalc" class="primary top">Calcular heridas</button>` : '' }${ step === 5 ? `<div class="resultBox"><b>Defensa resuelta</b><br>Heridas recibidas: ${ d.wounds || 0 }</div><button id="finishDefense" class="primary top">Finalizar defensa</button>` : '' }</div>`;
-}
-function defenseReminders(x) {
-  let arr = [];
-  activeSkills(x).forEach(q => arr.push(`Habilidad activa: ${ q.name }.`));
-  arr.push(`Habilidad propia: ${ C[x.cls].ability }`);
-  if (x.cls === 'paladin')
-    arr.push('Ignora 1 Garra en cada ataque.');
-  if (x.cls === 'berserker')
-    arr.push(`Postura: ${ x.berserker.stance }. Furia: ${ x.berserker.fury }.`);
-  return '<ol>' + arr.map(q => `<li>${ q }</li>`).join('') + '</ol>';
+  let html = '<ol>' + arr.map(q => `<li>${ q }</li>`).join('') + '</ol>';
+  if (x.cls === 'shaman') {
+    const attackAbilities = shamanAbilityControls(x, 'attack');
+    html += `<div class="resource top">${ shamanElementControls(x) }</div>${ attackAbilities ? `<h3>Hechizos de ataque disponibles</h3>${ attackAbilities }` : '' }`;
+  }
+  return html;
 }
 function inventoryHtml(x) {
   return `<div class="card"><h2>Registrar objeto</h2><div class="grid"><label>Nombre<input id="itemName"></label><label>Destino<select id="itemDest"><option value="equip">Equipar ahora</option><option value="inventory">Guardar</option></select></label></div><button id="addItem" class="top">Registrar</button></div><div class="card"><h2>Equipo e inventario</h2><div id="inventoryList">${ inventoryRows(x) }</div></div>`;
@@ -795,7 +943,6 @@ function bindHero() {
   bindClass(x);
   $('moveAction').onclick = () => startAction('move');
   $('attackAction').onclick = () => startAction('attack');
-  $('defenseAction').onclick = () => startAction('defense');
   document.querySelectorAll('[data-action]').forEach(b => b.onclick = () => startAction(b.dataset.action));
   $('finishTurn').onclick = () => {
     x.actions = 0;
@@ -864,8 +1011,8 @@ function bindClass(x) {
         return;
       shamanPay(x, a.cost);
       if (a.kind === 'summon') {
-        let d = MD2.shamanSpirits[a.spirit];
-        x.shaman.spirits = x.shaman.spirits.filter(p => p.type !== a.spirit);
+        let d = MD2.shamanSpirits[a.spirit], family = a.spirit.replace(/[0-9]+$/, '');
+        x.shaman.spirits = x.shaman.spirits.filter(p => !p.type.startsWith(family));
         x.shaman.spirits.push({
           type: a.spirit,
           name: d.name,
@@ -873,7 +1020,9 @@ function bindClass(x) {
           hpMax: d.hp + (x.shaman.unlocked.nature ? 1 : 0),
           defense: d.defense,
           attack: d.attack,
-          effect: d.effect
+          effect: d.effect,
+          usedFreeAction: false,
+          defeated: false
         });
         x.shaman.spirits[x.shaman.spirits.length - 1].hp = x.shaman.spirits[x.shaman.spirits.length - 1].hpMax;
         say(`${ d.name } invocado en tu Zona. ${ a.effect }`, x);
@@ -885,27 +1034,43 @@ function bindClass(x) {
     document.querySelectorAll('[data-spirit-dmg]').forEach(b => b.onclick = () => {
       let p = x.shaman.spirits[+b.dataset.spiritDmg];
       p.hp = Math.max(0, p.hp - 1);
-      if (p.hp === 0) {
-        say(`${ p.name } ha sido derrotado.`, x);
-        x.shaman.spirits.splice(+b.dataset.spiritDmg, 1);
+      if (p.hp === 0 && !p.defeated) {
+        p.defeated = true;
+        log(`${ p.name } ha sido derrotado. Invócalo de nuevo para reactivarlo.`);
+        say(`${ p.name } ha sido derrotado. Invócalo de nuevo para reactivarlo.`, x);
       }
       save();
       renderHero();
     });
     document.querySelectorAll('[data-spirit-heal]').forEach(b => b.onclick = () => {
       let p = x.shaman.spirits[+b.dataset.spiritHeal];
+      if (p.defeated)
+        return;
       p.hp = Math.min(p.hpMax, p.hp + 1);
-      save();
-      renderHero();
-    });
-    document.querySelectorAll('[data-spirit-remove]').forEach(b => b.onclick = () => {
-      x.shaman.spirits.splice(+b.dataset.spiritRemove, 1);
       save();
       renderHero();
     });
     document.querySelectorAll('[data-spirit-turn]').forEach(b => b.onclick = () => {
       let p = x.shaman.spirits[+b.dataset.spiritTurn];
-      say(`Turno de ${ p.name }. Ataca con ${ p.attack }. ${ p.effect }`, x);
+      if (p.defeated)
+        return;
+      if (!p.usedFreeAction) {
+        p.usedFreeAction = true;
+        log(`${ p.name } actúa gratis (primera acción del turno).`);
+        say(`${ p.name } actúa. Ataca con ${ p.attack }. ${ p.effect } Esta acción fue gratuita.`, x);
+        save();
+        renderHero();
+        return;
+      }
+      if (x.actions < 1)
+        return alert('No te quedan acciones para hacer actuar de nuevo al Espíritu.');
+      if (!confirm(`¿Gastar 1 acción de ${ x.name } para que ${ p.name } actúe de nuevo este turno?`))
+        return;
+      x.actions--;
+      log(`${ x.name } gasta 1 acción para que ${ p.name } actúe de nuevo.`);
+      say(`${ p.name } actúa de nuevo. Ataca con ${ p.attack }. ${ p.effect } Esto costó 1 acción.`, x);
+      save();
+      renderHero();
     });
   }
   if (x.cls === 'paladin') {
@@ -1026,18 +1191,6 @@ function bindFlow(x) {
     $('finishMove').onclick = finishFlow;
   if ($('finishFlow'))
     $('finishFlow').onclick = finishFlow;
-  if ($('targetType'))
-    $('targetType').onchange = e => {
-      x.flow.attack = x.flow.attack || {};
-      x.flow.attack.targetType = e.target.value;
-      renderHero();
-    };
-  if ($('targetType'))
-    $('targetType').onchange = e => {
-      x.flow.attack = x.flow.attack || {};
-      x.flow.attack.targetType = e.target.value;
-      renderHero();
-    };
   if ($('repeatAttackSteps'))
     $('repeatAttackSteps').onclick = () => duckAndSay('Pasos del ataque: primero arma tu reserva de dados y elige el objetivo. Segundo, lanza físicamente los dados. Tercero, revisa habilidades y efectos disponibles. Cuarto, marca el resultado del ataque y confirma.');
   if ($('berserkerStanceSuggest'))
@@ -1069,10 +1222,6 @@ function bindFlow(x) {
   if ($('attackCalc'))
     $('attackCalc').onclick = () => {
       let a = x.flow.attack = x.flow.attack || {};
-      a.targetType = $('targetType') ? $('targetType').value : 'mob';
-      a.heroDice = $('heroDice') ? $('heroDice').value : '';
-      a.blackDice = $('blackDice') ? +$('blackDice').value || 0 : 0;
-      a.minions = $('minions') ? +$('minions').value || 0 : 0;
       const selected = Array.from($('attackResult').selectedOptions).map(o => o.value);
       a.killedMinions = selected.includes('m3') ? 3 : selected.includes('m2') ? 2 : selected.includes('m1') ? 1 : 0;
       a.leaderDamage = selected.includes('leader') ? 1 : 0;
@@ -1097,63 +1246,6 @@ function bindFlow(x) {
       duckAndSay(`Ataque resuelto. ${ xpMsgs.length ? xpMsgs.join(' ') : 'Sin eliminaciones registradas.' }`);
       finishFlow(true);
     };
-  if ($('defNext1'))
-    $('defNext1').onclick = () => {
-      x.flow.defense = {
-        blueDice: $('blueDice').value,
-        enemySwords: +$('enemySwords').value || 0
-      };
-      x.flow.step = 2;
-      save();
-      renderHero();
-    };
-  if ($('defNext2'))
-    $('defNext2').onclick = () => {
-      x.flow.step = 3;
-      save();
-      renderHero();
-    };
-  if ($('provokeWound'))
-    $('provokeWound').onclick = () => {
-      if (x.berserker.fury < 1)
-        return;
-      if (!confirm('¿Gastar 1 Furia para infligir 1 Herida al atacante?'))
-        return;
-      x.berserker.fury--;
-      log(`${ x.name } gasta 1 Furia (Provocador) para infligir 1 Herida al atacante.`);
-      save();
-      renderHero();
-      say('Infliges 1 Herida al atacante.');
-    };
-  if ($('defNext3'))
-    $('defNext3').onclick = () => {
-      x.flow.step = 4;
-      save();
-      renderHero();
-    };
-  if ($('defCalc'))
-    $('defCalc').onclick = () => {
-      let d = x.flow.defense;
-      d.shields = +$('defShields').value || 0;
-      d.wounds = Math.max(0, d.enemySwords - d.shields);
-      x.hp = Math.max(0, x.hp - d.wounds);
-      if (x.hp === 0 && !x.unconscious)
-        knockOut(x);
-      if (x.cls === 'berserker' && d.wounds > 0) {
-        let gain = Math.min(d.wounds, 7 - x.berserker.fury);
-        if (gain > 0) {
-          x.berserker.fury += gain;
-          log(`${ x.name } gana ${ gain } punto${ gain > 1 ? 's' : '' } de Furia por recibir heridas. Furia: ${ x.berserker.fury }/7.`);
-        }
-      }
-      x.flow.step = 5;
-      log(`Defensa resuelta: ${ d.wounds } heridas.`);
-      save();
-      renderHero();
-      say(`Recibes ${ d.wounds } heridas.${ x.cls === 'berserker' && d.wounds > 0 ? ` Ganas Furia. Furia actual: ${ x.berserker.fury } de 7.` : '' }`);
-    };
-  if ($('finishDefense'))
-    $('finishDefense').onclick = finishFlow;
 }
 function bindInventory(x) {
   $('addItem').onclick = () => {
@@ -1190,6 +1282,12 @@ function bindInventory(x) {
       renderHero();
     }
   });
+}
+function startHeroTurn(x) {
+  if (x.cls === 'shaman') {
+    x.shaman.elementBoostDone = false;
+    x.shaman.spirits.forEach(p => p.usedFreeAction = false);
+  }
 }
 function advancePending() {
   let i = s.heroes.findIndex(q => pending(q));
@@ -1306,7 +1404,19 @@ function knockOut(x) {
     defense: {}
   };
   log(`${ x.name } quedó inconsciente.`);
-  duckAndSay(`${ heroSpoken(x) } ha quedado inconsciente. Tumba su miniatura. No puede actuar ni ser objetivo.`);
+  syncResurrectionTokens();
+  if (s.resurrection.blue <= 0) {
+    triggerGameOver(x);
+    return;
+  }
+  duckAndSay(`${ heroSpoken(x) } ha quedado inconsciente. Tumba su miniatura. No puede actuar ni ser objetivo. Quedan ${ s.resurrection.blue } fichas de Resurrección disponibles.`);
+}
+function triggerGameOver(x) {
+  s.gameOver = true;
+  log(`${ x.name } queda inconsciente sin Fichas de Resurrección disponibles. La partida termina en derrota.`);
+  save();
+  render();
+  duckAndSay(`${ heroSpoken(x) } queda inconsciente y no quedan Fichas de Resurrección disponibles. La partida termina aquí. El grupo ha sido derrotado.`);
 }
 function renderResurrection() {
   if (!$('resurrectionPanel'))
@@ -1488,10 +1598,11 @@ function nextPhase() {
   });
   if (s.phase === 0) {
     s.phase = 1;
+    s.enemyPhaseAsked = false;
     log('Comienza la Fase de Enemigos.');
     save();
     render();
-    say('Comienza la fase de enemigos. Activa las cuadrillas y después los monstruos errantes.');
+    say('Comienza la fase de enemigos. Activa las cuadrillas y después los monstruos errantes. ¿Hay enemigos atacando a los héroes?');
     return;
   }
   if (s.phase === 1) {

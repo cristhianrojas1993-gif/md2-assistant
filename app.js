@@ -460,7 +460,7 @@ function renderHeroTabs() {
     b.innerHTML = '';
     return;
   }
-  b.innerHTML = `<button data-main="game">Partida</button>` + s.heroes.map((x, i) => `<button data-hi="${ i }" class="${ i === s.active && $('hero').classList.contains('active') ? 'activeHero' : '' }" style="--hero:${ COLORS[x.cls] }">${ x.name }</button>`).join('') + `<button data-main="rules">Reglas</button><button data-main="director">Director</button>`;
+  b.innerHTML = `<button data-main="game">Partida</button>` + s.heroes.map((x, i) => `<button data-hi="${ i }" class="${ i === s.active && $('hero').classList.contains('active') ? 'activeHero' : '' } ${ x.turnDone && !x.unconscious ? 'heroTurnDone' : '' }" style="--hero:${ COLORS[x.cls] }">${ x.name }${ x.turnDone && !x.unconscious ? ' ✓' : '' }</button>`).join('') + `<button data-main="rules">Reglas</button><button data-main="director">Director</button>`;
   b.querySelectorAll('[data-hi]').forEach(q => q.onclick = () => {
     s.active = +q.dataset.hi;
     save();
@@ -596,6 +596,16 @@ function renderHero() {
   if (x.lastActiveRound !== s.round && !x.unconscious) {
     x.lastActiveRound = s.round;
     startHeroTurn(x);
+  }
+  if (s.phase === 0 && s.confirmed) {
+    const stillPlaying = s.heroes.filter(q => !q.unconscious && !q.turnDone);
+    if (stillPlaying.length === 0 && s.heroes.some(q => !q.unconscious)) {
+      s.turnPrompt = false;
+      save();
+      say('Todos los héroes han jugado su turno. Comienza la fase de enemigos.');
+      nextPhase();
+      return;
+    }
   }
   if (s.turnPrompt && s.phase !== 0) {
     s.turnPrompt = false;
@@ -1403,6 +1413,8 @@ function startAction(type) {
   const x = h();
   if (x.unconscious)
     return alert('Este héroe está inconsciente y no puede realizar acciones.');
+  if (x.turnDone)
+    return alert(`${ x.name } ya jugó su turno en esta ronda. Elige otro héroe.`);
   if (pending(x))
     return alert('Debes confirmar la habilidad pendiente.');
   if (s.phase !== 0)

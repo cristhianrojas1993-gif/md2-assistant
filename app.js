@@ -79,6 +79,7 @@ function makeHero(cls = 'rogue') {
     actions: s.mode === 'solo' ? 4 : 3,
     lastActiveRound: 0,
     turnDone: false,
+    exitedMap: false,
     choices: { 1: null },
     lockedChoices: {},
     move: {
@@ -190,6 +191,8 @@ s.heroes.forEach(x => {
     x.manaAtKO = null;
   if (typeof x.turnDone !== 'boolean')
     x.turnDone = false;
+  if (typeof x.exitedMap !== 'boolean')
+    x.exitedMap = false;
 });
 if (!s.resurrection)
   s.resurrection = {
@@ -513,7 +516,7 @@ function renderHeroTabs() {
     b.innerHTML = '';
     return;
   }
-  b.innerHTML = `<button data-main="game">Partida</button>` + s.heroes.map((x, i) => `<button data-hi="${ i }" class="${ i === s.active && $('hero').classList.contains('active') ? 'activeHero' : '' } ${ x.turnDone && !x.unconscious ? 'heroTurnDone' : '' }" style="--hero:${ COLORS[x.cls] }">${ x.name }${ x.turnDone && !x.unconscious ? ' ✓' : '' }</button>`).join('') + `<button data-main="rules">Reglas</button>`;
+  b.innerHTML = `<button data-main="game">Partida</button>` + s.heroes.map((x, i) => `<button data-hi="${ i }" class="${ i === s.active && $('hero').classList.contains('active') ? 'activeHero' : '' } ${ (x.turnDone && !x.unconscious) || x.exitedMap ? 'heroTurnDone' : '' }" style="--hero:${ COLORS[x.cls] }">${ x.name }${ x.exitedMap ? ' 🚪' : x.turnDone && !x.unconscious ? ' ✓' : '' }</button>`).join('') + `<button data-main="rules">Reglas</button>`;
   b.querySelectorAll('[data-hi]').forEach(q => q.onclick = () => {
     s.active = +q.dataset.hi;
     save();
@@ -554,7 +557,7 @@ function renderEnemyDefense() {
     panel.innerHTML = '';
     return;
   }
-  const available = s.heroes.filter(x => !x.unconscious);
+  const available = s.heroes.filter(x => !x.unconscious && !x.exitedMap);
   panel.innerHTML = `<h2>Defensa del grupo</h2><p class="notice">¿Hay enemigos atacando a los héroes en esta fase?</p><div class="actions"><button id="enemyAttackYes" class="primary">Sí, un héroe es atacado</button><button id="enemyAttackNo">No hay más ataques, continuar</button></div><div id="enemyDefenseForm"></div>`;
   $('enemyAttackYes').onclick = () => {
     s.enemyPhaseAsked = true;
@@ -820,8 +823,14 @@ function skillsHtml(x) {
   html += '</div><div class="card"><h2>Habilidades activas</h2>' + activeSkills(x).map(q => `<div class="skill">${ q.name }</div>`).join('') + '</div>';
   return html;
 }
+function missionTurnButton(x) {
+  const m = getActiveMission();
+  if (m && m.id === 'cursed_sword' && s.missionState.bearerId === x.id && !s.missionResult)
+    return `<button id="destroyCrystalBtn" ${ x.actions < 1 ? 'disabled' : '' }>Destruir Cristal del Pecado</button>`;
+  return '';
+}
 function actionsHtml(x) {
-  return `<div class="card"><h2>Turno de ${ x.name }</h2><p class="notice">Acciones restantes: <b>${ x.actions }</b></p><div class="actions"><button id="moveAction">Movimiento</button><button id="attackAction">Ataque</button><button data-action="Recuperación">Recuperación</button><button data-action="Intercambiar y equipar">Intercambiar y equipar</button><button id="finishTurn" class="primary">Finalizar turno</button></div></div>${ flowHtml(x) }`;
+  return `<div class="card"><h2>Turno de ${ x.name }</h2><p class="notice">Acciones restantes: <b>${ x.actions }</b></p><div class="actions"><button id="moveAction">Movimiento</button><button id="attackAction">Ataque</button><button data-action="Recuperación">Recuperación</button><button data-action="Intercambiar y equipar">Intercambiar y equipar</button>${ missionTurnButton(x) }<button id="finishTurn" class="primary">Finalizar turno</button></div></div>${ flowHtml(x) }`;
 }
 function flowHtml(x) {
   if (!x.flow.type)
@@ -1558,6 +1567,8 @@ function startAction(type) {
   const x = h();
   if (x.unconscious)
     return alert('Este héroe está inconsciente y no puede realizar acciones.');
+  if (x.exitedMap)
+    return alert(`${ x.name } ya salió de la mazmorra y no participa más en esta partida.`);
   if (x.turnDone)
     return alert(`${ x.name } ya jugó su turno en esta ronda. Elige otro héroe.`);
   if (pending(x))
@@ -1620,6 +1631,18 @@ function useMove(k) {
   renderHero();
   say(`Quedan ${ x.move.pm } puntos de movimiento.`);
 }
+function checkMissionExitVictory() {
+  const available = s.heroes.filter(q => !q.unconscious);
+  if (available.length > 0 && available.every(q => q.exitedMap)) {
+    s.missionResult = 'victory';
+    save();
+    tab('missions');
+    renderMissions();
+    duckAndSay('Todos los héroes han salido de la mazmorra. La misión termina en victoria.');
+    return true;
+  }
+  return false;
+}
 function bindMissionButtons(x) {
   const escapeBtn = document.getElementById('missionEscapeBtn');
   if (escapeBtn)
@@ -1628,13 +1651,26 @@ function bindMissionButtons(x) {
       const zoneLabel = m.id === 'road_to_hell' ? 'la zona del Altar' : 'la zona de la Grieta';
       if (x.move.pm < 1)
         return alert('No tienes puntos de movimiento disponibles para esta acción.');
-      if (!confirm(`Confirma que ${ x.name } se encuentra en ${ zoneLabel } y quieres gastar 1 punto de movimiento para salir de la mazmorra.`))
+      if (!confirm(`Confirma que ${ x.name } se encuentra en ${ zoneLabel } y quieres gastar 1 punto de movimiento para salir de la mazmorra. ${ x.name } dejará de participar en la partida.`))
         return;
       x.move.pm--;
-      log(`${ x.name } sale de la mazmorra por ${ zoneLabel }.`);
-      if (!x.move.pm)
-        x.move.on = false;
+      x.exitedMap = true;
+      x.turnDone = true;
+      x.actions = 0;
+      x.flow = {
+        type: null,
+        step: 0,
+        attack: {},
+        defense: {}
+      };
+      x.move = {
+        on: false,
+        pm: 0
+      };
+      log(`${ x.name } sale de la mazmorra por ${ zoneLabel } y queda fuera del mapa.`);
       save();
+      if (checkMissionExitVictory())
+        return;
       renderHero();
       say(`${ x.name } sale de la mazmorra.`);
     };
@@ -1660,6 +1696,30 @@ function bindMissionButtons(x) {
       renderHero();
       renderMissions();
       say(`${ x.name } recoge un fragmento. Gana 5 de experiencia.`);
+    };
+  const crystalBtn = document.getElementById('destroyCrystalBtn');
+  if (crystalBtn)
+    crystalBtn.onclick = () => {
+      if (x.actions < 1)
+        return alert('No quedan acciones disponibles.');
+      const st = s.missionState;
+      if (!confirm(`Confirma que ${ x.name } se encuentra en la zona de un Cristal del Pecado. Se gastará 1 acción para destruirlo.`))
+        return;
+      x.actions--;
+      st.crystalsDestroyed = (st.crystalsDestroyed || 0) + 1;
+      log(`${ x.name } destruye un Cristal del Pecado (${ st.crystalsDestroyed }/5).`);
+      const bonus = swordBonusLabel(st.crystalsDestroyed);
+      if (st.crystalsDestroyed >= 5) {
+        s.missionResult = 'victory';
+        save();
+        renderMissions();
+        duckAndSay('Los 5 Cristales del Pecado han sido destruidos. La misión termina en victoria.');
+        return;
+      }
+      save();
+      renderHero();
+      renderMissions();
+      say(`Cristal destruido. ${ st.crystalsDestroyed } de 5.${ bonus ? ` La espada gana ${ bonus }.` : '' }`);
     };
 }
 function finishFlow(skipGenericVoice = false) {
@@ -2141,6 +2201,17 @@ $('newGameSettings').onclick = () => {
 function getActiveMission() {
   return MD2.missions.find(m => m.id === s.activeMissionId) || null;
 }
+function swordBonusLabel(crystals) {
+  if (crystals >= 4)
+    return '+2 dados amarillos, +2 dados naranjas';
+  if (crystals === 3)
+    return '+2 dados amarillos, +1 dado naranja';
+  if (crystals === 2)
+    return '+2 dados amarillos';
+  if (crystals === 1)
+    return '+1 dado amarillo';
+  return '';
+}
 function initMissions() {
   const select = $('missionSelect');
   MD2.missions.forEach(m => {
@@ -2239,8 +2310,10 @@ function renderMissionMechanics(m) {
   }
   if (m.id === 'cursed_sword') {
     const st = s.missionState;
+    st.crystalsDestroyed = st.crystalsDestroyed || 0;
     const bearer = s.heroes.find(x => x.id === st.bearerId);
-    return `<div class="card"><h3>Espada Maldita</h3>${ bearer ? `<p class="notice">${ bearer.name } porta la espada. Rondas consecutivas: ${ st.roundsHeld } / 4.</p>` : `<label>Asignar espada inicial<select id="swordAssign"><option value="">Elige un héroe</option>${ s.heroes.map(h => `<option value="${ h.id }">${ h.name }</option>`).join('') }</select></label>` }</div>`;
+    const bonusLabel = swordBonusLabel(st.crystalsDestroyed);
+    return `<div class="card"><h3>Espada Maldita</h3>${ bearer ? `<p class="notice">${ bearer.name } porta la espada. Rondas consecutivas: ${ st.roundsHeld } / 4.</p>` : `<label>Asignar espada inicial<select id="swordAssign"><option value="">Elige un héroe</option>${ s.heroes.map(h => `<option value="${ h.id }">${ h.name }</option>`).join('') }</select></label>` }<p class="muted top">Cristales del Pecado destruidos: ${ st.crystalsDestroyed } / 5${ bonusLabel ? ` · Bonus de la espada: ${ bonusLabel }` : '' }</p></div>`;
   }
   return '';
 }
@@ -2255,7 +2328,7 @@ function bindMissionMechanics(m) {
         save();
         renderMissions();
         renderHero();
-        say(`Portón Izquierdo abierto. ${ x.name } gana 3 de experiencia.${ s.missionState.gateRight ? ' Ambos portones abiertos. Ya pueden ir al Altar para escapar gastando 1 punto de movimiento.' : '' }`);
+        say(`Portón Izquierdo abierto. +3 XP.${ s.missionState.gateRight ? ' Ya pueden escapar por el Altar.' : '' }`);
       };
     if ($('gateRightBtn'))
       $('gateRightBtn').onclick = () => {
@@ -2266,7 +2339,7 @@ function bindMissionMechanics(m) {
         save();
         renderMissions();
         renderHero();
-        say(`Portón Derecho abierto. ${ x.name } gana 3 de experiencia.${ s.missionState.gateLeft ? ' Ambos portones abiertos. Ya pueden ir al Altar para escapar gastando 1 punto de movimiento.' : '' }`);
+        say(`Portón Derecho abierto. +3 XP.${ s.missionState.gateLeft ? ' Ya pueden escapar por el Altar.' : '' }`);
       };
   }
   if (m.id === 'the_step' && $('reachRiftBtn'))
@@ -2276,7 +2349,7 @@ function bindMissionMechanics(m) {
       save();
       renderMissions();
       renderHero();
-      say('El Invocador llegó a la Grieta. Los héroes ya pueden salir de la mazmorra gastando 1 punto de movimiento.');
+      say('El Invocador llegó a la Grieta. Ya pueden salir.');
     };
   if (m.id === 'demonic_artifact' && $('forgeArtifactBtn'))
     $('forgeArtifactBtn').onclick = () => {

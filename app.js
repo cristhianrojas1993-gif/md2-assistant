@@ -847,8 +847,17 @@ function flowHtml(x) {
 }
 function swapEquipFlow(x) {
   const m = getActiveMission();
-  const isBearer = m && m.id === 'cursed_sword' && s.missionState.bearerId === x.id && !s.missionResult;
-  const swordOption = isBearer ? `<label class="top">Pasar la Espada Maldita a<select id="swordPassTo"><option value="">Elige un héroe</option>${ s.heroes.filter(h2 => h2.id !== x.id && !h2.unconscious).map(h2 => `<option value="${ h2.id }">${ h2.name }</option>`).join('') }</select></label><button id="passSwordBtn" class="primary top">Confirmar intercambio de la espada</button>` : '';
+  if (!m || m.id !== 'cursed_sword' || s.missionResult)
+    return `<div class="card"><p class="notice">Intercambiar y equipar registrada.</p><button id="finishFlow" class="top">Finalizar acción</button></div>`;
+  const bearer = s.heroes.find(h2 => h2.id === s.missionState.bearerId);
+  let swordOption = '';
+  if (bearer && bearer.id === x.id) {
+    swordOption = `<label class="top">Pasar la Espada Maldita a<select id="swordPassTo"><option value="">Elige un héroe</option>${ s.heroes.filter(h2 => h2.id !== x.id && !h2.unconscious).map(h2 => `<option value="${ h2.id }">${ h2.name }</option>`).join('') }</select></label><button id="passSwordBtn" class="primary top">Confirmar intercambio de la espada</button>`;
+  } else if (bearer && bearer.id !== x.id) {
+    swordOption = `<button id="requestSwordBtn" class="primary top">Tomar la Espada Maldita de ${ bearer.name }</button>`;
+  } else if (!bearer) {
+    swordOption = `<label class="top">Recibir la Espada Maldita (nadie la porta)<select id="swordTakeFrom"><option value="${ x.id }">${ x.name } la toma</option></select></label><button id="passSwordBtn" class="primary top">Confirmar</button>`;
+  }
   return `<div class="card"><p class="notice">Intercambiar y equipar registrada.</p>${ swordOption }<button id="finishFlow" class="top">Finalizar acción</button></div>`;
 }
 function recoveryFlow(x) {
@@ -1356,10 +1365,13 @@ function bindFlow(x) {
   bindMissionButtons(x);
   if ($('passSwordBtn'))
     $('passSwordBtn').onclick = () => {
-      const targetId = $('swordPassTo').value;
+      const selectEl = $('swordPassTo') || $('swordTakeFrom');
+      const targetId = selectEl.value;
       if (!targetId)
         return alert('Elige a qué héroe le pasas la espada.');
       const target = s.heroes.find(h2 => h2.id == targetId);
+      if (target.id !== x.id && !confirm(`Confirma que ${ x.name } y ${ target.name } se encuentran en la misma casilla.`))
+        return;
       s.missionState.bearerId = target.id;
       s.missionState.roundsHeld = 0;
       log(`${ x.name } pasa la Espada Maldita a ${ target.name }. El contador de rondas se reinicia.`);
@@ -1367,6 +1379,21 @@ function bindFlow(x) {
       renderHero();
       renderMissions();
       say(`La Espada Maldita pasa a ${ target.name }. El contador de rondas se reinicia a cero.`);
+    };
+  if ($('requestSwordBtn'))
+    $('requestSwordBtn').onclick = () => {
+      const bearer = s.heroes.find(h2 => h2.id === s.missionState.bearerId);
+      if (!bearer)
+        return;
+      if (!confirm(`Confirma que ${ x.name } y ${ bearer.name } se encuentran en la misma casilla.`))
+        return;
+      s.missionState.bearerId = x.id;
+      s.missionState.roundsHeld = 0;
+      log(`${ x.name } toma la Espada Maldita de ${ bearer.name }. El contador de rondas se reinicia.`);
+      save();
+      renderHero();
+      renderMissions();
+      say(`La Espada Maldita pasa a ${ x.name }. El contador de rondas se reinicia a cero.`);
     };
   if ($('furyExtraPm'))
     $('furyExtraPm').onclick = () => {
@@ -2259,6 +2286,31 @@ function initMissions() {
   renderMissions();
 }
 function deactivateMission() {
+  if (s.missionResult) {
+    const choice = confirm('Misión finalizada.\n\nAceptar = seguir jugando con los mismos héroes (continúa la partida general).\nCancelar = empezar una partida nueva desde cero.');
+    s.activeMissionId = '';
+    s.missionResult = '';
+    s.missionState = {};
+    if (choice) {
+      s.heroes.forEach(x => {
+        x.exitedMap = false;
+        x.turnDone = false;
+      });
+      save();
+      $('missionSelect').value = '';
+      renderMissions();
+      render();
+      say('Continúa la partida con los mismos héroes.');
+    } else {
+      s = fresh();
+      save();
+      stopAmbient();
+      render();
+      tab('setup');
+      say('Nueva partida iniciada.');
+    }
+    return;
+  }
   if (!confirm('¿Desactivar la misión activa? Se perderá el progreso de sus mecánicas especiales.'))
     return;
   s.activeMissionId = '';

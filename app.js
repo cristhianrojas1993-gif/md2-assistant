@@ -1064,7 +1064,7 @@ function bindHero() {
       continueLevelQueueAfterSkill();
     else
       advancePending();
-    say(`${ v } confirmada. Esta elección queda bloqueada.`, x);
+    say(`Habilidad ${ v } confirmada.`, x);
   });
   document.querySelectorAll('[data-undo]').forEach(b => b.onclick = () => {
     let n = +b.dataset.undo;
@@ -1487,12 +1487,12 @@ function advancePending() {
     render();
     tab('hero');
     setTimeout(() => document.querySelector('[data-sec="skills"]').click(), 30);
-    say(`Ahora debes elegir la habilidad de ${ s.heroes[i].name }.`);
+    say(`${ s.heroes[i].name } escoge habilidad.`);
   } else {
     save();
     render();
     tab('hero');
-    say('Todos los héroes tienen sus habilidades pendientes confirmadas. Comienza la partida.');
+    say('Comienza la partida.');
   }
 }
 function startAction(type) {
@@ -1971,7 +1971,6 @@ $('confirmGroup').onclick = () => {
   save();
   render();
   advancePending();
-  say(s.mode === 'solo' ? 'Modo solitario activado. Tu héroe dispone de 4 acciones. Elige ahora su habilidad inicial.' : 'Grupo confirmado. Elige ahora la habilidad inicial de cada héroe.');
 };
 $('playerMode').onchange = e => {
   if (s.confirmed) {

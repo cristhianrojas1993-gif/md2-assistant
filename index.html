@@ -120,6 +120,15 @@
   <div id="heroPage"></div>
 </section>
 
+<section id="missions" class="view">
+  <div class="card">
+    <h2>Misiones del juego base</h2>
+    <p class="muted">Elige una misión para ver sus losetas, objetivos y reglas especiales, sin necesidad de consultar el libro.</p>
+    <label>Misión<select id="missionSelect"><option value="">Selecciona una misión</option></select></label>
+  </div>
+  <div id="missionDetail"></div>
+</section>
+
 <section id="rules" class="view">
   <div class="card">
     <h2>Asistente de reglas</h2>
@@ -141,10 +150,6 @@
 
 </section>
 
-<section id="director" class="view">
-<div class="card"><h2>Misión</h2><label>Nombre<input id="missionName" placeholder="Ej.: El Paso"></label><label>Objetivo<textarea id="missionObjective"></textarea></label><label>Reglas especiales<textarea id="missionRules"></textarea></label><div class="row"><button id="saveMission" class="primary">Guardar misión</button><button id="announceMission">Leer objetivo</button></div><div id="missionSummary" class="notice"></div></div>
-<div class="card"><div class="row between"><h2>Enemigos</h2><button id="clearEnemies">Vaciar</button></div><div class="grid"><label>Nombre<input id="enemyName"></label><label>Tipo<select id="enemyType"><option>Cuadrilla</option><option>Líder</option><option>Monstruo errante</option><option>Jefe</option></select></label><label>Vida máxima<input id="enemyHpMax" type="number" min="1" value="5"></label><label>Fuego<input id="enemyFire" type="number" min="0" value="0"></label><label>Escarcha<input id="enemyFrost" type="number" min="0" value="0"></label></div><button id="addEnemy" class="primary">Registrar enemigo</button><div id="enemyList"></div></div>
-<div class="card"><h2>Diario de partida</h2><div class="row"><button id="exportJournal">Exportar diario</button><button id="clearJournal">Vaciar diario</button></div><div id="directorJournal"></div></div></section>
 <section id="settings" class="view">
 <div class="card"><h2>Asistente de voz</h2><div id="audioStatus" class="notice">Estado de la voz: pendiente.</div>
 <div class="actions"><button id="enableAudio" class="primary">Activar voz</button><button id="testVoiceSettings">Probar voz</button><button id="repeatLastAnnouncement">Repetir último anuncio</button></div>
@@ -157,7 +162,8 @@
 <nav>
   <button data-tab="setup" class="active">Preparación</button>
   <button data-tab="game">Partida</button>
-  <button data-tab="rules">Reglas</button><button data-tab="director">Director</button><button data-tab="settings">Configuración</button>
+  <button data-tab="missions">Misiones</button>
+  <button data-tab="rules">Reglas</button><button data-tab="settings">Configuración</button>
 </nav>
 
 <script src="data.js"></script>

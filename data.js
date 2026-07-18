@@ -841,4 +841,94 @@ MD2.shamanSpirits = {
     attack: '3 dados amarillos',
     effect: 'Ataque: el defensor recibe 1 ficha de Escarcha.'
   }
-};
+};MD2.missions = [
+  {
+    name: 'Carretera al Infierno',
+    tiles: '1A, 3A, 5A',
+    objectives: [
+      'Abrir el Portón',
+      'Entrar al Infierno'
+    ],
+    rules: 'El Portón (puerta con contorno blanco) deja pasar a los enemigos libremente, pero los héroes no pueden abrirlo por medios normales; bloquea la línea de visión. Hay 2 interruptores (fichas de Objetivo bocarriba): cualquier héroe en su zona gasta 1 punto de movimiento para activarlo y retirarlo, ganando 3 XP. Cuando ambos están activados, el Portón se abre y se revela la Cámara. Para terminar, cualquier héroe en la zona del Altar gasta 1 punto de movimiento para salir de la mazmorra; cuando todos salieron, victoria.'
+  },
+  {
+    name: 'El Paso',
+    tiles: '2A, 4A, 5A',
+    objectives: [
+      'Proteger al Invocador hasta la Grieta',
+      'Entrar al Infierno por la Grieta'
+    ],
+    rules: 'En la preparación se usa una miniatura de héroe sobrante (sin peana) para representar al Invocador, colocada en la zona de inicio. Desde la segunda ronda, al inicio de cada Fase de Héroes, el Invocador se mueve solo 2 zonas hacia la puerta blanca por el camino más corto. No puede abrir puertas ni abandonar una zona con enemigos, cuenta como héroe para ser elegido como objetivo, pero no actúa ni lleva objetos. Al llegar a la puerta blanca la abre y revela la Cámara (o sigue avanzando si ya estaba abierta). Al llegar a la Grieta se retira al Invocador y cualquier héroe puede gastar 1 punto de movimiento ahí para salir de la mazmorra. Atributos del Invocador: Vida 8, Defensa 2 (azul).'
+  },
+  {
+    name: 'El Artefacto Demoníaco',
+    tiles: '1B, 3B, 5B, 7B',
+    objectives: [
+      'Reunir los 3 Fragmentos',
+      'Forjar el Artefacto con Fuego Infernal'
+    ],
+    rules: 'Los Fragmentos son fichas de Objetivo bocarriba; cualquier héroe puede recogerlas interactuando en su zona, ganando 5 XP cada una. Una vez reunidos los 3, si todos los héroes que llevan al menos 1 Fragmento están en la zona de la Forja Demoníaca (ficha gris), cualquiera de ellos gasta 1 acción para forjar el Artefacto y ganar la misión.'
+  },
+  {
+    name: 'La Espada Maldita',
+    tiles: '1B, 2B, 5B, 6A',
+    objectives: [
+      'Destruir los 5 Cristales del Pecado',
+      'No dejar que la Espada Maldita derrote a ningún héroe'
+    ],
+    rules: 'En la preparación se busca el "Espadón Enorme" en el mazo de Tesoro Común y se asigna a un héroe como arma inicial: es la Espada Maldita, que no puede guardarse en inventario. Quien la porta recibe heridas automáticas al inicio de cada Fase de Héroes según rondas consecutivas con ella: 1ª ronda 1 herida, 2ª ronda 2 heridas, 3ª ronda 3 heridas, 4ª ronda consecutiva = derrota inmediata de la misión (heridas antes que cualquier resurrección). Se usan fichas de Corrupción para contar las rondas; al pasar la espada a otro héroe con una acción de Intercambio, la cuenta se reinicia. Un héroe con la Espada en la zona de un Cristal del Pecado (ficha de Objetivo) gasta 1 acción para destruirlo, ganando 5 XP; al destruir los 5, victoria. La Espada gana dados de ataque según cristales destruidos: 1 cristal +1 amarillo, 2 cristales +2 amarillos, 3 cristales +2 amarillos y +1 rojo, 4 cristales +2 amarillos y +2 rojos. Modo Solitario: las heridas no son acumulativas (siempre 1 por ronda), el héroe no es derrotado tras 4 rondas, y puede elegir cualquier arma inicial como "Arma Maldita".'
+  },
+  {
+    name: 'Laberinto Infernal',
+    tiles: '3B, 4B, 5B, 6A (desconectadas)',
+    objectives: [
+      'Matar a las 4 Bestias Errantes especiales'
+    ],
+    rules: 'En la preparación se coloca 1 ficha de Corrupción en cada una de las 4 zonas indicadas. Las losetas no están conectadas: solo se accede mediante pasadizos mágicos (fichas de Objetivo); cualquier héroe en una zona con ficha de Objetivo gasta 1 punto de movimiento para moverse a otra zona con ficha de Objetivo. Al revelar una Cámara con ficha de Corrupción, además de lo habitual, aparece un Monstruo Errante (una Bestia) en la zona marcada. Cuadrillas y Monstruos Errantes también usan los pasadizos: en Fase de Enemigos, si no hay héroes en una loseta, se mueven a la zona de Objetivo más cercana (todas las zonas con Objetivo se consideran adyacentes entre sí para ellos, aunque no haya línea de visión real). Al morir las 4 Bestias, victoria.'
+  },
+  {
+    name: 'La Bestia Terrorífica',
+    tiles: '1B, 4B, 5B, 7B',
+    objectives: [
+      'Usar las Plumas de Ángel para volver vulnerable a la Bestia',
+      'Derrotar a la Bestia'
+    ],
+    rules: 'En la preparación aparece un Monstruo Errante de Nivel 5 al azar en la zona indicada: es la Bestia. Se activa normalmente en Fase de Enemigos pero es invulnerable por defecto (no puede ser objetivo de ataques, habilidades ni sufrir heridas). Las Plumas de Ángel son fichas de Objetivo: cualquier héroe en su zona gasta 1 punto de movimiento para recogerlas (puede llevar varias). Un héroe con una Pluma en la zona de la Bestia gasta 1 punto de movimiento para colocarla sobre ella. Mientras tenga al menos 1 Pluma encima, la Bestia es vulnerable. Al inicio de cada ronda se retiran todas las Plumas de la Bestia y vuelve a ser invulnerable. Al morir la Bestia, victoria.'
+  },
+  {
+    name: 'Liberar a Miguel',
+    tiles: '2B, 4B, 8A',
+    objectives: [
+      'Acceder a la Cámara de la Corrupción rompiendo todos los Sellos',
+      'Liberar a Miguel'
+    ],
+    rules: 'Miguel está prisionero en la Loseta 8A (Cámara del Jefe), accesible solo por la puerta blanca, que se abre al romper todos los Sellos de Corrupción. Al abrirla no se revela carta de Puerta; al entrar un héroe comienza el Combate Final. Cada Sello es una ficha de Corrupción: romperlo cuesta 1 acción en su zona, da 5 XP por héroe y retira la ficha. Combate Final: al entrar un héroe, todos van a la Zona de Inicio del Combate Final; se retiran las losetas ajenas a la Cámara del Jefe con sus componentes, se retira el Medidor de Oscuridad y se coloca el Tablero de Jefe de Miguel; los héroes recuperan Vida y Maná al máximo. Se colocan 2 fichas de Corrupción por héroe en las Zonas de Sombras, repartidas parejo entre ellas (elegidas por los jugadores); luego se hace una Fase de Subida de Nivel y comienza nueva Fase de Héroes. Miguel es invulnerable mientras haya fichas de Corrupción en su loseta. Un héroe en zona con ficha de Corrupción gasta 1 acción para eliminarla, pero lanza 1 dado negro: garra = 1 herida, mano = 1 ficha de Corrupción en su propio tablero, ambos símbolos = ambas cosas. Si algún efecto agrega fichas de Corrupción a la loseta, Miguel vuelve a ser invulnerable. Al morir Miguel, victoria.'
+  },
+  {
+    name: 'Recolector de Almas',
+    tiles: '2B, 3B, 5B, 6B',
+    objectives: [
+      'Recolectar 10 Almas por héroe',
+      'Salir por el Portón al Valle de las Almas'
+    ],
+    rules: 'Se ganan Almas matando enemigos: 1 Alma por Secuaz o Líder eliminado, 3 Almas por Monstruo Errante. Las fichas de Objetivo son Jaulas de Almas: destruirlas (1 acción en su zona) da 5 Almas y 5 XP al héroe. Se usan fichas de Vida en la zona del Portón (ficha gris) para llevar la cuenta de Almas recolectadas. Al reunir colectivamente 10 Almas por héroe, cualquier héroe en la zona del Portón gasta 1 punto de movimiento para salir; al salir todos, victoria.'
+  },
+  {
+    name: 'Las Llaves del Alma',
+    tiles: '6B, 7A, 8B',
+    objectives: [
+      'Recoger las Llaves del Alma antes de que desaparezcan',
+      'Derrotar a la Parca'
+    ],
+    rules: 'La Parca espera en la Cámara del Tiempo (Loseta 8B, Cámara del Jefe), accesible solo por la puerta blanca, que se abre al reunir las 3 Llaves del Alma. Al abrirla no se revela carta de Puerta; al entrar un héroe comienza el Combate Final. En la preparación se colocan fichas de Tiempo sobre cada ficha de Objetivo según el mapa; en cada Fase de Oscuridad se retira 1 ficha de Tiempo de cada una. Si hay que retirar una ficha de Tiempo y no quedan, ese Objetivo desaparece y la misión termina en derrota. Cada Llave es una ficha de Objetivo: recogerla cuesta 1 acción en su zona y da 8 XP por héroe; si desaparece una sola Llave, derrota inmediata. Los enemigos se mueven libremente a través de puertas cerradas (Planos Etéreos); las puertas cerradas igual bloquean línea de visión. Combate Final: al entrar un héroe se agrupa a todos en la Zona de Inicio del Combate Final, se limpian las losetas ajenas y se coloca el Tablero de Jefe de la Parca; héroes recuperan Vida y Maná al máximo. Se colocan 2 fichas de Tiempo en cada Zona de Reloj de Arena, se hace una Fase de Subida de Nivel y comienza nueva Fase de Héroes. Un héroe en una Zona de Reloj de Arena gasta 1 acción para añadir 1 ficha de Tiempo a esa zona. Si hay que eliminar una ficha de Tiempo por habilidad de la Parca y no quedan en esa zona, derrota. Al matar a la Parca, victoria.'
+  },
+  {
+    name: 'Hellscape',
+    tiles: '2B, 3A, 5A, 6A, 7A',
+    objectives: [
+      'Todos los héroes deben llegar a la Loseta 5A',
+      'Derrotar al Monstruo Errante Final'
+    ],
+    rules: 'Los héroes empiezan separados, cada uno en una Zona de Inicio distinta (con 5-6 héroes, 1 o 2 zonas pueden tener 2 héroes como máximo). A todos los efectos (cuadrillas con solo 2 secuaces y líder, monstruos errantes con vida de 2 héroes) se trata como partida de 2 héroes, excepto para el Monstruo Errante Final. Con menos de 4 héroes se retiran losetas de sobra, dejando la central más 1 loseta por héroe (nunca se retira la 5A). La Loseta central (5A) solo es accesible por Puertas Dimensionales (contorno blanco), inicialmente cerradas; una se abre sola cuando ya no quedan enemigos en su loseta y todas las Cámaras fueron reveladas (sin revelar carta de Puerta en la 5A). Una vez que un héroe abrió su Puerta Dimensional, puede moverse libremente por todas las demás sin abrirlas. Las puertas cerradas bloquean línea de visión. Cuando las 5 puertas de la Loseta 5A están abiertas, aparece un Monstruo Errante de Nivel 5 en su zona central; se roban cartas del mazo de Objetos de Cuadrilla de Nivel 5 hasta encontrar un arma con el mismo tipo de ataque que el Monstruo, y se le añade esa arma. A diferencia de otros Monstruos Errantes, este tiene vida equivalente al número de héroes en la partida. Al morir, victoria.'
+  }
+];

@@ -158,22 +158,10 @@ function fresh() {
     darknessPending: false,
     turnPrompt: false,
     enemyPhaseAsked: false,
-    gameOver: false,
-    mission: {
-      name: '',
-      objective: '',
-      rules: ''
-    },
-    enemies: []
+    gameOver: false
   };
 }
 let s = JSON.parse(localStorage.getItem(KEY) || 'null') || fresh();
-s.mission = s.mission || {
-  name: '',
-  objective: '',
-  rules: ''
-};
-s.enemies = s.enemies || [];
 s.heroes.forEach(x => x.statuses = x.statuses || []);
 if (!s.mode)
   s.mode = 'coop';
@@ -505,7 +493,6 @@ function render() {
   renderHistory();
   renderResurrection();
   renderSettings();
-  renderDirector();
   renderGameOver();
   updateAmbient();
   $('phaseChip').textContent = s.confirmed ? MD2.phases[s.phase] : 'Preparación';
@@ -516,7 +503,7 @@ function renderHeroTabs() {
     b.innerHTML = '';
     return;
   }
-  b.innerHTML = `<button data-main="game">Partida</button>` + s.heroes.map((x, i) => `<button data-hi="${ i }" class="${ i === s.active && $('hero').classList.contains('active') ? 'activeHero' : '' } ${ x.turnDone && !x.unconscious ? 'heroTurnDone' : '' }" style="--hero:${ COLORS[x.cls] }">${ x.name }${ x.turnDone && !x.unconscious ? ' ✓' : '' }</button>`).join('') + `<button data-main="rules">Reglas</button><button data-main="director">Director</button>`;
+  b.innerHTML = `<button data-main="game">Partida</button>` + s.heroes.map((x, i) => `<button data-hi="${ i }" class="${ i === s.active && $('hero').classList.contains('active') ? 'activeHero' : '' } ${ x.turnDone && !x.unconscious ? 'heroTurnDone' : '' }" style="--hero:${ COLORS[x.cls] }">${ x.name }${ x.turnDone && !x.unconscious ? ' ✓' : '' }</button>`).join('') + `<button data-main="rules">Reglas</button>`;
   b.querySelectorAll('[data-hi]').forEach(q => q.onclick = () => {
     s.active = +q.dataset.hi;
     save();
@@ -1660,97 +1647,6 @@ function greyRerollReminder() {
 function renderHistory() {
   $('history').innerHTML = s.history.length ? s.history.map(x => `<div><b>Ronda ${ x.r } · ${ x.p } · ${ x.n }</b><br>${ x.t }</div>`).join('') : '<p class="muted">Sin registros.</p>';
 }
-function renderDirector() {
-  if (!$('missionName'))
-    return;
-  $('missionName').value = s.mission.name || '';
-  $('missionObjective').value = s.mission.objective || '';
-  $('missionRules').value = s.mission.rules || '';
-  $('missionSummary').innerHTML = s.mission.name || s.mission.objective || s.mission.rules ? `<b>${ s.mission.name || 'Misión sin nombre' }</b><br>${ s.mission.objective || 'Sin objetivo.' }${ s.mission.rules ? `<hr><b>Reglas:</b><br>${ s.mission.rules }` : '' }` : 'Todavía no se ha registrado una misión.';
-  $('enemyList').innerHTML = s.enemies.length ? s.enemies.map((e, i) => `<div class="enemyCard"><div class="row between"><b>${ e.name }</b><span class="badge">${ e.type }</span></div><div class="stats"><div><small>Vida</small><b>${ e.hp }/${ e.hpMax }</b></div><div><small>Fuego</small><b>${ e.fire }</b></div><div><small>Escarcha</small><b>${ e.frost }</b></div></div><div class="actions"><button data-ehp="${ i }" data-d="-1">− Vida</button><button data-ehp="${ i }" data-d="1">+ Vida</button><button data-efire="${ i }">+ Fuego</button><button data-efrost="${ i }">+ Escarcha</button><button data-edelete="${ i }" class="danger">Retirar</button></div></div>`).join('') : '<p class="muted">No hay enemigos registrados.</p>';
-  $('directorJournal').innerHTML = s.history.length ? s.history.map(x => `<div class="journalEntry"><b>Ronda ${ x.r } · ${ x.p } · ${ x.n }</b><br>${ x.t }</div>`).join('') : '<p class="muted">Sin registros.</p>';
-  bindDirector();
-}
-function bindDirector() {
-  if (!$('saveMission'))
-    return;
-  $('saveMission').onclick = () => {
-    s.mission = {
-      name: $('missionName').value.trim(),
-      objective: $('missionObjective').value.trim(),
-      rules: $('missionRules').value.trim()
-    };
-    log(`Misión actualizada: ${ s.mission.name || 'sin nombre' }.`);
-    save();
-    renderDirector();
-  };
-  $('announceMission').onclick = () => say(`${ s.mission.name || 'Misión' }. ${ s.mission.objective || 'No hay objetivo registrado.' } ${ s.mission.rules || '' }`);
-  $('addEnemy').onclick = () => {
-    const name = $('enemyName').value.trim();
-    if (!name)
-      return alert('Escribe el nombre del enemigo.');
-    const hp = Math.max(1, +$('enemyHpMax').value || 1);
-    s.enemies.push({
-      name,
-      type: $('enemyType').value,
-      hp,
-      hpMax: hp,
-      fire: +$('enemyFire').value || 0,
-      frost: +$('enemyFrost').value || 0
-    });
-    log(`Enemigo registrado: ${ name }.`);
-    save();
-    renderDirector();
-  };
-  document.querySelectorAll('[data-ehp]').forEach(b => b.onclick = () => {
-    const e = s.enemies[+b.dataset.ehp];
-    e.hp = Math.max(0, Math.min(e.hpMax, e.hp + +b.dataset.d));
-    if (e.hp === 0) {
-      log(`${ e.name } fue derrotado.`);
-      say(`${ e.name } ha sido derrotado.`);
-    }
-    save();
-    renderDirector();
-  });
-  document.querySelectorAll('[data-efire]').forEach(b => b.onclick = () => {
-    s.enemies[+b.dataset.efire].fire++;
-    save();
-    renderDirector();
-  });
-  document.querySelectorAll('[data-efrost]').forEach(b => b.onclick = () => {
-    s.enemies[+b.dataset.efrost].frost++;
-    save();
-    renderDirector();
-  });
-  document.querySelectorAll('[data-edelete]').forEach(b => b.onclick = () => {
-    const e = s.enemies.splice(+b.dataset.edelete, 1)[0];
-    log(`${ e.name } fue retirado.`);
-    save();
-    renderDirector();
-  });
-  $('clearEnemies').onclick = () => {
-    if (confirm('\xBFVaciar enemigos?')) {
-      s.enemies = [];
-      save();
-      renderDirector();
-    }
-  };
-  $('clearJournal').onclick = () => {
-    if (confirm('\xBFVaciar diario?')) {
-      s.history = [];
-      save();
-      render();
-    }
-  };
-  $('exportJournal').onclick = () => {
-    const text = s.history.slice().reverse().map(x => `Ronda ${ x.r } · ${ x.p } · ${ x.n }\n${ x.t }`).join('\n\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
-    a.download = 'md2_diario_partida.txt';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-}
 function finishDarkness() {
   if (!(s.phase === 3 && s.darknessPending))
     return;
@@ -2095,4 +1991,23 @@ $('newGameSettings').onclick = () => {
     tab('setup');
   }
 };
+function initMissions() {
+  const select = $('missionSelect');
+  MD2.missions.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = m.name;
+    select.appendChild(opt);
+  });
+  select.onchange = () => {
+    const detail = $('missionDetail');
+    if (select.value === '') {
+      detail.innerHTML = '';
+      return;
+    }
+    const m = MD2.missions[+select.value];
+    detail.innerHTML = `<div class="card"><h2>${ m.name }</h2><p class="notice">Losetas necesarias: <b>${ m.tiles }</b></p><h3>Objetivos (en orden)</h3><ol>${ m.objectives.map(o => `<li>${ o }</li>`).join('') }</ol><h3>Reglas especiales</h3><p>${ m.rules }</p></div>`;
+  };
+}
+initMissions();
 render();

@@ -158,7 +158,10 @@ function fresh() {
     darknessPending: false,
     turnPrompt: false,
     enemyPhaseAsked: false,
-    gameOver: false
+    gameOver: false,
+    activeMissionId: '',
+    missionResult: '',
+    missionState: {}
   };
 }
 let s = JSON.parse(localStorage.getItem(KEY) || 'null') || fresh();
@@ -207,6 +210,12 @@ if (s.enemyPhaseAsked === undefined)
   s.enemyPhaseAsked = false;
 if (s.gameOver === undefined)
   s.gameOver = false;
+if (s.activeMissionId === undefined)
+  s.activeMissionId = '';
+if (s.missionResult === undefined)
+  s.missionResult = '';
+if (!s.missionState)
+  s.missionState = {};
 if (s.music === undefined)
   s.music = 'yes';
 if (s.musicVolume === undefined)
@@ -493,6 +502,7 @@ function render() {
   renderHistory();
   renderResurrection();
   renderSettings();
+  renderMissions();
   renderGameOver();
   updateAmbient();
   $('phaseChip').textContent = s.confirmed ? MD2.phases[s.phase] : 'Preparación';
@@ -562,8 +572,15 @@ function renderDefenseForm(available) {
   const form = $('enemyDefenseForm');
   if (!form)
     return;
-  form.innerHTML = `<div class="grid top"><label>Héroe atacado<select id="defendedHero">${ available.map((x, i) => `<option value="${ s.heroes.indexOf(x) }">${ x.name }</option>`).join('') }</select></label><label>Daño recibido<select id="damageAmount">${ Array.from({ length: 10 }, (_, i) => i + 1).map(n => `<option value="${ n }">${ n }</option>`).join('') }</select></label></div><div id="provokeSlot"></div><button id="confirmDamage" class="primary top">Confirmar daño</button>`;
+  const m = getActiveMission();
+  const invokerActive = m && m.id === 'the_step' && !s.missionState.reachedRift && !s.missionResult;
+  const invokerOption = invokerActive ? `<option value="invoker">El Invocador (NPC)</option>` : '';
+  form.innerHTML = `<div class="grid top"><label>Héroe atacado<select id="defendedHero">${ available.map((x, i) => `<option value="${ s.heroes.indexOf(x) }">${ x.name }</option>`).join('') }${ invokerOption }</select></label><label>Daño recibido<select id="damageAmount">${ Array.from({ length: 10 }, (_, i) => i + 1).map(n => `<option value="${ n }">${ n }</option>`).join('') }</select></label></div><div id="provokeSlot"></div><button id="confirmDamage" class="primary top">Confirmar daño</button>`;
   function renderProvokeSlot() {
+    if ($('defendedHero').value === 'invoker') {
+      $('provokeSlot').innerHTML = '';
+      return;
+    }
     const idx = +$('defendedHero').value, target = s.heroes[idx];
     const slot = $('provokeSlot');
     if (target.cls === 'berserker' && target.berserker.stance === 'Provocador')
@@ -586,7 +603,23 @@ function renderDefenseForm(available) {
   renderProvokeSlot();
   $('defendedHero').onchange = renderProvokeSlot;
   $('confirmDamage').onclick = () => {
-    const targetIdx = +$('defendedHero').value, dmg = +$('damageAmount').value, target = s.heroes[targetIdx];
+    const dmg = +$('damageAmount').value;
+    if ($('defendedHero').value === 'invoker') {
+      s.missionState.invokerHp = Math.max(0, (s.missionState.invokerHp ?? 8) - dmg);
+      log(`El Invocador recibe ${ dmg } de daño (Vida restante: ${ s.missionState.invokerHp }/8).`);
+      save();
+      render();
+      if (s.missionState.invokerHp === 0) {
+        s.missionResult = 'defeat';
+        save();
+        renderMissions();
+        duckAndSay('El Invocador ha muerto. La misión termina en derrota.');
+      } else {
+        say(`El Invocador recibe ${ dmg } de daño. Le quedan ${ s.missionState.invokerHp } de vida. ¿Hay más enemigos atacando a los héroes?`);
+      }
+      return;
+    }
+    const targetIdx = +$('defendedHero').value, target = s.heroes[targetIdx];
     const paladin = s.heroes.find(q => q.cls === 'paladin' && !q.unconscious && q !== target);
     let finalTarget = target;
     if (paladin) {
@@ -799,7 +832,15 @@ function flowHtml(x) {
     return attackFlow(x);
   if (x.flow.type === 'Recuperación')
     return recoveryFlow(x);
+  if (x.flow.type === 'Intercambiar y equipar')
+    return swapEquipFlow(x);
   return `<div class="card"><p class="notice">${ x.flow.type } registrada.</p><button id="finishFlow">Finalizar acción</button></div>`;
+}
+function swapEquipFlow(x) {
+  const m = getActiveMission();
+  const isBearer = m && m.id === 'cursed_sword' && s.missionState.bearerId === x.id && !s.missionResult;
+  const swordOption = isBearer ? `<label class="top">Pasar la Espada Maldita a<select id="swordPassTo"><option value="">Elige un héroe</option>${ s.heroes.filter(h2 => h2.id !== x.id && !h2.unconscious).map(h2 => `<option value="${ h2.id }">${ h2.name }</option>`).join('') }</select></label><button id="passSwordBtn" class="primary top">Confirmar intercambio de la espada</button>` : '';
+  return `<div class="card"><p class="notice">Intercambiar y equipar registrada.</p>${ swordOption }<button id="finishFlow" class="top">Finalizar acción</button></div>`;
 }
 function recoveryFlow(x) {
   if (x.cls === 'shaman') {
@@ -827,9 +868,25 @@ function recoveryFlow(x) {
   const remaining = 2 - r.hp - r.mana;
   return `<div class="card actionFlow active"><h2>Recuperación</h2><p class="notice">Reparte 2 puntos entre Vida y Maná como prefieras.</p><div class="grid top"><div class="elementRow"><span class="badge">Vida: +${ r.hp }</span><button data-rec="hp" data-d="-1" ${ r.hp <= 0 ? 'disabled' : '' }>−</button><button data-rec="hp" data-d="1" ${ remaining <= 0 ? 'disabled' : '' }>+</button></div><div class="elementRow"><span class="badge">Maná: +${ r.mana }</span><button data-rec="mana" data-d="-1" ${ r.mana <= 0 ? 'disabled' : '' }>−</button><button data-rec="mana" data-d="1" ${ remaining <= 0 ? 'disabled' : '' }>+</button></div></div><p class="muted top">Puntos restantes por repartir: ${ remaining }</p><button id="confirmRecovery" class="primary top" ${ remaining !== 0 ? 'disabled' : '' }>Confirmar Recuperación</button></div>`;
 }
+function missionEscapeButton(x) {
+  const m = getActiveMission();
+  if (!m || s.missionResult)
+    return '';
+  if (m.id === 'road_to_hell' && s.missionState.gateLeft && s.missionState.gateRight)
+    return `<button id="missionEscapeBtn" class="primary top" ${ x.move.pm < 1 ? 'disabled' : '' }>Escape de la mazmorra (1 PM)</button>`;
+  if (m.id === 'the_step' && s.missionState.reachedRift)
+    return `<button id="missionEscapeBtn" class="primary top" ${ x.move.pm < 1 ? 'disabled' : '' }>Salir por la Grieta (1 PM)</button>`;
+  return '';
+}
+function missionInteractOptions(x) {
+  const m = getActiveMission();
+  if (m && m.id === 'demonic_artifact' && !s.missionResult)
+    return `<button data-move="interact">Interactuar (genérico)</button><button id="collectFragmentBtn" ${ x.move.pm < 1 ? 'disabled' : '' }>Recoger fragmento de artefacto</button>`;
+  return `<button data-move="interact">Interactuar</button>`;
+}
 function moveFlow(x) {
   const suggestion = berserkerStanceSuggestion(x, 'move');
-  return `<div class="card actionFlow active"><h2>Movimiento</h2><div class="flowSteps"><span class="flowStep active">Gastar PM</span><span class="flowStep">Finalizar</span></div><p class="notice">PM disponibles: <b>${ x.move.pm }</b></p>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }<div class="actions"><button data-move="move">Mover 1 zona</button><button data-move="door">Abrir puerta</button><button data-move="interact">Interactuar</button>${ x.cls === 'berserker' && x.berserker.stance === 'Temerario' ? `<button id="furyExtraPm" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: +1 PM (${ x.berserker.fury }/7)</button>` : '' }<button id="finishMove" class="primary">Finalizar movimiento</button></div></div>`;
+  return `<div class="card actionFlow active"><h2>Movimiento</h2><div class="flowSteps"><span class="flowStep active">Gastar PM</span><span class="flowStep">Finalizar</span></div><p class="notice">PM disponibles: <b>${ x.move.pm }</b></p>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }<div class="actions"><button data-move="move">Mover 1 zona</button><button data-move="door">Abrir puerta</button>${ missionInteractOptions(x) }${ x.cls === 'berserker' && x.berserker.stance === 'Temerario' ? `<button id="furyExtraPm" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: +1 PM (${ x.berserker.fury }/7)</button>` : '' }<button id="finishMove" class="primary">Finalizar movimiento</button></div>${ missionEscapeButton(x) }</div>`;
 }
 function arrowFlow(x) {
   return `<div class="card actionFlow active"><h2>Mazo de Flechas</h2><p class="notice">Saca cartas del mazo de Flechas e indica el resultado obtenido.</p><div class="actions"><button data-arrow="rapido">Disparo rápido (menos de 7)</button><button data-arrow="certero">Disparo certero (7 justas)</button><button data-arrow="lento">Disparo lento o fallido (más de 7)</button></div></div>`;
@@ -1287,6 +1344,21 @@ function bindFlow(x) {
     duckAndSay(`${ label }. Ahora forma tu reserva de dados.`);
   });
   document.querySelectorAll('[data-move]').forEach(b => b.onclick = () => useMove(b.dataset.move));
+  bindMissionButtons(x);
+  if ($('passSwordBtn'))
+    $('passSwordBtn').onclick = () => {
+      const targetId = $('swordPassTo').value;
+      if (!targetId)
+        return alert('Elige a qué héroe le pasas la espada.');
+      const target = s.heroes.find(h2 => h2.id == targetId);
+      s.missionState.bearerId = target.id;
+      s.missionState.roundsHeld = 0;
+      log(`${ x.name } pasa la Espada Maldita a ${ target.name }. El contador de rondas se reinicia.`);
+      save();
+      renderHero();
+      renderMissions();
+      say(`La Espada Maldita pasa a ${ target.name }. El contador de rondas se reinicia a cero.`);
+    };
   if ($('furyExtraPm'))
     $('furyExtraPm').onclick = () => {
       if (x.berserker.fury < 1)
@@ -1548,6 +1620,48 @@ function useMove(k) {
   renderHero();
   say(`Quedan ${ x.move.pm } puntos de movimiento.`);
 }
+function bindMissionButtons(x) {
+  const escapeBtn = document.getElementById('missionEscapeBtn');
+  if (escapeBtn)
+    escapeBtn.onclick = () => {
+      const m = getActiveMission();
+      const zoneLabel = m.id === 'road_to_hell' ? 'la zona del Altar' : 'la zona de la Grieta';
+      if (x.move.pm < 1)
+        return alert('No tienes puntos de movimiento disponibles para esta acción.');
+      if (!confirm(`Confirma que ${ x.name } se encuentra en ${ zoneLabel } y quieres gastar 1 punto de movimiento para salir de la mazmorra.`))
+        return;
+      x.move.pm--;
+      log(`${ x.name } sale de la mazmorra por ${ zoneLabel }.`);
+      if (!x.move.pm)
+        x.move.on = false;
+      save();
+      renderHero();
+      say(`${ x.name } sale de la mazmorra.`);
+    };
+  const fragBtn = document.getElementById('collectFragmentBtn');
+  if (fragBtn)
+    fragBtn.onclick = () => {
+      if (x.move.pm < 1)
+        return alert('No tienes puntos de movimiento disponibles para esta acción.');
+      const st = s.missionState;
+      const total = Object.values(st.fragments || {}).reduce((a, b) => a + b, 0);
+      if (total >= 3)
+        return alert('Ya se recolectaron los 3 fragmentos del Artefacto.');
+      if (!confirm(`Confirma que ${ x.name } se encuentra en la zona de un Fragmento del Artefacto.`))
+        return;
+      x.move.pm--;
+      if (!x.move.pm)
+        x.move.on = false;
+      st.fragments = st.fragments || {};
+      st.fragments[x.id] = (st.fragments[x.id] || 0) + 1;
+      x.xp += 5;
+      log(`${ x.name } recoge un Fragmento del Artefacto. Gana 5 XP.`);
+      save();
+      renderHero();
+      renderMissions();
+      say(`${ x.name } recoge un fragmento. Gana 5 de experiencia.`);
+    };
+}
 function finishFlow(skipGenericVoice = false) {
   const x = h();
   x.flow = {
@@ -1674,11 +1788,44 @@ function finishDarkness() {
       say(`${ heroSpoken(x) }: retira la habilidad bendecida ${ old }; vuelve a su lado normal.`, x);
     }
   });
+  applyCursedSwordDamage();
   log('Comienza la Fase de Héroes.');
   save();
   render();
   showPhaseCurtain(`Ronda ${ s.round } · Fase de Héroes`);
   say(`Comienza la ronda ${ s.round }. Fase de Héroes.`);
+}
+function applyCursedSwordDamage() {
+  const m = getActiveMission();
+  if (!m || m.id !== 'cursed_sword' || s.missionResult)
+    return;
+  const st = s.missionState;
+  const bearer = s.heroes.find(x => x.id === st.bearerId);
+  if (!bearer)
+    return;
+  st.roundsHeld = (st.roundsHeld || 0) + 1;
+  if (s.mode === 'solo') {
+    bearer.hp = Math.max(0, bearer.hp - 1);
+    log(`${ bearer.name } sufre 1 herida por la Espada Maldita (modo solitario).`);
+    if (bearer.hp === 0 && !bearer.unconscious)
+      knockOut(bearer);
+    save();
+    return;
+  }
+  if (st.roundsHeld >= 4) {
+    s.missionResult = 'defeat';
+    log(`${ bearer.name } ha sostenido la Espada Maldita 4 rondas consecutivas y pierde su alma. Derrota.`);
+    save();
+    duckAndSay(`${ bearer.name } sucumbe a la Espada Maldita. La misión termina en derrota.`);
+    return;
+  }
+  const dmg = st.roundsHeld;
+  bearer.hp = Math.max(0, bearer.hp - dmg);
+  log(`${ bearer.name } sufre ${ dmg } herida${ dmg > 1 ? 's' : '' } por la Espada Maldita (ronda ${ st.roundsHeld } consecutiva).`);
+  if (bearer.hp === 0 && !bearer.unconscious)
+    knockOut(bearer);
+  save();
+  say(`${ bearer.name } sufre ${ dmg } herida${ dmg > 1 ? 's' : '' } por la Espada Maldita.`);
 }
 function nextPhase() {
   if (!s.confirmed)
@@ -1991,23 +2138,174 @@ $('newGameSettings').onclick = () => {
     tab('setup');
   }
 };
+function getActiveMission() {
+  return MD2.missions.find(m => m.id === s.activeMissionId) || null;
+}
 function initMissions() {
   const select = $('missionSelect');
-  MD2.missions.forEach((m, i) => {
+  MD2.missions.forEach(m => {
     const opt = document.createElement('option');
-    opt.value = i;
+    opt.value = m.id;
     opt.textContent = m.name;
     select.appendChild(opt);
   });
+  select.value = s.activeMissionId || '';
   select.onchange = () => {
-    const detail = $('missionDetail');
     if (select.value === '') {
-      detail.innerHTML = '';
-      return;
+      s.activeMissionId = '';
+      s.missionResult = '';
+      s.missionState = {};
+    } else {
+      s.activeMissionId = select.value;
+      s.missionResult = '';
+      s.missionState = {};
+      if (s.activeMissionId === 'road_to_hell')
+        s.missionState = {
+          gateLeft: false,
+          gateRight: false
+        };
+      if (s.activeMissionId === 'the_step')
+        s.missionState = {
+          reachedRift: false
+        };
+      if (s.activeMissionId === 'demonic_artifact')
+        s.missionState = {
+          fragments: {}
+        };
+      if (s.activeMissionId === 'cursed_sword')
+        s.missionState = {
+          bearerId: null,
+          roundsHeld: 0,
+          lastRoundChecked: 0
+        };
+      log(`Misión activada: ${ getActiveMission()?.name || 'ninguna' }.`);
+      say(`Misión activada: ${ getActiveMission()?.name }.`);
     }
-    const m = MD2.missions[+select.value];
-    detail.innerHTML = `<div class="card"><h2>${ m.name }</h2><p class="notice">Losetas necesarias: <b>${ m.tiles }</b></p><h3>Objetivos (en orden)</h3><ol>${ m.objectives.map(o => `<li>${ o }</li>`).join('') }</ol><h3>Reglas especiales</h3><p>${ m.rules }</p></div>`;
+    save();
+    renderMissions();
+    renderHero();
   };
+  renderMissions();
+}
+function deactivateMission() {
+  if (!confirm('¿Desactivar la misión activa? Se perderá el progreso de sus mecánicas especiales.'))
+    return;
+  s.activeMissionId = '';
+  s.missionResult = '';
+  s.missionState = {};
+  save();
+  $('missionSelect').value = '';
+  renderMissions();
+  renderHero();
+}
+function renderMissions() {
+  const detail = $('missionDetail'), resultPanel = $('missionResultPanel'), activePanel = $('missionActivePanel');
+  if (!detail)
+    return;
+  const m = getActiveMission();
+  if (!m) {
+    detail.innerHTML = '';
+    resultPanel.innerHTML = '';
+    activePanel.innerHTML = '';
+    return;
+  }
+  detail.innerHTML = `<div class="card"><h2>${ m.name }</h2><p class="notice">Losetas necesarias: <b>${ m.tiles }</b></p><h3>Objetivos (en orden)</h3><ol>${ m.objectives.map(o => `<li>${ o }</li>`).join('') }</ol><h3>Reglas especiales</h3><p>${ m.rules }</p></div>`;
+  if (s.missionResult) {
+    resultPanel.innerHTML = `<div class="card ${ s.missionResult === 'victory' ? 'levelup-burst' : '' }" style="border-color:${ s.missionResult === 'victory' ? 'var(--accent-bright)' : 'var(--ember)' };text-align:center"><h2>${ s.missionResult === 'victory' ? '🏆 Victoria' : '💀 Derrota' }</h2><p>${ s.missionResult === 'victory' ? `Los héroes completaron "${ m.name }".` : `La misión "${ m.name }" terminó en derrota.` }</p><button id="deactivateMission" class="primary top">Desactivar misión</button></div>`;
+    $('deactivateMission').onclick = deactivateMission;
+    activePanel.innerHTML = '';
+    return;
+  }
+  activePanel.innerHTML = `<div class="row between top"><span class="badge">Misión activa</span><button id="deactivateMissionBtn">Desactivar</button></div>` + renderMissionMechanics(m);
+  const deactivateBtn = $('deactivateMissionBtn');
+  if (deactivateBtn)
+    deactivateBtn.onclick = deactivateMission;
+  bindMissionMechanics(m);
+}
+function renderMissionMechanics(m) {
+  if (m.id === 'road_to_hell') {
+    const st = s.missionState;
+    return `<div class="card"><h3>Portones</h3><div class="row"><button id="gateLeftBtn" ${ st.gateLeft ? 'disabled' : '' } class="${ st.gateLeft ? '' : 'primary' }">${ st.gateLeft ? '✓ Portón Izquierdo abierto' : 'Abrir Portón Izquierdo (+3 XP)' }</button><button id="gateRightBtn" ${ st.gateRight ? 'disabled' : '' } class="${ st.gateRight ? '' : 'primary' }">${ st.gateRight ? '✓ Portón Derecho abierto' : 'Abrir Portón Derecho (+3 XP)' }</button></div>${ st.gateLeft && st.gateRight ? '<p class="notice top">Ambos portones abiertos. Ya pueden escapar por el Altar gastando 1 PM (opción disponible en Movimiento).</p>' : '' }</div>`;
+  }
+  if (m.id === 'the_step') {
+    const st = s.missionState;
+    return `<div class="card"><h3>El Invocador</h3><p class="muted">Vida 8 · Defensa 2 (azul). Se mueve solo y se defiende; no realiza otras acciones.</p>${ st.reachedRift ? '<p class="notice">✓ El Invocador llegó a la Grieta. Los héroes ya pueden salir gastando 1 PM (opción en Movimiento).</p>' : '<button id="rift Btn" class="primary top">El Invocador llegó a la Grieta</button>' }</div>`.replace('rift Btn', 'reachRiftBtn');
+  }
+  if (m.id === 'demonic_artifact') {
+    const st = s.missionState;
+    const withFrag = Object.keys(st.fragments || {}).filter(id => st.fragments[id]);
+    const total = withFrag.reduce((sum, id) => sum + st.fragments[id], 0);
+    return `<div class="card"><h3>Fragmentos del Artefacto</h3><p class="muted">Reunidos: ${ total } / 3</p>${ withFrag.length ? `<ul>${ withFrag.map(id => { const h = s.heroes.find(x => x.id == id); return h ? `<li>${ h.name }: ${ st.fragments[id] } fragmento${ st.fragments[id] > 1 ? 's' : '' }</li>` : ''; }).join('') }</ul>` : '<p class="muted">Nadie tiene fragmentos todavía.</p>' }${ total === 3 ? `<button id="forgeArtifactBtn" class="primary top">Forjar Artefacto</button>` : '' }</div>`;
+  }
+  if (m.id === 'cursed_sword') {
+    const st = s.missionState;
+    const bearer = s.heroes.find(x => x.id === st.bearerId);
+    return `<div class="card"><h3>Espada Maldita</h3>${ bearer ? `<p class="notice">${ bearer.name } porta la espada. Rondas consecutivas: ${ st.roundsHeld } / 4.</p>` : `<label>Asignar espada inicial<select id="swordAssign"><option value="">Elige un héroe</option>${ s.heroes.map(h => `<option value="${ h.id }">${ h.name }</option>`).join('') }</select></label>` }</div>`;
+  }
+  return '';
+}
+function bindMissionMechanics(m) {
+  if (m.id === 'road_to_hell') {
+    if ($('gateLeftBtn'))
+      $('gateLeftBtn').onclick = () => {
+        s.missionState.gateLeft = true;
+        const x = h();
+        x.xp += 3;
+        log(`${ x.name } abre el Portón Izquierdo. Gana 3 XP.`);
+        save();
+        renderMissions();
+        renderHero();
+        say(`Portón Izquierdo abierto. ${ x.name } gana 3 de experiencia.${ s.missionState.gateRight ? ' Ambos portones abiertos. Ya pueden ir al Altar para escapar gastando 1 punto de movimiento.' : '' }`);
+      };
+    if ($('gateRightBtn'))
+      $('gateRightBtn').onclick = () => {
+        s.missionState.gateRight = true;
+        const x = h();
+        x.xp += 3;
+        log(`${ x.name } abre el Portón Derecho. Gana 3 XP.`);
+        save();
+        renderMissions();
+        renderHero();
+        say(`Portón Derecho abierto. ${ x.name } gana 3 de experiencia.${ s.missionState.gateLeft ? ' Ambos portones abiertos. Ya pueden ir al Altar para escapar gastando 1 punto de movimiento.' : '' }`);
+      };
+  }
+  if (m.id === 'the_step' && $('reachRiftBtn'))
+    $('reachRiftBtn').onclick = () => {
+      s.missionState.reachedRift = true;
+      log('El Invocador llegó a la Grieta.');
+      save();
+      renderMissions();
+      renderHero();
+      say('El Invocador llegó a la Grieta. Los héroes ya pueden salir de la mazmorra gastando 1 punto de movimiento.');
+    };
+  if (m.id === 'demonic_artifact' && $('forgeArtifactBtn'))
+    $('forgeArtifactBtn').onclick = () => {
+      const st = s.missionState;
+      const bearers = Object.keys(st.fragments || {}).filter(id => st.fragments[id]).map(id => s.heroes.find(x => x.id == id)).filter(Boolean);
+      const names = bearers.map(x => x.name).join(', ');
+      if (!confirm(`Confirma que TODOS los héroes con fragmentos (${ names }) están en la zona de la Forja Demoníaca. ¿Forjar el Artefacto?`))
+        return;
+      s.missionResult = 'victory';
+      log('El Artefacto Demoníaco ha sido forjado. Victoria.');
+      save();
+      renderMissions();
+      duckAndSay('Artefacto forjado. La misión termina en victoria.');
+    };
+  if (m.id === 'cursed_sword' && $('swordAssign'))
+    $('swordAssign').onchange = e => {
+      if (!e.target.value)
+        return;
+      const heroId = +e.target.value || e.target.value;
+      const hero = s.heroes.find(x => x.id == e.target.value);
+      s.missionState.bearerId = hero.id;
+      s.missionState.roundsHeld = 0;
+      s.missionState.lastRoundChecked = s.round;
+      log(`${ hero.name } recibe la Espada Maldita, reemplazando su arma inicial.`);
+      save();
+      renderMissions();
+      renderHero();
+      duckAndSay(`${ heroSpoken(hero) } porta la Espada Maldita. Reemplaza su arma inicial. Si la mantiene 4 rondas seguidas, morirá y la partida se pierde automáticamente.`);
+    };
 }
 initMissions();
 render();

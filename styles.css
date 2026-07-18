@@ -143,3 +143,50 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 #gameOverScreen h1{font-size:1.8rem;color:var(--ember-bright);text-shadow:0 0 22px rgba(255,107,53,.4);margin-bottom:10px}
 #gameOverScreen p{color:var(--parchment,var(--text));max-width:340px;margin-bottom:22px;line-height:1.5}
 #gameOverScreen .actions{display:flex;flex-direction:column;gap:10px;width:100%;max-width:280px}
+
+/* ============ ANIMACIONES DE JUEGO ============ */
+.float-number{position:absolute;font-family:var(--font-display);font-weight:700;font-size:1.25rem;top:6px;right:12px;opacity:0;pointer-events:none;z-index:5}
+.float-dmg{color:var(--ember-bright);text-shadow:0 0 8px rgba(255,107,53,.6);animation:floatDmg 1.1s ease forwards}
+.float-heal{color:#7fd88f;text-shadow:0 0 8px rgba(127,216,143,.6);animation:floatHeal 1.1s ease forwards}
+@keyframes floatDmg{0%{opacity:0;transform:translateY(0)}15%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-26px)}}
+@keyframes floatHeal{0%{opacity:0;transform:translateY(0)}15%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-26px)}}
+.flash-red{animation:flashRed .5s ease}
+.flash-green{animation:flashGreen .5s ease}
+@keyframes flashRed{0%{background:rgba(199,62,29,.3)}100%{background:transparent}}
+@keyframes flashGreen{0%{background:rgba(79,157,99,.3)}100%{background:transparent}}
+
+#phaseCurtain{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--panel2),var(--void));opacity:0;pointer-events:none}
+#phaseCurtain.show{animation:phaseCurtain 1.5s ease forwards}
+#phaseCurtain span{font-family:var(--font-display);font-size:1.4rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-bright);text-shadow:0 0 20px rgba(212,175,90,.4);opacity:0;transform:scale(.9)}
+#phaseCurtain.show span{animation:phaseText 1.5s ease forwards}
+@keyframes phaseCurtain{0%{opacity:0}12%{opacity:1}78%{opacity:1}100%{opacity:0}}
+@keyframes phaseText{0%{opacity:0;transform:scale(.9)}18%{opacity:1;transform:scale(1)}78%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.05)}}
+
+.cell.pulse{animation:darkPulse 1s ease}
+@keyframes darkPulse{
+  0%{box-shadow:0 0 0 rgba(212,175,90,0);border-color:var(--line)}
+  30%{box-shadow:0 0 18px rgba(212,175,90,.7);border-color:var(--accent-bright);background:rgba(212,175,90,.18)}
+  100%{box-shadow:0 0 0 rgba(212,175,90,0)}
+}
+
+.levelup-burst{position:relative;overflow:hidden}
+.levelup-burst::before{content:"";position:absolute;inset:-50%;background:radial-gradient(circle,rgba(212,175,90,.5),transparent 60%);opacity:0;pointer-events:none;animation:levelBurst 1.2s ease forwards;z-index:1}
+@keyframes levelBurst{0%{opacity:0;transform:scale(.4)}30%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.6)}}
+.spark{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--accent-bright);opacity:0;z-index:2;pointer-events:none}
+.spark.go{animation:sparkFly 1s ease forwards}
+@keyframes sparkFly{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(var(--sx),var(--sy))}}
+
+.heroHeader{transition:background 1s ease,border-color 1s ease}
+.heroHeader.zone-light{background:linear-gradient(155deg,rgba(212,175,90,.14),var(--panel));border-color:var(--accent)}
+.heroHeader.zone-dark{background:linear-gradient(155deg,rgba(90,58,138,.22),var(--panel));border-color:#8a5fd4}
+
+.card.ko-fx{filter:grayscale(1) brightness(.55);opacity:.75;transition:filter 1s ease,opacity 1s ease}
+
+.classIcon{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:.8rem;margin-right:4px;vertical-align:middle}
+
+.alertDot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ember-bright);margin-left:4px;animation:alertPulse 1.4s ease-in-out infinite;vertical-align:middle}
+@keyframes alertPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,53,.6)}50%{box-shadow:0 0 0 5px rgba(255,107,53,0)}}
+
+@media(prefers-reduced-motion:reduce){
+  .float-number,#phaseCurtain,.cell.pulse,.levelup-burst::before,.spark,.alertDot{animation-duration:.01ms!important}
+}

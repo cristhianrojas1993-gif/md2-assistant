@@ -7,6 +7,62 @@ const COLORS = {
   mage: '#06b6d4',
   berserker: '#ef4444'
 };
+const CLASS_ICONS = {
+  rogue: '🗡️',
+  ranger: '🏹',
+  shaman: '🔥',
+  paladin: '🛡️',
+  mage: '✨',
+  berserker: '🪓'
+};
+function classIcon(cls) {
+  return `<span class="classIcon" style="background:${ COLORS[cls] }22;color:${ COLORS[cls] }">${ CLASS_ICONS[cls] || '' }</span>`;
+}
+function showFloatNumber(delta, kind) {
+  const slot = document.getElementById('floatNumSlot');
+  const card = document.getElementById('heroHeaderCard');
+  if (!slot || !card)
+    return;
+  const el = document.createElement('div');
+  el.className = `float-number ${ kind === 'heal' ? 'float-heal' : 'float-dmg' }`;
+  el.textContent = (delta > 0 ? '+' : '') + delta;
+  slot.appendChild(el);
+  card.classList.remove('flash-red', 'flash-green');
+  void card.offsetWidth;
+  card.classList.add(kind === 'heal' ? 'flash-green' : 'flash-red');
+  setTimeout(() => el.remove(), 1200);
+}
+function showPhaseCurtain(text) {
+  const curtain = document.getElementById('phaseCurtain');
+  const label = document.getElementById('phaseCurtainText');
+  if (!curtain || !label)
+    return;
+  label.textContent = text;
+  curtain.classList.remove('show');
+  void curtain.offsetWidth;
+  curtain.classList.add('show');
+}
+function showLevelUpBurst() {
+  const card = document.getElementById('heroHeaderCard');
+  if (!card)
+    return;
+  card.classList.remove('levelup-burst');
+  void card.offsetWidth;
+  card.classList.add('levelup-burst');
+  for (let i = 0; i < 10; i++) {
+    const spark = document.createElement('div');
+    spark.className = 'spark';
+    const angle = (Math.PI * 2 * i) / 10, dist = 50 + Math.random() * 24;
+    spark.style.setProperty('--sx', Math.cos(angle) * dist + 'px');
+    spark.style.setProperty('--sy', Math.sin(angle) * dist + 'px');
+    spark.style.left = '50%';
+    spark.style.top = '40%';
+    card.appendChild(spark);
+    requestAnimationFrame(() => spark.classList.add('go'));
+    setTimeout(() => spark.remove(), 1100);
+  }
+  setTimeout(() => card.classList.remove('levelup-burst'), 1300);
+}
 function makeHero(cls = 'rogue') {
   const c = C[cls];
   return {
@@ -641,7 +697,9 @@ function renderHero() {
     return;
   }
   const activeSec = document.querySelector('.sectionTabs [data-sec].active')?.dataset.sec;
-  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader"><div class="row between"><div><h2>${ x.name }</h2><small>${ C[x.cls].label }</small></div><span class="badge">Nivel ${ x.level }</span></div><div class="stats top"><div><small>Vida</small><b>${ x.hp }/${ x.hpMax }</b></div><div><small>Maná</small><b>${ x.mana }/${ x.manaMax }</b></div><div><small>XP</small><b>${ x.xp }</b></div><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div></div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }<button data-sec="inventory" class="${ activeSec === 'inventory' ? 'active' : '' }">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }<div id="sec-inventory" class="heroSection ${ activeSec === 'inventory' ? 'active' : '' }">${ inventoryHtml(x) }</div>`;
+  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader zone-${ x.zone === 'dark' ? 'dark' : 'light' }" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div><span class="badge">Nivel ${ x.level }</span></div><div class="stats top"><div><small>Vida</small><b>${ x.hp }/${ x.hpMax }</b></div><div><small>Maná</small><b>${ x.mana }/${ x.manaMax }</b></div><div><small>XP</small><b>${ x.xp }</b></div><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div></div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }<button data-sec="inventory" class="${ activeSec === 'inventory' ? 'active' : '' }">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }<div id="sec-inventory" class="heroSection ${ activeSec === 'inventory' ? 'active' : '' }">${ inventoryHtml(x) }</div>`;
+  if (x.unconscious)
+    $('heroHeaderCard')?.classList.add('ko-fx');
   document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
     document.querySelectorAll('[data-sec]').forEach(q => q.classList.remove('active'));
     b.classList.add('active');
@@ -757,6 +815,27 @@ function flowHtml(x) {
   return `<div class="card"><p class="notice">${ x.flow.type } registrada.</p><button id="finishFlow">Finalizar acción</button></div>`;
 }
 function recoveryFlow(x) {
+  if (x.cls === 'shaman') {
+    const r = x.flow.recovery = {
+      hp: 0,
+      mana: 0,
+      fire: 0,
+      water: 0,
+      air: 0,
+      nature: 0,
+      ...(x.flow.recovery || {})
+    };
+    const remaining = 2 - r.hp - r.mana - r.fire - r.water - r.air - r.nature;
+    const rows = [
+      ['hp', 'Vida', '❤️'],
+      ['mana', 'Maná', '🔷'],
+      ['fire', 'Fuego', '🔥'],
+      ['water', 'Agua', '💧'],
+      ['air', 'Aire', '🌪️'],
+      ['nature', 'Naturaleza', '🌿']
+    ];
+    return `<div class="card actionFlow active"><h2>Recuperación del Chamán</h2><p class="notice">Reparte 2 puntos como prefieras entre Vida, Maná o tus Elementos.</p><div class="grid top">${ rows.map(([key, label, icon]) => `<div class="elementRow"><span class="badge">${ icon } ${ label }: +${ r[key] || 0 }</span><button data-rec="${ key }" data-d="-1" ${ (r[key] || 0) <= 0 ? 'disabled' : '' }>−</button><button data-rec="${ key }" data-d="1" ${ remaining <= 0 || (['fire', 'water', 'air', 'nature'].includes(key) && x.shaman[key] + (r[key] || 0) >= 4) ? 'disabled' : '' }>+</button></div>` ).join('') }</div><p class="muted top">Puntos restantes por repartir: ${ remaining }</p><button id="confirmRecovery" class="primary top" ${ remaining !== 0 ? 'disabled' : '' }>Confirmar Recuperación</button></div>`;
+  }
   const r = x.flow.recovery || { hp: 0, mana: 0 };
   const remaining = 2 - r.hp - r.mana;
   return `<div class="card actionFlow active"><h2>Recuperación</h2><p class="notice">Reparte 2 puntos entre Vida y Maná como prefieras.</p><div class="grid top"><div class="elementRow"><span class="badge">Vida: +${ r.hp }</span><button data-rec="hp" data-d="-1" ${ r.hp <= 0 ? 'disabled' : '' }>−</button><button data-rec="hp" data-d="1" ${ remaining <= 0 ? 'disabled' : '' }>+</button></div><div class="elementRow"><span class="badge">Maná: +${ r.mana }</span><button data-rec="mana" data-d="-1" ${ r.mana <= 0 ? 'disabled' : '' }>−</button><button data-rec="mana" data-d="1" ${ remaining <= 0 ? 'disabled' : '' }>+</button></div></div><p class="muted top">Puntos restantes por repartir: ${ remaining }</p><button id="confirmRecovery" class="primary top" ${ remaining !== 0 ? 'disabled' : '' }>Confirmar Recuperación</button></div>`;
@@ -863,6 +942,7 @@ function bindHero() {
     }
     save();
     renderHero();
+    showFloatNumber(-1, 'dmg');
   };
   $('hpUp').onclick = () => {
     if (x.unconscious)
@@ -870,6 +950,7 @@ function bindHero() {
     x.hp = Math.min(x.hpMax, x.hp + 1);
     save();
     renderHero();
+    showFloatNumber(1, 'heal');
   };
   $('manaDown').onclick = () => {
     x.mana = Math.max(0, x.mana - 1);
@@ -881,26 +962,19 @@ function bindHero() {
       const el = prompt('¿Qué elemento aumentas? Escribe: fuego, agua, aire o naturaleza', 'fuego');
       const map = { fuego: 'fire', agua: 'water', aire: 'air', naturaleza: 'nature' };
       const key = map[(el || '').toLowerCase().trim()];
-      if (!key) {
-        alert('Elemento no reconocido. Inténtalo de nuevo desde el botón + Maná.');
-        return;
-      }
+      if (!key)
+        return alert('Elemento no reconocido. Inténtalo de nuevo desde el botón + Maná.');
       x.shaman[key] = Math.min(4, x.shaman[key] + 1);
       log(`${ x.name } convierte 1 maná en +1 ${ MD2.shamanElements[key] } (${ x.shaman[key] }/4).`);
-      say(`${ MD2.shamanElements[key] } aumenta a ${ x.shaman[key] } de 4.`);
       save();
       renderHero();
+      say(`Elemento ${ MD2.shamanElements[key] } aumenta en 1.`);
     };
     if (x.cls === 'shaman') {
-      if (x.mana >= x.manaMax) {
-        say('Maná ya al máximo. Este punto se convierte automáticamente en un elemento.');
-        askElement();
-        return;
-      }
-      if (confirm('¿Quieres usar este punto para aumentar 1 Elemento en vez de recuperar maná?')) {
-        askElement();
-        return;
-      }
+      if (x.mana >= x.manaMax)
+        return askElement();
+      if (confirm('¿Quieres usar este punto para aumentar 1 Elemento en vez de recuperar maná?'))
+        return askElement();
     }
     x.mana = Math.min(x.manaMax, x.mana + 1);
     save();
@@ -1244,45 +1318,67 @@ function bindFlow(x) {
   if ($('finishFlow'))
     $('finishFlow').onclick = finishFlow;
   document.querySelectorAll('[data-rec]').forEach(b => b.onclick = () => {
-    x.flow.recovery = x.flow.recovery || { hp: 0, mana: 0 };
+    const isShaman = x.cls === 'shaman';
+    x.flow.recovery = isShaman ? {
+      hp: 0,
+      mana: 0,
+      fire: 0,
+      water: 0,
+      air: 0,
+      nature: 0,
+      ...(x.flow.recovery || {})
+    } : {
+      hp: 0,
+      mana: 0,
+      ...(x.flow.recovery || {})
+    };
     const field = b.dataset.rec, d = +b.dataset.d, r = x.flow.recovery;
-    const remaining = 2 - r.hp - r.mana;
+    const keys = isShaman ? [
+      'hp',
+      'mana',
+      'fire',
+      'water',
+      'air',
+      'nature'
+    ] : [
+      'hp',
+      'mana'
+    ];
+    const remaining = 2 - keys.reduce((sum, k) => sum + (r[k] || 0), 0);
     if (d > 0 && remaining <= 0)
       return;
-    if (d < 0 && r[field] <= 0)
+    if (d < 0 && (r[field] || 0) <= 0)
       return;
-    r[field] += d;
+    if (d > 0 && ['fire', 'water', 'air', 'nature'].includes(field) && x.shaman[field] + (r[field] || 0) >= 4)
+      return;
+    r[field] = (r[field] || 0) + d;
     save();
     renderHero();
   });
   if ($('confirmRecovery'))
     $('confirmRecovery').onclick = () => {
       const r = x.flow.recovery || { hp: 0, mana: 0 };
-      if (r.hp + r.mana !== 2)
+      const elementKeys = { fire: 'Fuego', water: 'Agua', air: 'Aire', nature: 'Naturaleza' };
+      const total = (r.hp || 0) + (r.mana || 0) + Object.keys(elementKeys).reduce((s2, k) => s2 + (r[k] || 0), 0);
+      if (total !== 2)
         return;
-      x.hp = Math.min(x.hpMax, x.hp + r.hp);
-      let manaGained = 0, elementMsgs = [];
-      const askElement = () => {
-        const el = prompt('¿Qué elemento aumentas con este punto? Escribe: fuego, agua, aire o naturaleza', 'fuego');
-        const map = { fuego: 'fire', agua: 'water', aire: 'air', naturaleza: 'nature' };
-        const key = map[(el || '').toLowerCase().trim()];
-        if (!key) {
-          alert('Elemento no reconocido, este punto se pierde. Puedes repartir de nuevo en Recuperación la próxima vez.');
-          return;
-        }
-        x.shaman[key] = Math.min(4, x.shaman[key] + 1);
-        elementMsgs.push(`${ MD2.shamanElements[key] } a ${ x.shaman[key] } de 4`);
-      };
-      for (let i = 0; i < r.mana; i++) {
-        if (x.cls === 'shaman' && (x.mana + manaGained >= x.manaMax || confirm(`Punto de maná ${ i + 1 } de ${ r.mana }: ¿usarlo para aumentar 1 Elemento en vez de recuperar maná?`))) {
-          askElement();
-        } else {
-          manaGained++;
-        }
+      const parts = [];
+      if (r.hp) {
+        x.hp = Math.min(x.hpMax, x.hp + r.hp);
+        parts.push(`+${ r.hp } Vida`);
       }
-      x.mana = Math.min(x.manaMax, x.mana + manaGained);
-      log(`${ x.name } se recupera: +${ r.hp } Vida, +${ manaGained } Maná.${ elementMsgs.length ? ' Elementos: ' + elementMsgs.join(', ') + '.' : '' }`);
-      say(`Recuperas ${ r.hp } de vida${ manaGained ? ` y ${ manaGained } de maná` : '' }.${ elementMsgs.length ? ' ' + elementMsgs.join('. ') + '.' : '' }`);
+      if (r.mana) {
+        x.mana = Math.min(x.manaMax, x.mana + r.mana);
+        parts.push(`+${ r.mana } Maná`);
+      }
+      Object.entries(elementKeys).forEach(([key, label]) => {
+        if (r[key]) {
+          x.shaman[key] = Math.min(4, x.shaman[key] + r[key]);
+          parts.push(`+${ r[key] } ${ label }`);
+        }
+      });
+      log(`${ x.name } se recupera: ${ parts.join(', ') || 'sin cambios' }.`);
+      say(`Recuperación: ${ parts.join(', ') }.`);
       finishFlow(true);
     };
   if ($('repeatAttackSteps'))
@@ -1483,7 +1579,6 @@ function finishFlow(skipGenericVoice = false) {
     if (s.mode === 'solo' || pendingHeroes.length === 0) {
       save();
       renderHero();
-      say('Sin acciones restantes. Todos los héroes han jugado su turno. Comienza la fase de enemigos.');
       nextPhase();
       return;
     }
@@ -1686,6 +1781,7 @@ function finishDarkness() {
   log('Comienza la Fase de Héroes.');
   save();
   render();
+  showPhaseCurtain(`Ronda ${ s.round } · Fase de Héroes`);
   say(`Comienza la ronda ${ s.round }. Fase de Héroes.`);
 }
 function nextPhase() {
@@ -1706,11 +1802,13 @@ function nextPhase() {
     log('Comienza la Fase de Enemigos.');
     save();
     render();
+    showPhaseCurtain('Fase de Enemigos');
     say('Comienza la fase de enemigos. Activa las cuadrillas y después los monstruos errantes. ¿Hay enemigos atacando a los héroes?');
     return;
   }
   if (s.phase === 1) {
     s.phase = 2;
+    showPhaseCurtain('Fase de Subida de Nivel');
     beginLevelPhase();
     save();
     render();
@@ -1718,6 +1816,7 @@ function nextPhase() {
   }
   if (s.phase === 2) {
     s.phase = 3;
+    showPhaseCurtain('Fase de Oscuridad');
     advanceDark(true);
     save();
     render();
@@ -1731,16 +1830,16 @@ function beginLevelPhase() {
   }));
   s.levelCursor = 0;
   s.levelPhaseResolved = false;
-  duckAndSay('Fase de subida de nivel. Reviso a cada héroe.');
-  setTimeout(processNextLevelHero, 1800);
+  s.anyLeveledUp = false;
+  processNextLevelHero();
 }
 function processNextLevelHero() {
   if (s.levelCursor >= s.levelQueue.length) {
     s.levelPhaseResolved = true;
     save();
     render();
-    duckAndSay('Revisión completa. Nadie más sube de nivel. Avanzamos a Oscuridad.');
-    setTimeout(nextPhase, 3000);
+    duckAndSay(s.anyLeveledUp ? 'Revisión completa. Avanzamos a Oscuridad.' : 'Ningún héroe sube de nivel por falta de experiencia. Avanzamos a Oscuridad.');
+    setTimeout(nextPhase, 2600);
     return;
   }
   const entry = s.levelQueue[s.levelCursor], x = s.heroes[entry.i];
@@ -1749,13 +1848,13 @@ function processNextLevelHero() {
   if (!cost || x.xp < cost) {
     entry.status = 'no-level';
     log(`${ x.name } fue revisado y no sube de nivel.`);
-    duckAndSay(`${ heroSpoken(x) }: sin nivel.`);
     s.levelCursor++;
     save();
     render();
-    setTimeout(processNextLevelHero, 1800);
+    setTimeout(processNextLevelHero, 200);
     return;
   }
+  s.anyLeveledUp = true;
   x.xp -= cost;
   x.level++;
   const g = MD2.levelGains[x.level];
@@ -1773,7 +1872,8 @@ function processNextLevelHero() {
   render();
   tab('hero');
   setTimeout(() => document.querySelector('[data-sec="skills"]')?.click(), 30);
-  duckAndSay(`${ heroSpoken(x) } sube a nivel ${ x.level }. Elige nueva habilidad.`);
+  setTimeout(showLevelUpBurst, 60);
+  duckAndSay(`${ heroSpoken(x) } sube a nivel ${ x.level }. Elige una habilidad.`);
 }
 function continueLevelQueueAfterSkill() {
   if (s.phase !== 2)
@@ -1820,6 +1920,7 @@ function advanceDark(voice = true) {
     duckAndSay(t);
   save();
   renderGame();
+  setTimeout(() => document.querySelector('#darkTrack .cell.active')?.classList.add('pulse'), 30);
 }
 function answerRule(q) {
   q = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');

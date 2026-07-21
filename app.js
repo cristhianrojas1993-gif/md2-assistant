@@ -2052,25 +2052,43 @@ function advanceDark(voice = true) {
   renderGame();
   setTimeout(() => document.querySelector('#darkTrack .cell.active')?.classList.add('pulse'), 30);
 }
+function normalizeQuery(q) {
+  return q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function stem(word) {
+  return word.length > 3 ? word.replace(/(es|s)$/, '') : word;
+}
 function answerRule(q) {
-  q = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  if (q.includes('linea') && q.includes('vision') || q.includes('ldv'))
-    return MD2.rules['linea de vision'];
-  if (q.includes('puerta'))
-    return MD2.rules.puertas;
-  if (q.includes('defensa'))
-    return MD2.rules.defensa;
-  if (q.includes('movimiento'))
-    return MD2.rules.movimiento;
-  if (q.includes('inventario') || q.includes('equipar'))
-    return MD2.rules.inventario;
-  if (q.includes('oscuridad'))
-    return MD2.rules.oscuridad;
-  if (q.includes('experiencia'))
-    return MD2.rules.experiencia;
-  if (q.includes('ataque'))
-    return MD2.rules.ataque;
-  return 'No encontré una coincidencia exacta. Incluye el nombre de la carta o usa un tema rápido.';
+  const norm = normalizeQuery(q);
+  if (!norm)
+    return 'Escribe o dicta tu duda sobre una regla del juego.';
+  const queryWords = norm.split(' ').map(stem);
+  let best = null, bestScore = 0, ties = [];
+  MD2.rulesTopics.forEach(topic => {
+    let score = 0;
+    topic.keywords.forEach(kw => {
+      const kwWords = normalizeQuery(kw).split(' ').map(stem);
+      const allPresent = kwWords.every(w => queryWords.includes(w));
+      if (allPresent)
+        score += kwWords.length;
+    });
+    if (score > bestScore) {
+      bestScore = score;
+      best = topic;
+      ties = [topic];
+    } else if (score === bestScore && score > 0 && topic !== best) {
+      ties.push(topic);
+    }
+  });
+  if (!best || bestScore === 0) {
+    const sample = MD2.rulesTopics.slice(0, 6).map(t => t.keywords[0]).join(', ');
+    return `No encontré una coincidencia clara. Intenta con palabras como: ${ sample }, u otro término del reglamento.`;
+  }
+  if (ties.length > 1) {
+    const names = ties.map(t => t.keywords[0]).join(' / ');
+    return `${ best.text }\n\n(Tu pregunta también podría referirse a: ${ names }. Sé más específico si quieres otra respuesta.)`;
+  }
+  return best.text;
 }
 $('addSelectedClass').onclick = () => {
   let k = $('classPicker').dataset.selected;

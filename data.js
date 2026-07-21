@@ -674,6 +674,248 @@ MD2.rules = {
   'oscuridad': 'Al atacar en Oscuridad añade el dado de Oscuridad y revisa la habilidad de Sombras.',
   'experiencia': 'Secuaz: +1 XP al héroe que lo elimina. Líder: +2 XP a cada héroe. Errante: +4 XP a cada héroe.'
 };
+MD2.rulesTopics = [
+  {
+    id: 'dados',
+    keywords: ['dado', 'dados', 'colores de dado', 'dado amarillo', 'dado naranja', 'dado azul', 'dado negro', 'dado sombra'],
+    text: 'Hay 5 tipos de dados. Amarillo y naranja son de Ataque (el amarillo tiende a dar más maná, el naranja más daño). El azul es de Defensa. El púrpura es el dado de Sombra, que solo usan los héroes al atacar desde una Zona de Sombra y da bonificaciones extra. El negro es el dado de Enemigo, usado solo por los enemigos tanto al atacar como al defender. Resultados: espada = 1 de daño (genera Heridas si no se bloquea), estrella = restaura 1 de maná al atacante, escudo = bloquea 1 de daño, símbolo de sombra = activa la Habilidad de Sombra del héroe, y el símbolo de garra del dado de enemigo siempre inflige 1 Herida sin poder bloquearse; el símbolo de mano activa las habilidades especiales del enemigo.'
+  },
+  {
+    id: 'tablero_heroe',
+    keywords: ['tablero de heroe', 'dashboard', 'ficha de heroe', 'slots de objeto', 'ranura'],
+    text: 'Cada jugador tiene su propio tablero con la carta de Héroe, el seguimiento de experiencia y nivel, y 6 ranuras de objeto: Cabeza, Pecho, Piernas, Miscelánea y 2 para Manos (un objeto a dos manos ocupa ambas ranuras de mano). Solo los objetos colocados en estas ranuras están activos; el resto son inventario.'
+  },
+  {
+    id: 'carta_heroe',
+    keywords: ['carta de heroe', 'habilidad de heroe', 'habilidad de sombra propia'],
+    text: 'La carta de cada Héroe muestra su nombre, clase, Vida y Maná iniciales, su Habilidad de Héroe (siempre disponible) y su Habilidad de Sombra (solo se activa cuando el dado de Sombra muestra ese símbolo).'
+  },
+  {
+    id: 'carta_habilidad',
+    keywords: ['carta de habilidad', 'skill', 'numeral romano', 'habilidad rango', 'mejorar habilidad'],
+    text: 'Las habilidades con número romano (I, II...) son habilidades de rango: se pueden mejorar al subir de nivel, pero solo si ya tienes el rango anterior. Cada habilidad indica el nivel mínimo de héroe necesario para adquirirla.'
+  },
+  {
+    id: 'bolsa_tesoro',
+    keywords: ['bolsa de tesoro', 'treasure bag', 'ficha de tesoro', 'tesoro comun', 'tesoro raro', 'tesoro epico'],
+    text: 'La Bolsa de Tesoro contiene fichas de tesoro Común, Raro y Épico. Cuando el juego indica sacar fichas de tesoro, se sacan al azar de la bolsa. Al recoger una ficha, se devuelve a la bolsa y se roba una carta del mazo de objetos correspondiente a su rareza. A medida que avanza la partida, se agregan más fichas de tesoros mejores a la bolsa.'
+  },
+  {
+    id: 'cartas_objeto',
+    keywords: ['carta de objeto', 'item', 'objeto comun', 'objeto raro', 'objeto epico', 'color de carta', 'arma', 'armadura'],
+    text: 'Los objetos tienen 7 mazos distintos según su origen. El color de fondo indica su rareza: verde Común, azul Raro, púrpura Épico, beige objetos iniciales (cuentan como Común), gris Consumibles (cuentan como Común), y los objetos de Set tienen colores propios. Las armas suelen dar dados de Ataque; las armaduras, dados de Defensa.'
+  },
+  {
+    id: 'enemigos_general',
+    keywords: ['tipos de enemigo', 'cuadrilla', 'mob', 'monstruo errante', 'jefe', 'boss'],
+    text: 'Hay 3 tipos de enemigos: Cuadrillas (un Líder más Secuaces, actúan como grupo), Monstruos Errantes (enemigos únicos y poderosos que recorren la mazmorra solos) y Jefes (con reglas únicas, normalmente ligados al objetivo de la misión).'
+  },
+  {
+    id: 'cuadrillas_detalle',
+    keywords: ['secuaz', 'lider de cuadrilla', 'vida de mob', 'recompensa de mob'],
+    text: 'Una carta de Cuadrilla muestra la recompensa de tesoro (para quien mata al Líder), la vida de cada miniatura, los dados de Defensa que suma el grupo, y su habilidad especial (activada por el símbolo de mano en los dados de enemigo). El nivel de mazmorra determina qué cuadrillas aparecen.'
+  },
+  {
+    id: 'errantes_detalle',
+    keywords: ['monstruo errante detalle', 'patron de activacion', 'recompensa fija'],
+    text: 'Los Monstruos Errantes tienen vida según la cantidad de héroes en la partida, y además de la recompensa normal de tesoro, entregan una Recompensa Fija (no se saca de la bolsa). Cada uno tiene su propio patrón de activación descrito en su carta.'
+  },
+  {
+    id: 'jefes_detalle',
+    keywords: ['pista de jefe', 'habilidad de combate del jefe', 'habilidad pasiva del jefe', 'dados de activacion'],
+    text: 'Cada Jefe tiene: dados de Activación (cuántos dados de enemigo lanza por acción), número de Acciones por Fase de Enemigos, dados de Ataque/Defensa, Habilidades de Combate (efectos al atacar o defender), Habilidades Especiales (activadas por símbolos de mano) y Habilidades Pasivas (siempre activas, ligadas a la Pista de Jefe, que reemplaza al Medidor de Oscuridad durante el combate final).'
+  },
+  {
+    id: 'losetas_zonas',
+    keywords: ['loseta', 'zona', 'zona de sombra', 'zona de luz', 'pared'],
+    text: 'Cada Loseta tiene 9 Zonas. Una Zona de aspecto oscuro es una Zona de Sombra (otorga ventajas al héroe); el resto son Zonas de Luz. Las Zonas son adyacentes si están pegadas ortogonalmente y no separadas por una pared o puerta cerrada. No hay límite de miniaturas por Zona.'
+  },
+  {
+    id: 'camaras_corredores',
+    keywords: ['camara', 'corredor', 'revelar camara'],
+    text: 'Un Corredor es cualquier Zona que no forma parte de una Cámara (sin reglas especiales). Una Cámara es un grupo de Zonas rodeado de paredes, a la que se entra por puertas. Al abrir por primera vez una puerta de una Cámara, esta se revela: se resuelve la carta de Puerta, luego aparecen los enemigos, y por último se colocan los tesoros.'
+  },
+  {
+    id: 'cartas_puerta',
+    keywords: ['carta de puerta', 'door card', 'evento de puerta'],
+    text: 'Las cartas de Puerta tienen un evento que se resuelve la primera vez que se abre la puerta de una Cámara, antes de que aparezcan enemigos o tesoros. Después se descarta, salvo que la carta diga lo contrario.'
+  },
+  {
+    id: 'fases_ronda',
+    keywords: ['fases de la ronda', 'orden de fases', 'ronda de juego'],
+    text: 'Cada ronda tiene 4 fases en orden: 1) Fase de Héroes (cada héroe actúa), 2) Fase de Enemigos (los enemigos contraatacan), 3) Fase de Subida de Nivel (se gasta experiencia acumulada), 4) Fase de Oscuridad (el peligro aumenta). Al terminar las 4, empieza una ronda nueva.'
+  },
+  {
+    id: 'accion_movimiento',
+    keywords: ['accion de movimiento', 'puntos de movimiento', 'pm', 'dano de reaccion', 'moverse'],
+    text: 'La Acción de Movimiento da 2 Puntos de Movimiento (PM). Cada PM sirve para: moverse a una Zona adyacente, abrir una puerta en la Zona actual, o interactuar con algo en la Zona actual. Los PM no gastados se pierden al final de la acción. Si un héroe sale de una Zona con enemigos, sufre Daño de Reacción: 1 Herida por cada miniatura enemiga presente.'
+  },
+  {
+    id: 'abrir_puerta',
+    keywords: ['abrir puerta', 'puerta cerrada', 'puerta abierta'],
+    text: 'Un héroe en una Zona con una puerta cerrada puede gastar 1 PM para abrirla. Abrir una puerta no termina la Acción de Movimiento, así que los PM restantes se pueden seguir usando. Las puertas no se pueden volver a cerrar.'
+  },
+  {
+    id: 'interactuar',
+    keywords: ['interactuar', 'recoger tesoro', 'objetos en la zona'],
+    text: 'Un héroe puede interactuar con 1 objeto en su Zona por cada PM que gaste, siempre que no haya enemigos presentes. Al interactuar con una ficha de tesoro, se recoge y se saca una carta del mazo correspondiente a su rareza. Al recoger objetos se pueden equipar de inmediato o repartir a otro héroe en la misma Zona.'
+  },
+  {
+    id: 'linea_vision',
+    keywords: ['linea de vision', 'ldv', 'line of sight', 'ver al enemigo'],
+    text: 'Un atacante tiene línea de visión a su objetivo si no hay paredes ni puertas cerradas entre ambos en línea recta. Otros héroes y enemigos no bloquean la línea de visión. Los ataques Mágicos y a Distancia siempre requieren línea de visión; los Cuerpo a cuerpo no, porque exigen estar en la misma Zona.'
+  },
+  {
+    id: 'accion_ataque',
+    keywords: ['accion de ataque', 'tipo de ataque', 'cuerpo a cuerpo', 'melee', 'magico', 'a distancia', 'ranged'],
+    text: 'Hay 3 tipos de ataque: Cuerpo a cuerpo (atacante y objetivo en la misma Zona), Mágico (misma Zona o 1 Zona de distancia con línea de visión) y A Distancia (1 o más Zonas de distancia, siempre con línea de visión, nunca contra alguien en la misma Zona). Los ataques y el movimiento siempre son ortogonales, nunca diagonales.'
+  },
+  {
+    id: 'resolver_ataque',
+    keywords: ['resolver ataque', 'reserva de dados', 'sumar espadas', 'restar escudos', 'lanzar dados'],
+    text: 'Para resolver un ataque: 1) Reunir y lanzar todos los dados (ataque del atacante, defensa del defensor, dado de sombra si aplica, dados de enemigo según secuaces). 2) Aplicar habilidades y efectos en el orden que el jugador que tira los dados decida, sin poder re-tirar un dado ya resuelto. 3) Sumar todas las espadas y restar los escudos; el resultado son las Heridas infligidas. El máximo por tirada es 3 dados de cada color de ataque, 5 azules, 1 de sombra y 6 de enemigo.'
+  },
+  {
+    id: 'experiencia_combate',
+    keywords: ['xp por matar', 'experiencia por eliminar', 'ganar experiencia'],
+    text: 'Por cada enemigo eliminado, el héroe que dio el golpe final gana 1 XP. Si es un Líder de Cuadrilla, todos los héroes ganan 2 XP adicionales; si es un Monstruo Errante, todos ganan 4 XP adicionales. Al matar un Líder o Errante también se recogen sus tesoros y objetos.'
+  },
+  {
+    id: 'intercambiar_equipar',
+    keywords: ['intercambiar y equipar', 'trade and equip', 'repartir objetos'],
+    text: 'Gastando 1 acción, un héroe activa su Zona para comerciar: todos los héroes en esa Zona pueden intercambiar y equipar objetos libremente. Aunque solo se quiera equipar algo del propio inventario sin intercambiar con nadie, igual se necesita que un héroe gaste la acción de Intercambiar y Equipar.'
+  },
+  {
+    id: 'recuperar',
+    keywords: ['accion de recuperar', 'recover', 'recuperar vida o mana'],
+    text: 'Gastando 1 acción de Recuperación, un héroe gana hasta 2 puntos entre Vida y Maná, en cualquier combinación (2 Vida, 2 Maná, o 1 de cada).'
+  },
+  {
+    id: 'acciones_especiales',
+    keywords: ['accion especial', 'accion action', 'gastar una accion'],
+    text: 'Algunas habilidades u objetos indican "Acción": el héroe puede gastar 1 de sus 3 acciones del turno para activar ese efecto.'
+  },
+  {
+    id: 'objetos_set',
+    keywords: ['objeto de set', 'set item', 'shadowbane'],
+    text: 'Los objetos de un mismo Set comparten nombre (por ejemplo, "Set Shadowbane"). Con al menos 2 piezas equipadas del mismo set se obtiene su poder Menor; con 4 o más, el poder Mayor. Si se quita una pieza y ya no se cumple el mínimo, se pierde el poder correspondiente.'
+  },
+  {
+    id: 'consumibles',
+    keywords: ['objeto consumible', 'pocion', 'consumable'],
+    text: 'Los consumibles (pociones y similares) no ocupan ranuras de equipo; se guardan junto al tablero del héroe. Se pueden usar en cualquier momento, antes o después de una acción, incluso durante la Fase de Enemigos. Al usarse, se descartan.'
+  },
+  {
+    id: 'fase_enemigos',
+    keywords: ['fase de enemigos', 'enemy phase', 'contraataque'],
+    text: 'En la Fase de Enemigos, cada Cuadrilla y Monstruo Errante en la mazmorra se activa por separado; los jugadores eligen el orden. Al terminar todos, la fase acaba.'
+  },
+  {
+    id: 'activacion_mob',
+    keywords: ['activacion de cuadrilla', 'mob attack', 'ataque de cuadrilla', 'movimiento de cuadrilla'],
+    text: 'Cada Cuadrilla realiza 2 acciones al activarse. En cada una, ataca si puede (al héroe más cercano dentro de su rango, decidido por los jugadores en caso de empate); si no puede atacar, se mueve 1 Zona por el camino más corto hacia un héroe. Las Cuadrillas no abren puertas, no interactúan y no activan trampas.'
+  },
+  {
+    id: 'activacion_errante',
+    keywords: ['activacion de monstruo errante', 'roaming monster activation'],
+    text: 'Cada Monstruo Errante sigue sus propias condiciones escritas en su carta: revisa la primera condición, y si se cumple, ejecuta ese efecto y termina. Si no, revisa la segunda condición. Si ninguna se cumple, actúa como una Cuadrilla normal con 2 acciones.'
+  },
+  {
+    id: 'inconsciente',
+    keywords: ['inconsciente', 'ko', 'knocked out', 'ficha de resurreccion', 'lifebringer'],
+    text: 'Un héroe sin Vida queda Inconsciente (tumbar la miniatura, se descartan sus estados). Al inicio de cada ronda, si hay algún héroe Inconsciente, se gasta 1 Ficha de Resurrección para revivirlo con 3 de Vida (conserva el Maná que tenía). Si no quedan Fichas de Resurrección disponibles, la partida termina en derrota inmediata. Un héroe Inconsciente no actúa ni puede ser objetivo hasta que reviva.'
+  },
+  {
+    id: 'fase_subida_nivel',
+    keywords: ['fase de subida de nivel', 'level up', 'costo de nivel', 'subir de nivel'],
+    text: 'Subir de nivel es obligatorio si se tiene la experiencia suficiente. Costos acumulados: nivel 1→2 cuesta 5 XP, 2→3 cuesta 10 XP, 3→4 cuesta 12 XP, 4→5 cuesta 18 XP. Al subir: se descuenta la XP gastada, sube el marcador de nivel, aumenta Vida o Maná máximo (según el token de nivel) recibiendo esa cantidad de la reserva, se añaden fichas de tesoro a la bolsa según indique el token, y se gana una nueva habilidad de la clase (con requisito de nivel igual o menor al nuevo nivel).'
+  },
+  {
+    id: 'fase_oscuridad',
+    keywords: ['fase de oscuridad', 'medidor de oscuridad', 'darkness phase', 'darkness track'],
+    text: 'Cada Fase de Oscuridad avanza el marcador 1 casilla. Al llegar a una casilla de Cuadrilla, aparece una Cuadrilla en cada Zona con Portal. Al llegar a una de Monstruo Errante, aparece uno en la Zona de Portal de Monstruo Errante. Al llegar a una de tesoro, se añade una ficha de esa rareza a la bolsa. Al superar la última casilla, el medidor se voltea a su reverso y continúa desde ahí.'
+  },
+  {
+    id: 'sombra_luz',
+    keywords: ['sombra y luz', 'zona de sombra regla', 'ventaja de sombra'],
+    text: 'Estar en una Zona de Sombra se considera "estar en Sombra"; algunas habilidades solo se activan así. Al atacar en Sombra se suma el dado de Sombra, fuente de maná o espadas extra, y que además activa la Habilidad de Sombra propia del héroe cuando muestra su símbolo especial. Estar en Zona de Luz se considera "estar en Luz"; otras habilidades requieren esta condición.'
+  },
+  {
+    id: 'nivel_mazmorra',
+    keywords: ['nivel de mazmorra', 'dungeon level'],
+    text: 'El Nivel de Mazmorra determina qué enemigos y objetos aparecen, y es igual al nivel del héroe con el nivel más alto del grupo.'
+  },
+  {
+    id: 'habilidades_especiales_formato',
+    keywords: ['formato de habilidad', 'condicion de tiempo', 'costo de habilidad', 'requisito de habilidad'],
+    text: 'Las habilidades siguen el formato [Tipo/Condición de tiempo/Costo/Requisito]: [Efecto]. Condiciones de tiempo comunes: Ataque (solo el atacante, 1 vez por combate), Defensa (solo el defensor), Combate (cualquiera de los dos), Movimiento (1 vez por Acción de Movimiento), Cualquier momento. Costos comunes: gastar 1 acción, estar en Sombra o en Luz, descartar maná, haber recibido X Heridas. Salvo que se indique lo contrario, una habilidad se puede usar en cualquier momento del turno del héroe, antes o después de una acción.'
+  },
+  {
+    id: 'tokens_condicion',
+    keywords: ['ficha de fuego', 'ficha de escarcha', 'condition token', 'quemado', 'congelado'],
+    text: 'Fuego: al activarse un héroe o enemigo con fichas de fuego, se quita 1 ficha y se lanza 1 dado amarillo; cada espada inflige 1 Herida, repitiendo hasta agotar las fichas. Escarcha: si un héroe o Cuadrilla va a realizar una acción y tiene fichas de escarcha, se quita 1 en vez de realizarla; un Monstruo Errante con 2 o más fichas pierde toda su activación (con solo 1, la pierde sin efecto). Los Jefes quitan todas sus fichas de escarcha sin efecto al activarse.'
+  },
+  {
+    id: 'tokens_especiales',
+    keywords: ['trampa de pinchos', 'trampa de oso', 'pilar', 'fuente', 'cofre', 'forja', 'puente', 'abismo'],
+    text: 'Trampa de Pinchos: al entrar en su Zona, se voltea y se sufren las Heridas indicadas. Trampa de Oso: al entrar, si muestra "pierde 1 acción" se pierde esa acción y termina el movimiento; si es en blanco, no pasa nada. Pilar: no bloquea línea de visión pero resta 1 dado amarillo a ataques mágicos o a distancia que pasen a través suyo. Fuente: gastando 1 PM se voltea y se cura la cantidad indicada. Cofre Normal: gastando 1 PM se obtienen 2 objetos de la rareza mostrada; Cofre Mayor da 3. Forja: gastando 1 PM se puede descartar 3 cartas de objeto y robar 1 objeto de una rareza superior a la más baja descartada. Puente: funciona como una Zona extra de Sombra, adyacente a una Zona de la Loseta. Abismo: Zona infranqueable, ni héroes ni enemigos pueden entrar.'
+  },
+  {
+    id: 'modo_solitario',
+    keywords: ['modo solitario', 'single player', 'un jugador', 'un heroe'],
+    text: 'En modo solitario, el único héroe recibe 4 acciones por turno en vez de 3, y el resto de reglas (vida de Monstruos Errantes, secuaces en Cuadrillas) se calculan como si hubiera 2 héroes.'
+  },
+  {
+    id: 'hellbreaker',
+    keywords: ['hellbreaker', 'desafio hellbreaker', 'aumentar dificultad'],
+    text: 'El Desafío Hellbreaker aumenta la dificultad de cualquier misión reduciendo en 1 la cantidad de Fichas de Resurrección disponibles.'
+  },
+  {
+    id: 'romper_empates',
+    keywords: ['romper empate', 'breaking ties', 'empate de regla'],
+    text: 'Salvo que se indique lo contrario, cuando un efecto de juego tiene más de una opción válida, los propios jugadores eligen cuál aplicar.'
+  },
+  {
+    id: 'clases_general',
+    keywords: ['clases de heroe', 'hero classes', 'clase de personaje'],
+    text: 'Hay 6 clases: Mago, Paladín, Berserker, Pícaro, Chamán y Explorador. Cada una trae componentes y una mecánica exclusiva propia.'
+  },
+  {
+    id: 'clase_mago',
+    keywords: ['mago', 'wizard', 'amuleto de hechizos', 'marcador listo'],
+    text: 'El Mago usa un Amuleto de Hechizos dividido en 4 cuadrantes, cada uno con un hechizo básico que se va mejorando con las habilidades de nivel. Solo puede lanzar el hechizo que señala el Marcador Listo; tras lanzarlo, el marcador rota al siguiente cuadrante en sentido horario. Puede forzar la rotación gastando 1 maná por cada cuadrante que avance. Para beneficiarse de un hechizo de ataque, necesita un arma equipada con ataque Mágico.'
+  },
+  {
+    id: 'clase_paladin',
+    keywords: ['paladin', 'consagracion', 'bendicion', 'zona consagrada'],
+    text: 'El Paladín coloca Fichas de Consagración (gastando 1 maná, sin costar una acción) en Zonas dentro de su línea de visión; los héroes en esa Zona reciben los beneficios de las habilidades asociadas a esa ficha. Solo 1 Consagración por Zona a la vez. Al inicio de cada ronda puede además "bendecir" 1 habilidad volteando su carta, aumentando su poder hasta el final de la ronda.'
+  },
+  {
+    id: 'clase_berserker',
+    keywords: ['berserker', 'furia', 'postura', 'sangre furiosa', 'temerario', 'provocador'],
+    text: 'El Berserker tiene 3 posturas: Furia Sangrienta (más poder de ataque), Temerario (más movilidad) y Provocador (castiga a quien lo ataca). Al recibir Heridas, puede mover esas fichas de Vida perdida a su Reserva de Furia (máximo 7); gastar Furia (siempre de a 1 por costo) activa habilidades de su postura actual. Cambiar de postura cuesta 1 Furia, antes o después de una acción.'
+  },
+  {
+    id: 'clase_picaro',
+    keywords: ['picaro', 'rogue', 'bolsa de herramientas', 'ficha de picaro', 'token rojo azul verde'],
+    text: 'El Pícaro extrae 3 fichas al azar de su Bolsa de Herramientas al inicio de cada ronda. Cada acción realizada obliga a voltear 1 ficha: si su color coincide con el tipo de acción (rojo=Ataque, azul=Movimiento, verde=cualquiera), se obtiene el beneficio indicado; si no coincide, la acción se resuelve igual mente pero sin bonificación.'
+  },
+  {
+    id: 'clase_chaman',
+    keywords: ['chaman', 'shaman', 'elemento', 'fuego agua aire naturaleza', 'espiritu de fuego', 'espiritu de hielo'],
+    text: 'El Chamán tiene 4 pistas de Elemento (Fuego, Agua, Aire, Naturaleza). En vez de ganar maná, puede subir cualquier pista de elemento por esa cantidad. Al llegar una pista a su máximo, puede gastarla entera para obtener una habilidad pasiva permanente para el resto de la misión. También puede invocar un Espíritu de Fuego y uno de Hielo mediante habilidades; cada uno puede activarse una vez gratis por turno del Chamán (acciones adicionales sí cuestan 1 acción), y solo pueden Mover o Atacar (no interactúan, no abren puertas, no recuperan).'
+  },
+  {
+    id: 'clase_explorador',
+    keywords: ['explorador', 'ranger', 'mazo de flechas', 'carta de flecha', 'rebote'],
+    text: 'El Explorador revela cartas de su mazo de Flechas una por una al hacer un ataque a distancia, hasta decidir parar o hasta acumular 7 o más espadas. Con menos de 7, aplica el efecto central (tiro rápido); con exactamente 7, el efecto especial de "Blanco perfecto"; con más de 7, el efecto negativo de "Sobrecarga". Luego se descartan las cartas reveladas.'
+  },
+  {
+    id: 'ganar_perder',
+    keywords: ['ganar la partida', 'perder la partida', 'condicion de victoria', 'condicion de derrota'],
+    text: 'Se gana al cumplir el objetivo de la misión elegida. Se pierde si se cumple alguna condición de derrota específica de la misión, o si hay que gastar una Ficha de Resurrección y ya no queda ninguna.'
+  }
+];
 MD2.shamanElements = {
   fire: '\uD83D\uDD25 Fuego',
   water: '\uD83D\uDCA7 Agua',

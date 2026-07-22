@@ -249,6 +249,36 @@ function playTone() {
 }
 async function ambient(mode) {
 }
+function attackSongEl() {
+  let el = document.getElementById('attackSong');
+  if (!el) {
+    el = document.createElement('audio');
+    el.id = 'attackSong';
+    el.src = 'el-grito-de-los-vientos.mp3';
+    el.preload = 'auto';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function playAttackSong() {
+  const el = attackSongEl();
+  try {
+    el.currentTime = 0;
+    el.play().catch(() => {
+    });
+  } catch (err) {
+  }
+}
+function stopAttackSong() {
+  const el = document.getElementById('attackSong');
+  if (!el)
+    return;
+  try {
+    el.pause();
+    el.currentTime = 0;
+  } catch (err) {
+  }
+}
 function duckAndSay(t) {
   say(t);
 }
@@ -561,6 +591,7 @@ function renderEnemyDefense() {
   panel.innerHTML = `<h2>Defensa del grupo</h2><p class="notice">¿Hay enemigos atacando a los héroes en esta fase?</p><div class="actions"><button id="enemyAttackYes" class="primary">Sí, un héroe es atacado</button><button id="enemyAttackNo">No hay más ataques, continuar</button></div><div id="enemyDefenseForm"></div>`;
   $('enemyAttackYes').onclick = () => {
     s.enemyPhaseAsked = true;
+    playAttackSong();
     renderDefenseForm(available);
   };
   $('enemyAttackNo').onclick = () => {
@@ -607,6 +638,7 @@ function renderDefenseForm(available) {
   $('defendedHero').onchange = renderProvokeSlot;
   $('confirmDamage').onclick = () => {
     const dmg = +$('damageAmount').value;
+    stopAttackSong();
     if ($('defendedHero').value === 'invoker') {
       s.missionState.invokerHp = Math.max(0, (s.missionState.invokerHp ?? 8) - dmg);
       log(`El Invocador recibe ${ dmg } de daño (Vida restante: ${ s.missionState.invokerHp }/8).`);
@@ -1634,6 +1666,8 @@ function startAction(type) {
     };
   if (type === 'attack' && x.cls === 'ranger')
     x.flow.arrowResult = null;
+  if (type === 'attack')
+    playAttackSong();
   save();
   renderHero();
   setTimeout(() => document.querySelector('.actionFlow')?.scrollIntoView({ behavior: 'smooth' }), 30);
@@ -1751,6 +1785,7 @@ function bindMissionButtons(x) {
 }
 function finishFlow(skipGenericVoice = false) {
   const x = h();
+  const wasAttack = x.flow.type === 'attack';
   x.flow = {
     type: null,
     step: 0,
@@ -1761,6 +1796,8 @@ function finishFlow(skipGenericVoice = false) {
     on: false,
     pm: 0
   };
+  if (wasAttack)
+    stopAttackSong();
   if (x.actions <= 0) {
     x.turnDone = true;
     const pendingHeroes = s.heroes.filter(q => !q.unconscious && !q.turnDone);

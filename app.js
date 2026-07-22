@@ -148,6 +148,8 @@ function fresh() {
     voicePitch: 1,
     voiceName: '',
     audioUnlocked: false,
+    musicMuted: false,
+    musicVolume: 0.7,
     lastAnnouncement: '',
     resurrection: {
       blue: 0,
@@ -231,6 +233,10 @@ if (s.voiceName === undefined)
   s.voiceName = '';
 if (s.audioUnlocked === undefined)
   s.audioUnlocked = false;
+if (s.musicMuted === undefined)
+  s.musicMuted = false;
+if (typeof s.musicVolume !== 'number')
+  s.musicVolume = 0.7;
 if (s.lastAnnouncement === undefined)
   s.lastAnnouncement = '';
 let audioCtx = null;
@@ -268,6 +274,9 @@ function attackSongEl() {
   }
   return el;
 }
+function musicVol() {
+  return s.musicMuted ? 0 : (typeof s.musicVolume === 'number' ? s.musicVolume : 0.7);
+}
 let attackSongFadeInterval = null;
 function playAttackSong() {
   if (attackSongFadeInterval) {
@@ -277,7 +286,7 @@ function playAttackSong() {
   pauseAmbient();
   const el = attackSongEl();
   try {
-    el.volume = 1;
+    el.volume = s.musicMuted ? 0 : 1;
     el.currentTime = 0;
     el.play().catch(() => {
     });
@@ -287,7 +296,7 @@ function playAttackSong() {
 function stopAttackSong() {
   const el = document.getElementById('attackSong');
   if (!el) {
-    resumeAmbient();
+    resumeAmbientAfterInterruption();
     return;
   }
   if (attackSongFadeInterval) {
@@ -311,39 +320,61 @@ function stopAttackSong() {
         el.volume = 1;
       } catch (err) {
       }
-      resumeAmbient();
+      resumeAmbientAfterInterruption();
     }
   }, fadeStepMs);
 }
 const AMBIENT_LOOP_START = 25;
+const GAME_TRACKS = ['ambiental_1.mp3', 'ambiental_2.mp3', 'ambiental_3.mp3'];
+let currentGameTrack = null;
 function ambientEl() {
   let el = document.getElementById('ambientSong');
   if (!el) {
     el = document.createElement('audio');
     el.id = 'ambientSong';
-    el.src = 'ambiente.mp3';
     el.preload = 'auto';
-    el.addEventListener('ended', () => {
-      try {
-        el.currentTime = AMBIENT_LOOP_START;
-        el.play().catch(() => {
-        });
-      } catch (err) {
-      }
-    });
+    el.addEventListener('ended', onAmbientTrackEnded);
     document.body.appendChild(el);
   }
   return el;
 }
-function startAmbient() {
+function onAmbientTrackEnded() {
+  if (!s.confirmed)
+    return;
+  playRandomGameTrack();
+}
+function startMenuAmbient() {
+  if (s.confirmed)
+    return;
   const el = ambientEl();
+  el.loop = true;
   try {
-    el.volume = 1;
-    el.currentTime = AMBIENT_LOOP_START;
+    if (!el.src || el.src.indexOf('ambiente.mp3') === -1)
+      el.src = 'ambiente.mp3';
+    el.volume = musicVol();
+    el.currentTime = 0;
     el.play().catch(() => {
     });
   } catch (err) {
   }
+}
+function playRandomGameTrack() {
+  const el = ambientEl();
+  el.loop = false;
+  const options = GAME_TRACKS.filter(t => t !== currentGameTrack);
+  const next = options[Math.floor(Math.random() * options.length)] || GAME_TRACKS[0];
+  currentGameTrack = next;
+  try {
+    el.src = next;
+    el.volume = musicVol();
+    el.currentTime = 0;
+    el.play().catch(() => {
+    });
+  } catch (err) {
+  }
+}
+function startAmbient() {
+  playRandomGameTrack();
 }
 function pauseAmbient() {
   const el = document.getElementById('ambientSong');
@@ -359,21 +390,60 @@ function resumeAmbient() {
   if (!el)
     return;
   try {
-    el.volume = 1;
+    el.volume = musicVol();
     el.play().catch(() => {
     });
   } catch (err) {
   }
 }
-function reactivateAmbient() {
-  const el = document.getElementById('ambientSong');
-  if (el && el.currentTime > 0) {
-    resumeAmbient();
-    say('Música ambiental reactivada.');
-  } else {
-    startAmbient();
-    say('Música ambiental iniciada.');
+function resumeAmbientAfterInterruption() {
+  if (!s.confirmed) {
+    startMenuAmbient();
+    return;
   }
+  playRandomGameTrack();
+}
+function reactivateAmbient() {
+  if (s.musicMuted) {
+    say('La música está silenciada. Actívala en Configuración para reactivarla.');
+    return;
+  }
+  if (!s.confirmed) {
+    startMenuAmbient();
+    say('Música de menú reactivada.');
+    return;
+  }
+  const el = document.getElementById('ambientSong');
+  if (el && !el.paused && el.currentTime > 0) {
+    say('La música ya se está reproduciendo.');
+    return;
+  }
+  playRandomGameTrack();
+  say('Música de fondo reactivada.');
+}
+function setMusicMuted(muted) {
+  s.musicMuted = muted;
+  save();
+  const ambientElRef = document.getElementById('ambientSong');
+  const attackElRef = document.getElementById('attackSong');
+  if (ambientElRef)
+    ambientElRef.volume = musicVol();
+  if (attackElRef && !attackSongFadeInterval)
+    attackElRef.volume = muted ? 0 : 1;
+  renderMusicControls();
+}
+function setMusicVolume(vol) {
+  s.musicVolume = Math.max(0, Math.min(1, vol));
+  save();
+  const ambientElRef = document.getElementById('ambientSong');
+  if (ambientElRef)
+    ambientElRef.volume = musicVol();
+}
+function renderMusicControls() {
+  if (!$('muteMusicBtn'))
+    return;
+  $('muteMusicBtn').textContent = s.musicMuted ? 'Activar música' : 'Silenciar música';
+  $('musicVolumeSlider').value = Math.round((s.musicVolume ?? 0.7) * 100);
 }
 function duckAndSay(t) {
   say(t);
@@ -2332,6 +2402,9 @@ $('repeatLastAnnouncement').onclick = () => {
   say(s.lastAnnouncement);
 };
 $('reactivateAmbient').onclick = () => reactivateAmbient();
+$('muteMusicBtn').onclick = () => setMusicMuted(!s.musicMuted);
+$('musicVolumeSlider').oninput = e => setMusicVolume(+e.target.value / 100);
+renderMusicControls();
 $('voiceSetting').onchange = e => {
   s.voice = e.target.value;
   save();
@@ -2374,6 +2447,8 @@ $('newGameSettings').onclick = () => {
     s = fresh();
     save();
     stopAmbient();
+    currentGameTrack = null;
+    startMenuAmbient();
     render();
     tab('setup');
   }
@@ -2458,6 +2533,8 @@ function deactivateMission() {
       s = fresh();
       save();
       stopAmbient();
+      currentGameTrack = null;
+      startMenuAmbient();
       render();
       tab('setup');
       say('Nueva partida iniciada.');
@@ -2587,3 +2664,8 @@ function bindMissionMechanics(m) {
 }
 initMissions();
 render();
+document.addEventListener('pointerdown', function firstTouchStartMenuMusic() {
+  document.removeEventListener('pointerdown', firstTouchStartMenuMusic);
+  if (!s.confirmed && !s.musicMuted)
+    startMenuAmbient();
+}, { once: true });

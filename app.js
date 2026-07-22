@@ -244,6 +244,14 @@ async function ensureAudio() {
   return true;
 }
 function stopAmbient() {
+  const el = document.getElementById('ambientSong');
+  if (!el)
+    return;
+  try {
+    el.pause();
+    el.currentTime = 0;
+  } catch (err) {
+  }
 }
 function playTone() {
 }
@@ -260,9 +268,16 @@ function attackSongEl() {
   }
   return el;
 }
+let attackSongFadeInterval = null;
 function playAttackSong() {
+  if (attackSongFadeInterval) {
+    clearInterval(attackSongFadeInterval);
+    attackSongFadeInterval = null;
+  }
+  pauseAmbient();
   const el = attackSongEl();
   try {
+    el.volume = 1;
     el.currentTime = 0;
     el.play().catch(() => {
     });
@@ -271,11 +286,82 @@ function playAttackSong() {
 }
 function stopAttackSong() {
   const el = document.getElementById('attackSong');
+  if (!el) {
+    resumeAmbient();
+    return;
+  }
+  if (attackSongFadeInterval) {
+    clearInterval(attackSongFadeInterval);
+    attackSongFadeInterval = null;
+  }
+  const fadeSteps = 18, fadeStepMs = 100, startVolume = el.volume || 1;
+  let step = 0;
+  attackSongFadeInterval = setInterval(() => {
+    step++;
+    try {
+      el.volume = Math.max(0, startVolume * (1 - step / fadeSteps));
+    } catch (err) {
+    }
+    if (step >= fadeSteps) {
+      clearInterval(attackSongFadeInterval);
+      attackSongFadeInterval = null;
+      try {
+        el.pause();
+        el.currentTime = 0;
+        el.volume = 1;
+      } catch (err) {
+      }
+      resumeAmbient();
+    }
+  }, fadeStepMs);
+}
+const AMBIENT_LOOP_START = 25;
+function ambientEl() {
+  let el = document.getElementById('ambientSong');
+  if (!el) {
+    el = document.createElement('audio');
+    el.id = 'ambientSong';
+    el.src = 'ambiente.mp3';
+    el.preload = 'auto';
+    el.addEventListener('ended', () => {
+      try {
+        el.currentTime = AMBIENT_LOOP_START;
+        el.play().catch(() => {
+        });
+      } catch (err) {
+      }
+    });
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function startAmbient() {
+  const el = ambientEl();
+  try {
+    el.volume = 1;
+    el.currentTime = AMBIENT_LOOP_START;
+    el.play().catch(() => {
+    });
+  } catch (err) {
+  }
+}
+function pauseAmbient() {
+  const el = document.getElementById('ambientSong');
   if (!el)
     return;
   try {
     el.pause();
-    el.currentTime = 0;
+  } catch (err) {
+  }
+}
+function resumeAmbient() {
+  const el = document.getElementById('ambientSong');
+  if (!el)
+    return;
+  try {
+    el.volume = 1;
+    el.play().catch(() => {
+    });
   } catch (err) {
   }
 }
@@ -2156,6 +2242,7 @@ $('confirmGroup').onclick = () => {
   save();
   render();
   advancePending();
+  startAmbient();
 };
 $('playerMode').onchange = e => {
   if (s.confirmed) {

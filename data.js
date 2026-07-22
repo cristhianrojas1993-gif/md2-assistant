@@ -856,9 +856,14 @@ MD2.rulesTopics = [
     text: 'Fuego: al activarse un héroe o enemigo con fichas de fuego, se quita 1 ficha y se lanza 1 dado amarillo; cada espada inflige 1 Herida, repitiendo hasta agotar las fichas. Escarcha: si un héroe o Cuadrilla va a realizar una acción y tiene fichas de escarcha, se quita 1 en vez de realizarla; un Monstruo Errante con 2 o más fichas pierde toda su activación (con solo 1, la pierde sin efecto). Los Jefes quitan todas sus fichas de escarcha sin efecto al activarse.'
   },
   {
+    id: 'pilar',
+    keywords: ['pilar', 'pilares', 'columna'],
+    text: 'Sí, un Pilar afecta tu ataque, pero solo si es un ataque Mágico o a Distancia (los ataques Cuerpo a cuerpo no se ven afectados). El efecto se aplica cuando atacas hacia o a través de una Zona que contiene un Pilar, desde otra Zona: restas 1 dado amarillo de tu reserva de ataque. Si tu ataque no incluye dados amarillos, el Pilar no tiene ningún efecto. El Pilar no bloquea la línea de visión.'
+  },
+  {
     id: 'tokens_especiales',
-    keywords: ['trampa de pinchos', 'trampa de oso', 'pilar', 'fuente', 'cofre', 'forja', 'puente', 'abismo'],
-    text: 'Trampa de Pinchos: al entrar en su Zona, se voltea y se sufren las Heridas indicadas. Trampa de Oso: al entrar, si muestra "pierde 1 acción" se pierde esa acción y termina el movimiento; si es en blanco, no pasa nada. Pilar: no bloquea línea de visión pero resta 1 dado amarillo a ataques mágicos o a distancia que pasen a través suyo. Fuente: gastando 1 PM se voltea y se cura la cantidad indicada. Cofre Normal: gastando 1 PM se obtienen 2 objetos de la rareza mostrada; Cofre Mayor da 3. Forja: gastando 1 PM se puede descartar 3 cartas de objeto y robar 1 objeto de una rareza superior a la más baja descartada. Puente: funciona como una Zona extra de Sombra, adyacente a una Zona de la Loseta. Abismo: Zona infranqueable, ni héroes ni enemigos pueden entrar.'
+    keywords: ['trampa de pinchos', 'trampa de oso', 'fuente', 'cofre', 'forja', 'puente', 'abismo'],
+    text: 'Trampa de Pinchos: al entrar en su Zona, se voltea y se sufren las Heridas indicadas. Trampa de Oso: al entrar, si muestra "pierde 1 acción" se pierde esa acción y termina el movimiento; si es en blanco, no pasa nada. Fuente: gastando 1 PM se voltea y se cura la cantidad indicada. Cofre Normal: gastando 1 PM se obtienen 2 objetos de la rareza mostrada; Cofre Mayor da 3. Forja: gastando 1 PM se puede descartar 3 cartas de objeto y robar 1 objeto de una rareza superior a la más baja descartada. Puente: funciona como una Zona extra de Sombra, adyacente a una Zona de la Loseta. Abismo: Zona infranqueable, ni héroes ni enemigos pueden entrar.'
   },
   {
     id: 'modo_solitario',

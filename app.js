@@ -365,6 +365,16 @@ function resumeAmbient() {
   } catch (err) {
   }
 }
+function reactivateAmbient() {
+  const el = document.getElementById('ambientSong');
+  if (el && el.currentTime > 0) {
+    resumeAmbient();
+    say('Música ambiental reactivada.');
+  } else {
+    startAmbient();
+    say('Música ambiental iniciada.');
+  }
+}
 function duckAndSay(t) {
   say(t);
 }
@@ -2321,6 +2331,7 @@ $('repeatLastAnnouncement').onclick = () => {
     return alert('No hay anuncio anterior.');
   say(s.lastAnnouncement);
 };
+$('reactivateAmbient').onclick = () => reactivateAmbient();
 $('voiceSetting').onchange = e => {
   s.voice = e.target.value;
   save();

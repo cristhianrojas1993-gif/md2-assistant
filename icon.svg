@@ -1,1 +1,72 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#111318"/><path d="M256 60 420 165v182L256 452 92 347V165Z" fill="#d5aa35"/><path d="M256 132 352 194v124l-96 62-96-62V194Z" fill="#252933"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <clipPath id="clipCircleG"><circle cx="100" cy="100" r="96"/></clipPath>
+    <radialGradient id="darkSideG" cx="30%" cy="55%" r="80%">
+      <stop offset="0%" stop-color="#4a4560"/>
+      <stop offset="45%" stop-color="#221f30"/>
+      <stop offset="100%" stop-color="#0a0910"/>
+    </radialGradient>
+    <radialGradient id="fireSideG" cx="75%" cy="60%" r="80%">
+      <stop offset="0%" stop-color="#ff8a3d"/>
+      <stop offset="50%" stop-color="#8a2410"/>
+      <stop offset="100%" stop-color="#1a0d08"/>
+    </radialGradient>
+    <linearGradient id="bladeCoreG" x1="0" y1="0" x2="0" y2="170">
+      <stop offset="0%" stop-color="#fffdf5"/>
+      <stop offset="30%" stop-color="#f6ecd0"/>
+      <stop offset="70%" stop-color="#d9bd7c"/>
+      <stop offset="100%" stop-color="#a8823f"/>
+    </linearGradient>
+    <linearGradient id="bladeShadeG" x1="0" y1="0" x2="20" y2="0">
+      <stop offset="0%" stop-color="#5a4522" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#5a4522" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gripWrapG" x1="0" y1="0" x2="0" y2="18">
+      <stop offset="0%" stop-color="#3a2e18"/><stop offset="100%" stop-color="#241b0e"/>
+    </linearGradient>
+    <radialGradient id="pommelGG" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#f6ecd0"/><stop offset="100%" stop-color="#8a6a2f"/>
+    </radialGradient>
+    <linearGradient id="wingGoldG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fffaef"/><stop offset="100%" stop-color="#c9a24b"/>
+    </linearGradient>
+    <linearGradient id="wingDarkG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7a3050"/><stop offset="100%" stop-color="#1e0f20"/>
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#clipCircleG)">
+    <rect x="4" width="96" height="200" fill="url(#darkSideG)"/>
+    <rect x="100" width="96" height="200" fill="url(#fireSideG)"/>
+    <circle cx="42" cy="55" r="1.6" fill="#e8e4f0" opacity="0.85"/>
+    <circle cx="28" cy="150" r="1.1" fill="#c9c2dd" opacity="0.7"/>
+    <circle cx="158" cy="55" r="1.5" fill="#ffd23f" opacity="0.8"/>
+    <circle cx="168" cy="150" r="1.1" fill="#ff8a5c" opacity="0.65"/>
+    <g transform="translate(100,55)" opacity="0.85">
+      <g transform="translate(0,0) scale(0.165) rotate(6)">
+        <path fill="url(#wingGoldG)" stroke="#f6ecd0" stroke-width="4" stroke-linejoin="round"
+          d="M475.3.1c9.9-.8 19.6 3 26.6 10s10.8 16.7 10 26.6c-4 49.3-17.4 126.2-46.3 199.7-1.8 4.5-5.5 7.9-10.2 9.3L374.5 270c-3.9 1.2-6.5 4.7-6.5 8.8 0 5.1 4.1 9.2 9.2 9.2h38.6c12 0 19.7 12.8 13.5 23.1-4 6.7-8.3 13.2-12.7 19.6-2 2.9-5 5-8.4 6.1L310.5 366c-3.9 1.2-6.5 4.7-6.5 8.8 0 5.1 4.1 9.2 9.2 9.2h16c14.6 0 21 17.4 8.8 25.4-68 45-137.7 43.3-182.4 31.3-12.7-3.4-24-9.9-34.4-17.9L48 496c-8.8 8.8-23.2 8.8-32 0s-8.8-23.2 0-32l80-80 .5.5q1.05-1.95 2.7-3.6L256 224c8.8-8.8 8.8-23.2 0-32s-23.2-8.8-32 0L89.7 326.2c-8.9 8.9-24 4.4-25-8.2-4.3-53.2 9.3-123.1 72.6-186.4C228.4 40.5 391.5 6.9 475.2.1z"/>
+      </g>
+    </g>
+    <g transform="translate(100,55) scale(-1,1)" opacity="0.85">
+      <g transform="translate(0,0) scale(0.165) rotate(6)">
+        <path fill="url(#wingDarkG)" stroke="#c65578" stroke-width="4" stroke-linejoin="round"
+          d="M475.3.1c9.9-.8 19.6 3 26.6 10s10.8 16.7 10 26.6c-4 49.3-17.4 126.2-46.3 199.7-1.8 4.5-5.5 7.9-10.2 9.3L374.5 270c-3.9 1.2-6.5 4.7-6.5 8.8 0 5.1 4.1 9.2 9.2 9.2h38.6c12 0 19.7 12.8 13.5 23.1-4 6.7-8.3 13.2-12.7 19.6-2 2.9-5 5-8.4 6.1L310.5 366c-3.9 1.2-6.5 4.7-6.5 8.8 0 5.1 4.1 9.2 9.2 9.2h16c14.6 0 21 17.4 8.8 25.4-68 45-137.7 43.3-182.4 31.3-12.7-3.4-24-9.9-34.4-17.9L48 496c-8.8 8.8-23.2 8.8-32 0s-8.8-23.2 0-32l80-80 .5.5q1.05-1.95 2.7-3.6L256 224c8.8-8.8 8.8-23.2 0-32s-23.2-8.8-32 0L89.7 326.2c-8.9 8.9-24 4.4-25-8.2-4.3-53.2 9.3-123.1 72.6-186.4C228.4 40.5 391.5 6.9 475.2.1z"/>
+      </g>
+    </g>
+  </g>
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#f6ecd0" stroke-width="2"/>
+  <g transform="translate(100,100)">
+    <polygon points="0,-94 5,-52 6.5,-6 0,4 -6.5,-6 -5,-52" fill="url(#bladeCoreG)" stroke="#7a5f2c" stroke-width="0.6"/>
+    <polygon points="0,-94 5,-52 6.5,-6 0,4" fill="url(#bladeShadeG)"/>
+    <line x1="0" y1="-86" x2="0" y2="-4" stroke="#8a6a30" stroke-width="1" opacity="0.5"/>
+    <line x1="-3.2" y1="-78" x2="-1.5" y2="-8" stroke="#fffdf5" stroke-width="0.8" opacity="0.7"/>
+    <path d="M-18 4 C-10 1 10 1 18 4 C10 8 -10 8 -18 4 Z" fill="#c9a24b" stroke="#f0e6d2" stroke-width="0.7"/>
+    <path d="M-18 4 C-10 6 10 6 18 4" stroke="#8a6a2f" stroke-width="0.6" fill="none" opacity="0.6"/>
+    <rect x="-4.5" y="10" width="9" height="13" rx="1" fill="url(#gripWrapG)"/>
+    <line x1="-4.5" y1="12.5" x2="4.5" y2="11" stroke="#5a4522" stroke-width="0.6" opacity="0.7"/>
+    <line x1="-4.5" y1="16" x2="4.5" y2="14.5" stroke="#5a4522" stroke-width="0.6" opacity="0.7"/>
+    <line x1="-4.5" y1="19.5" x2="4.5" y2="18" stroke="#5a4522" stroke-width="0.6" opacity="0.7"/>
+    <ellipse cx="0" cy="27" rx="6" ry="7" fill="url(#pommelGG)" stroke="#8a6a2f" stroke-width="0.6"/>
+    <circle cx="-1.5" cy="24.5" r="1.4" fill="#fffdf5" opacity="0.8"/>
+  </g>
+</svg>

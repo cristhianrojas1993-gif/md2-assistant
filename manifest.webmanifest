@@ -1,6 +1,6 @@
 {
-  "name": "MD2 Assistant Versión 1.0",
-  "short_name": "MD2 1.0",
+  "name": "Asistente para los Portadores de la Luz",
+  "short_name": "AppLuz",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#0d0a0f",

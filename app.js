@@ -163,6 +163,8 @@ function fresh() {
     turnPrompt: false,
     enemyPhaseAsked: false,
     enemyDefenseFormOpen: false,
+    enemyKillCheckOpen: false,
+    enemyKillFormOpen: false,
     gameOver: false,
     activeMissionId: '',
     missionResult: '',
@@ -221,6 +223,10 @@ if (s.enemyPhaseAsked === undefined)
   s.enemyPhaseAsked = false;
 if (s.enemyDefenseFormOpen === undefined)
   s.enemyDefenseFormOpen = false;
+if (s.enemyKillCheckOpen === undefined)
+  s.enemyKillCheckOpen = false;
+if (s.enemyKillFormOpen === undefined)
+  s.enemyKillFormOpen = false;
 if (s.gameOver === undefined)
   s.gameOver = false;
 if (s.activeMissionId === undefined)
@@ -810,6 +816,51 @@ function renderSetup() {
   $('playerMode').value = s.mode;
   $('soloRuleNotice').classList.toggle('hidden', s.mode !== 'solo');
 }
+function renderEnemyKillCheck(panel, available) {
+  if (!s.enemyKillFormOpen) {
+    panel.innerHTML = `<h2>Defensa del grupo</h2><p class="notice">¿Algún enemigo resultó eliminado por un efecto especial (ficha de fuego, veneno, u otro)?</p><div class="actions"><button id="enemyKillYes" class="primary">Sí, un enemigo murió</button><button id="enemyKillNo">No, continuar</button></div>`;
+    $('enemyKillYes').onclick = () => {
+      s.enemyKillFormOpen = true;
+      save();
+      renderEnemyDefense();
+    };
+    $('enemyKillNo').onclick = () => {
+      s.enemyKillCheckOpen = false;
+      save();
+      render();
+      say('De acuerdo. ¿Hay más enemigos atacando a los héroes?');
+    };
+    return;
+  }
+  panel.innerHTML = `<h2>Enemigo eliminado</h2><div class="grid top"><label>Tipo de enemigo<select id="killedEnemyType"><option value="minion">Secuaz</option><option value="leader">Líder</option><option value="roamer">Monstruo errante</option></select></label><div id="killedHeroSlot"></div></div><button id="confirmKilledEnemy" class="primary top">Confirmar</button>`;
+  const renderHeroSlot = () => {
+    const type = $('killedEnemyType').value;
+    $('killedHeroSlot').innerHTML = type === 'minion' ? `<label>Héroe que recibe la XP<select id="killedHeroSelect">${ available.map((x, i) => `<option value="${ s.heroes.indexOf(x) }">${ x.name }</option>`).join('') }</select></label>` : '';
+  };
+  renderHeroSlot();
+  $('killedEnemyType').onchange = renderHeroSlot;
+  $('confirmKilledEnemy').onclick = () => {
+    const type = $('killedEnemyType').value;
+    if (type === 'minion') {
+      const heroIdx = +$('killedHeroSelect').value, hero = s.heroes[heroIdx];
+      hero.xp += 1;
+      log(`${ hero.name } gana 1 XP por eliminar un secuaz mediante un efecto especial.`);
+      say(`${ hero.name } gana 1 de experiencia por el secuaz eliminado.`);
+    } else if (type === 'leader') {
+      s.heroes.forEach(q => q.xp += 2);
+      log('Líder eliminado por un efecto especial. Todo el grupo gana 2 XP.');
+      say('Líder eliminado. El grupo gana 2 de experiencia.');
+    } else {
+      s.heroes.forEach(q => q.xp += 4);
+      log('Monstruo errante eliminado por un efecto especial. Todo el grupo gana 4 XP.');
+      say('Monstruo errante eliminado. El grupo gana 4 de experiencia.');
+    }
+    s.enemyKillCheckOpen = false;
+    s.enemyKillFormOpen = false;
+    save();
+    render();
+  };
+}
 function renderEnemyDefense() {
   const panel = $('enemyDefensePanel');
   if (!panel)
@@ -822,6 +873,10 @@ function renderEnemyDefense() {
   if (s.enemyDefenseFormOpen) {
     panel.innerHTML = `<h2>Defensa del grupo</h2><p class="notice">Registrando ataque en curso.</p><div id="enemyDefenseForm"></div>`;
     renderDefenseForm(available);
+    return;
+  }
+  if (s.enemyKillCheckOpen) {
+    renderEnemyKillCheck(panel, available);
     return;
   }
   panel.innerHTML = `<h2>Defensa del grupo</h2><p class="notice">¿Hay enemigos atacando a los héroes en esta fase?</p><div class="actions"><button id="enemyAttackYes" class="primary">Sí, un héroe es atacado</button><button id="enemyAttackNo">No hay más ataques, continuar</button></div><div id="enemyDefenseForm"></div>`;
@@ -889,7 +944,10 @@ function renderDefenseForm(available) {
         renderMissions();
         duckAndSay('El Invocador ha muerto. La misión termina en derrota.');
       } else {
-        say(`El Invocador recibe ${ dmg } de daño. Le quedan ${ s.missionState.invokerHp } de vida. ¿Hay más enemigos atacando a los héroes?`);
+        s.enemyKillCheckOpen = true;
+        save();
+        render();
+        say(`El Invocador recibe ${ dmg } de daño. Le quedan ${ s.missionState.invokerHp } de vida. ¿Algún enemigo resultó eliminado por un efecto especial?`);
       }
       return;
     }
@@ -908,9 +966,10 @@ function renderDefenseForm(available) {
     }
     if (dmg === 0) {
       log(`${ target.name } se defiende con éxito: no recibe daño en la fase de Enemigos.`);
+      s.enemyKillCheckOpen = true;
       save();
       render();
-      say(`${ target.name } se defiende sin recibir daño. ¿Hay más enemigos atacando a los héroes?`);
+      say(`${ target.name } se defiende sin recibir daño. ¿Algún enemigo resultó eliminado por un efecto especial?`);
       return;
     }
     finalTarget.hp = Math.max(0, finalTarget.hp - dmg);
@@ -924,9 +983,10 @@ function renderDefenseForm(available) {
         log(`${ finalTarget.name } gana ${ gain } punto${ gain > 1 ? 's' : '' } de Furia por recibir daño. Furia: ${ finalTarget.berserker.fury }/7.`);
       }
     }
+    s.enemyKillCheckOpen = true;
     save();
     render();
-    say(`${ finalTarget.name } recibe ${ dmg } de daño. Le quedan ${ finalTarget.hp } de ${ finalTarget.hpMax } de vida. ¿Hay más enemigos atacando a los héroes?`);
+    say(`${ finalTarget.name } recibe ${ dmg } de daño. Le quedan ${ finalTarget.hp } de ${ finalTarget.hpMax } de vida. ¿Algún enemigo resultó eliminado por un efecto especial?`);
   };
 }
 function renderGame() {
@@ -1009,15 +1069,40 @@ function renderHero() {
   });
   bindHero();
 }
+function eyeBadgeSvg(level, sizeOverride) {
+  const ringCol = level <= 2 ? '#4a3d20' : level <= 4 ? '#c9a24b' : '#f0d488';
+  const count = 6 + level;
+  let fangs = '';
+  for (let i = 0; i < count; i++) {
+    const a = Math.PI * 2 * i / count;
+    const jag = i % 2 === 0 ? 1 : 0.6;
+    const bx = 20 + 13 * Math.cos(a), by = 20 + 13 * Math.sin(a);
+    const tx = 20 + (19 + 2.5 * jag) * Math.cos(a), ty = 20 + (19 + 2.5 * jag) * Math.sin(a);
+    const perp = a + Math.PI / 2;
+    const b1x = bx + 2.1 * Math.cos(perp), b1y = by + 2.1 * Math.sin(perp);
+    const b2x = bx - 2.1 * Math.cos(perp), b2y = by - 2.1 * Math.sin(perp);
+    fangs += `<polygon points="${ b1x },${ b1y } ${ tx },${ ty } ${ b2x },${ b2y }" fill="url(#obsidianGold${ level })" stroke="#000" stroke-width=".4" stroke-linejoin="round"/>`;
+  }
+  let cracks = '';
+  if (level >= 3) {
+    const cCount = level >= 5 ? 6 : 3, col = level <= 4 ? '#c9a24b' : '#ff6b35';
+    for (let i = 0; i < cCount; i++) {
+      const a = Math.PI * 2 * i / cCount + 0.4;
+      const x1 = 20 + 11 * Math.cos(a), y1 = 20 + 11 * Math.sin(a);
+      const midA = a + 0.15;
+      const x2 = 20 + 7 * Math.cos(midA), y2 = 20 + 7 * Math.sin(midA);
+      const x3 = 20 + 4 * Math.cos(a - 0.1), y3 = 20 + 4 * Math.sin(a - 0.1);
+      cracks += `<path d="M${ x1 },${ y1 } L${ x2 },${ y2 } L${ x3 },${ y3 }" stroke="${ col }" stroke-width="${ level >= 5 ? 0.9 : 0.6 }" fill="none" opacity="${ level >= 5 ? 0.9 : 0.55 }"/>`;
+    }
+  }
+  const irisR = 2 + level * 0.85;
+  const eye = `<ellipse cx="20" cy="20" rx="9" ry="4.8" fill="url(#scleraCracked${ level })"/><ellipse cx="20" cy="20" rx="${ irisR }" ry="${ irisR }" fill="url(#irisEmber${ level })"/><rect x="19.3" y="${ 20 - irisR * 0.9 }" width="1.4" height="${ irisR * 1.8 }" rx="0.7" fill="#0d0a0f"/><path d="M11,20 Q20,15 29,20" stroke="#20180f" stroke-width="1.1" fill="none"/><path d="M11,20 Q20,25 29,20" stroke="#20180f" stroke-width="1.1" fill="none"/>`;
+  const size = sizeOverride || (level >= 5 ? 54 : level >= 3 ? 46 : 38);
+  const glowClass = level >= 5 ? 'badgeGlowStrong' : level >= 3 ? 'badgeGlowSoft' : '';
+  return `<svg class="eyeBadge ${ glowClass }" width="${ size }" height="${ size }" viewBox="0 0 40 40"><defs><linearGradient id="obsidianGold${ level }" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#f0d488"/><stop offset="18%" stop-color="#2a221a"/><stop offset="100%" stop-color="#0d0a0f"/></linearGradient><radialGradient id="irisEmber${ level }" cx="50%" cy="45%" r="60%"><stop offset="0%" stop-color="#ffb057"/><stop offset="60%" stop-color="#c73e1d"/><stop offset="100%" stop-color="#4a1408"/></radialGradient><radialGradient id="scleraCracked${ level }" cx="40%" cy="35%" r="70%"><stop offset="0%" stop-color="#e8dcc0"/><stop offset="70%" stop-color="#a89468"/><stop offset="100%" stop-color="#6b5a38"/></radialGradient></defs><g class="badgeSpikes">${ fangs }</g><g class="badgeRing"><circle cx="20" cy="20" r="14.8" fill="#0d0a0f" stroke="${ ringCol }" stroke-width="1"/><circle cx="20" cy="20" r="13.2" fill="none" stroke="${ ringCol }" stroke-width="2.6"/></g><circle cx="20" cy="20" r="11.6" fill="#15101a"/>${ cracks }${ eye }</svg>`;
+}
 function levelBadge(level) {
-  const icons = {
-    1: '◆',
-    2: '◆◆',
-    3: '★',
-    4: '★★',
-    5: '👑'
-  };
-  return `<span class="levelBadge levelBadge-${ level }">${ icons[level] || '◆' } Nivel ${ level }</span>`;
+  return `<span class="levelBadge levelBadge-${ level }">${ eyeBadgeSvg(level, 26) } Nivel ${ level }</span>`;
 }
 function heroBarsHtml(x) {
   const hpPct = x.hpMax ? Math.max(0, Math.min(100, Math.round(x.hp / x.hpMax * 100))) : 0;
@@ -2321,6 +2406,35 @@ function beginLevelPhase() {
   }
   processNextLevelHero();
 }
+function showLevelTransition(x, oldLevel, newLevel, onDone) {
+  const overlay = document.getElementById('levelUpTransition');
+  if (!overlay) {
+    if (onDone)
+      onDone();
+    return;
+  }
+  document.getElementById('levelUpHeroName').textContent = x.name;
+  document.getElementById('levelUpHeroClass').textContent = C[x.cls].label;
+  const oldSlot = document.getElementById('levelUpBadgeOld');
+  const newSlot = document.getElementById('levelUpBadgeNew');
+  oldSlot.innerHTML = eyeBadgeSvg(oldLevel, 64);
+  newSlot.innerHTML = '';
+  overlay.classList.remove('hidden');
+  requestAnimationFrame(() => overlay.classList.add('show'));
+  setTimeout(() => {
+    oldSlot.querySelector('svg')?.classList.add('badgeOut');
+    newSlot.innerHTML = eyeBadgeSvg(newLevel, 64);
+    newSlot.querySelector('svg')?.classList.add('badgeIn');
+  }, 550);
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    setTimeout(() => {
+      overlay.classList.add('hidden');
+      if (onDone)
+        onDone();
+    }, 350);
+  }, 2150);
+}
 function processNextLevelHero() {
   if (s.levelCursor >= s.levelQueue.length) {
     s.levelPhaseResolved = true;
@@ -2343,6 +2457,7 @@ function processNextLevelHero() {
     return;
   }
   s.anyLeveledUp = true;
+  const oldLevel = x.level;
   x.xp -= cost;
   x.level++;
   const g = MD2.levelGains[x.level];
@@ -2358,15 +2473,17 @@ function processNextLevelHero() {
   log(`${ x.name } sube a nivel ${ x.level }. +${ g.hp } vida, +${ g.mana } maná. ${ g.treasure }`);
   save();
   render();
-  tab('hero');
-  setTimeout(() => document.querySelector('[data-sec="skills"]')?.click(), 30);
-  setTimeout(showLevelUpBurst, 60);
   const gainParts = [];
   if (g.hp)
     gainParts.push(`${ g.hp } de vida máxima`);
   if (g.mana)
     gainParts.push(`${ g.mana } de maná máximo`);
-  duckAndSay(`${ heroSpoken(x) } sube a nivel ${ x.level }. Gana ${ gainParts.join(' y ') }. ${ g.treasure } Elige una habilidad.`);
+  showLevelTransition(x, oldLevel, x.level, () => {
+    tab('hero');
+    setTimeout(() => document.querySelector('[data-sec="skills"]')?.click(), 30);
+    setTimeout(showLevelUpBurst, 60);
+    duckAndSay(`${ heroSpoken(x) } sube a nivel ${ x.level }. Gana ${ gainParts.join(' y ') }. ${ g.treasure } Elige una habilidad.`);
+  });
 }
 function continueLevelQueueAfterSkill() {
   if (s.phase !== 2)

@@ -202,10 +202,30 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 .xpFill{background:linear-gradient(90deg,#8a6d1a,var(--accent-bright,#f0d488))}
 .statBarNum{font-family:var(--font-display);font-size:.72rem;color:var(--text);white-space:nowrap;min-width:52px;text-align:right}
 
-/* ============ BADGE DE NIVEL EVOLUTIVO ============ */
-.levelBadge{font-family:var(--font-display);font-size:.78rem;padding:5px 10px;border-radius:2px;border:1px solid var(--accent);background:rgba(212,175,90,.1);white-space:nowrap}
-.levelBadge-2{border-color:#c9c9c9;background:rgba(201,201,201,.12)}
-.levelBadge-3{border-color:#7fd0e6;background:rgba(127,208,230,.12)}
-.levelBadge-4{border-color:#d48ae6;background:rgba(212,138,230,.14);box-shadow:0 0 8px rgba(212,138,230,.25)}
-.levelBadge-5{border-color:var(--accent-bright,#f0d488);background:linear-gradient(135deg,rgba(240,212,136,.22),rgba(255,107,53,.14));box-shadow:0 0 14px rgba(240,212,136,.5);animation:levelBadgePulse 2.4s ease-in-out infinite;font-weight:700}
-@keyframes levelBadgePulse{0%,100%{box-shadow:0 0 10px rgba(240,212,136,.4)}50%{box-shadow:0 0 20px rgba(240,212,136,.75)}}
+/* ============ BADGE DE NIVEL: OJO DE LA BESTIA ============ */
+.levelBadge{font-family:var(--font-display);font-size:.78rem;padding:4px 10px 4px 4px;border-radius:2px;border:1px solid var(--line);background:rgba(0,0,0,.2);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.eyeBadge{display:block;flex-shrink:0}
+.eyeBadge .badgeSpikes{transform-origin:20px 20px;animation:spikesRotate 22s linear infinite}
+.eyeBadge .badgeRing{transform-origin:20px 20px;animation:ringShine 2.6s ease-in-out infinite}
+.eyeBadge.badgeGlowSoft{filter:drop-shadow(0 0 3px rgba(201,162,75,.5))}
+.eyeBadge.badgeGlowStrong{filter:drop-shadow(0 0 6px rgba(240,212,136,.75))}
+@keyframes spikesRotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes ringShine{0%,100%{opacity:1}50%{opacity:.72}}
+@media(prefers-reduced-motion:reduce){
+  .eyeBadge .badgeSpikes,.eyeBadge .badgeRing{animation-duration:.01ms!important}
+}
+
+/* ============ TRANSICIÓN DE SUBIDA DE NIVEL ============ */
+#levelUpTransition{position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 45%,rgba(28,21,34,.97),rgba(13,10,15,.99));opacity:0;pointer-events:none;transition:opacity .35s ease}
+#levelUpTransition.show{opacity:1}
+.levelUpCard{text-align:center;padding:24px}
+.levelUpHeroName{font-family:var(--font-display);font-size:1.5rem;color:var(--accent-bright,#f0d488);text-shadow:0 0 18px rgba(240,212,136,.4)}
+.levelUpHeroClass{font-family:var(--font-body);color:var(--muted,#a89a86);font-size:.95rem;margin-top:2px;letter-spacing:.06em;text-transform:uppercase}
+.levelUpBadges{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:22px}
+.levelUpBadgeSlot{display:flex;align-items:center;justify-content:center;min-width:70px;min-height:70px}
+.levelUpArrow{font-size:1.6rem;color:var(--accent,#d4af5a)}
+.levelUpBadgeSlot .eyeBadge{width:64px!important;height:64px!important}
+.badgeOut{animation:badgeFadeOut .6s ease forwards}
+.badgeIn{animation:badgeFadeIn .7s cubic-bezier(.34,1.56,.64,1) .35s backwards}
+@keyframes badgeFadeOut{0%{opacity:1;transform:scale(1)}100%{opacity:.15;transform:scale(.7)}}
+@keyframes badgeFadeIn{0%{opacity:0;transform:scale(.3) rotate(-25deg)}100%{opacity:1;transform:scale(1) rotate(0)}}

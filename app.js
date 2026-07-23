@@ -71,6 +71,7 @@ function makeHero(cls = 'rogue') {
     cls,
     level: 1,
     xp: 0,
+    maxLevelAnnounced: false,
     hp: c.hp,
     hpMax: c.hp,
     mana: c.mana,
@@ -161,6 +162,7 @@ function fresh() {
     darknessPending: false,
     turnPrompt: false,
     enemyPhaseAsked: false,
+    enemyDefenseFormOpen: false,
     gameOver: false,
     activeMissionId: '',
     missionResult: '',
@@ -169,6 +171,10 @@ function fresh() {
 }
 let s = JSON.parse(localStorage.getItem(KEY) || 'null') || fresh();
 s.heroes.forEach(x => x.statuses = x.statuses || []);
+s.heroes.forEach(x => {
+  if (x.maxLevelAnnounced === undefined)
+    x.maxLevelAnnounced = false;
+});
 if (!s.mode)
   s.mode = 'coop';
 s.heroes.forEach(x => {
@@ -213,6 +219,8 @@ if (s.turnPrompt === undefined)
   s.turnPrompt = false;
 if (s.enemyPhaseAsked === undefined)
   s.enemyPhaseAsked = false;
+if (s.enemyDefenseFormOpen === undefined)
+  s.enemyDefenseFormOpen = false;
 if (s.gameOver === undefined)
   s.gameOver = false;
 if (s.activeMissionId === undefined)
@@ -286,6 +294,7 @@ function playAttackSong() {
   pauseAmbient();
   const el = attackSongEl();
   try {
+    el.muted = s.musicMuted;
     el.volume = s.musicMuted ? 0 : 1;
     el.currentTime = 0;
     el.play().catch(() => {
@@ -343,6 +352,38 @@ function onAmbientTrackEnded() {
     return;
   playRandomGameTrack();
 }
+let ambientFadeInterval = null;
+function fadeAmbientTo(targetVol, durationMs, onDone) {
+  const el = document.getElementById('ambientSong');
+  if (!el) {
+    if (onDone)
+      onDone();
+    return;
+  }
+  if (ambientFadeInterval) {
+    clearInterval(ambientFadeInterval);
+    ambientFadeInterval = null;
+  }
+  const steps = 16, stepMs = durationMs / steps, startVol = el.volume || 0;
+  let step = 0;
+  ambientFadeInterval = setInterval(() => {
+    step++;
+    try {
+      el.volume = Math.max(0, Math.min(1, startVol + (targetVol - startVol) * (step / steps)));
+    } catch (err) {
+    }
+    if (step >= steps) {
+      clearInterval(ambientFadeInterval);
+      ambientFadeInterval = null;
+      try {
+        el.volume = targetVol;
+      } catch (err) {
+      }
+      if (onDone)
+        onDone();
+    }
+  }, stepMs);
+}
 function startMenuAmbient() {
   if (s.confirmed)
     return;
@@ -351,30 +392,40 @@ function startMenuAmbient() {
   try {
     if (!el.src || el.src.indexOf('ambiente.mp3') === -1)
       el.src = 'ambiente.mp3';
-    el.volume = musicVol();
+    el.muted = s.musicMuted;
+    el.volume = 0;
     el.currentTime = 0;
     el.play().catch(() => {
     });
+    fadeAmbientTo(musicVol(), 1200);
   } catch (err) {
   }
 }
-function playRandomGameTrack() {
+function playRandomGameTrack(withFadeOutFirst = false) {
   const el = ambientEl();
-  el.loop = false;
-  const options = GAME_TRACKS.filter(t => t !== currentGameTrack);
-  const next = options[Math.floor(Math.random() * options.length)] || GAME_TRACKS[0];
-  currentGameTrack = next;
-  try {
-    el.src = next;
-    el.volume = musicVol();
-    el.currentTime = 0;
-    el.play().catch(() => {
-    });
-  } catch (err) {
-  }
+  const doSwitch = () => {
+    el.loop = false;
+    const options = GAME_TRACKS.filter(t => t !== currentGameTrack);
+    const next = options[Math.floor(Math.random() * options.length)] || GAME_TRACKS[0];
+    currentGameTrack = next;
+    try {
+      el.src = next;
+      el.muted = s.musicMuted;
+      el.volume = 0;
+      el.currentTime = 0;
+      el.play().catch(() => {
+      });
+      fadeAmbientTo(musicVol(), 1200);
+    } catch (err) {
+    }
+  };
+  if (withFadeOutFirst && !el.paused)
+    fadeAmbientTo(0, 900, doSwitch);
+  else
+    doSwitch();
 }
 function startAmbient() {
-  playRandomGameTrack();
+  playRandomGameTrack(true);
 }
 function pauseAmbient() {
   const el = document.getElementById('ambientSong');
@@ -390,6 +441,7 @@ function resumeAmbient() {
   if (!el)
     return;
   try {
+    el.muted = s.musicMuted;
     el.volume = musicVol();
     el.play().catch(() => {
     });
@@ -424,17 +476,30 @@ function reactivateAmbient() {
 function setMusicMuted(muted) {
   s.musicMuted = muted;
   save();
+  if (ambientFadeInterval) {
+    clearInterval(ambientFadeInterval);
+    ambientFadeInterval = null;
+  }
   const ambientElRef = document.getElementById('ambientSong');
   const attackElRef = document.getElementById('attackSong');
-  if (ambientElRef)
+  if (ambientElRef) {
+    ambientElRef.muted = muted;
     ambientElRef.volume = musicVol();
-  if (attackElRef && !attackSongFadeInterval)
-    attackElRef.volume = muted ? 0 : 1;
+  }
+  if (attackElRef) {
+    attackElRef.muted = muted;
+    if (!attackSongFadeInterval)
+      attackElRef.volume = muted ? 0 : 1;
+  }
   renderMusicControls();
 }
 function setMusicVolume(vol) {
   s.musicVolume = Math.max(0, Math.min(1, vol));
   save();
+  if (ambientFadeInterval) {
+    clearInterval(ambientFadeInterval);
+    ambientFadeInterval = null;
+  }
   const ambientElRef = document.getElementById('ambientSong');
   if (ambientElRef)
     ambientElRef.volume = musicVol();
@@ -754,11 +819,18 @@ function renderEnemyDefense() {
     return;
   }
   const available = s.heroes.filter(x => !x.unconscious && !x.exitedMap);
+  if (s.enemyDefenseFormOpen) {
+    panel.innerHTML = `<h2>Defensa del grupo</h2><p class="notice">Registrando ataque en curso.</p><div id="enemyDefenseForm"></div>`;
+    renderDefenseForm(available);
+    return;
+  }
   panel.innerHTML = `<h2>Defensa del grupo</h2><p class="notice">¿Hay enemigos atacando a los héroes en esta fase?</p><div class="actions"><button id="enemyAttackYes" class="primary">Sí, un héroe es atacado</button><button id="enemyAttackNo">No hay más ataques, continuar</button></div><div id="enemyDefenseForm"></div>`;
   $('enemyAttackYes').onclick = () => {
     s.enemyPhaseAsked = true;
+    s.enemyDefenseFormOpen = true;
+    save();
     playAttackSong();
-    renderDefenseForm(available);
+    renderEnemyDefense();
   };
   $('enemyAttackNo').onclick = () => {
     s.enemyPhaseAsked = true;
@@ -775,7 +847,7 @@ function renderDefenseForm(available) {
   const m = getActiveMission();
   const invokerActive = m && m.id === 'the_step' && !s.missionState.reachedRift && !s.missionResult;
   const invokerOption = invokerActive ? `<option value="invoker">El Invocador (NPC)</option>` : '';
-  form.innerHTML = `<div class="grid top"><label>Héroe atacado<select id="defendedHero">${ available.map((x, i) => `<option value="${ s.heroes.indexOf(x) }">${ x.name }</option>`).join('') }${ invokerOption }</select></label><label>Daño recibido<select id="damageAmount">${ Array.from({ length: 10 }, (_, i) => i + 1).map(n => `<option value="${ n }">${ n }</option>`).join('') }</select></label></div><div id="provokeSlot"></div><button id="confirmDamage" class="primary top">Confirmar daño</button>`;
+  form.innerHTML = `<div class="grid top"><label>Héroe atacado<select id="defendedHero">${ available.map((x, i) => `<option value="${ s.heroes.indexOf(x) }">${ x.name }</option>`).join('') }${ invokerOption }</select></label><label>Daño recibido<select id="damageAmount">${ Array.from({ length: 11 }, (_, i) => i).map(n => `<option value="${ n }" ${ n === 0 ? 'selected' : '' }>${ n === 0 ? '0 (héroe se defendió)' : n }</option>`).join('') }</select></label></div><div id="provokeSlot"></div><button id="confirmDamage" class="primary top">Confirmar daño</button>`;
   function renderProvokeSlot() {
     if ($('defendedHero').value === 'invoker') {
       $('provokeSlot').innerHTML = '';
@@ -805,6 +877,7 @@ function renderDefenseForm(available) {
   $('confirmDamage').onclick = () => {
     const dmg = +$('damageAmount').value;
     stopAttackSong();
+    s.enemyDefenseFormOpen = false;
     if ($('defendedHero').value === 'invoker') {
       s.missionState.invokerHp = Math.max(0, (s.missionState.invokerHp ?? 8) - dmg);
       log(`El Invocador recibe ${ dmg } de daño (Vida restante: ${ s.missionState.invokerHp }/8).`);
@@ -823,7 +896,7 @@ function renderDefenseForm(available) {
     const targetIdx = +$('defendedHero').value, target = s.heroes[targetIdx];
     const paladin = s.heroes.find(q => q.cls === 'paladin' && !q.unconscious && q !== target);
     let finalTarget = target;
-    if (paladin) {
+    if (dmg > 0 && paladin) {
       const hasVinculo = activeSkills(paladin).some(q => q.branch === 'vinculo');
       if (hasVinculo) {
         const zoneConsecrated = confirm(`${ paladin.name } tiene Vínculo Vital activo. ¿La zona donde ocurre este ataque está consagrada?`);
@@ -833,8 +906,15 @@ function renderDefenseForm(available) {
         }
       }
     }
+    if (dmg === 0) {
+      log(`${ target.name } se defiende con éxito: no recibe daño en la fase de Enemigos.`);
+      save();
+      render();
+      say(`${ target.name } se defiende sin recibir daño. ¿Hay más enemigos atacando a los héroes?`);
+      return;
+    }
     finalTarget.hp = Math.max(0, finalTarget.hp - dmg);
-    log(`${ finalTarget.name } recibe ${ dmg } de daño en la fase de Enemigos${ finalTarget !== target ? ` (redirigido desde ${ target.name } por Vínculo Vital)` : '' }.`);
+    log(`${ finalTarget.name } recibe ${ dmg } de daño en la fase de Enemigos${ finalTarget !== target ? ` (redirigido desde ${ target.name } por Vínculo Vital)` : '' }. Vida restante: ${ finalTarget.hp }/${ finalTarget.hpMax }.`);
     if (finalTarget.hp === 0 && !finalTarget.unconscious)
       knockOut(finalTarget);
     if (finalTarget.cls === 'berserker' && dmg > 0) {
@@ -846,7 +926,7 @@ function renderDefenseForm(available) {
     }
     save();
     render();
-    say(`${ finalTarget.name } recibe ${ dmg } de daño. ¿Hay más enemigos atacando a los héroes?`);
+    say(`${ finalTarget.name } recibe ${ dmg } de daño. Le quedan ${ finalTarget.hp } de ${ finalTarget.hpMax } de vida. ¿Hay más enemigos atacando a los héroes?`);
   };
 }
 function renderGame() {
@@ -918,7 +998,7 @@ function renderHero() {
     return;
   }
   const activeSec = document.querySelector('.sectionTabs [data-sec].active')?.dataset.sec;
-  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader zone-${ x.zone === 'dark' ? 'dark' : 'light' }" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div><span class="badge">Nivel ${ x.level }</span></div><div class="stats top"><div><small>Vida</small><b>${ x.hp }/${ x.hpMax }</b></div><div><small>Maná</small><b>${ x.mana }/${ x.manaMax }</b></div><div><small>XP</small><b>${ x.xp }</b></div><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div></div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }<button data-sec="inventory" class="${ activeSec === 'inventory' ? 'active' : '' }">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }<div id="sec-inventory" class="heroSection ${ activeSec === 'inventory' ? 'active' : '' }">${ inventoryHtml(x) }</div>`;
+  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader zone-${ x.zone === 'dark' ? 'dark' : 'light' }" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div></div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }<button data-sec="inventory" class="${ activeSec === 'inventory' ? 'active' : '' }">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }<div id="sec-inventory" class="heroSection ${ activeSec === 'inventory' ? 'active' : '' }">${ inventoryHtml(x) }</div>`;
   if (x.unconscious)
     $('heroHeaderCard')?.classList.add('ko-fx');
   document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
@@ -928,6 +1008,24 @@ function renderHero() {
     $('sec-' + b.dataset.sec).classList.add('active');
   });
   bindHero();
+}
+function levelBadge(level) {
+  const icons = {
+    1: '◆',
+    2: '◆◆',
+    3: '★',
+    4: '★★',
+    5: '👑'
+  };
+  return `<span class="levelBadge levelBadge-${ level }">${ icons[level] || '◆' } Nivel ${ level }</span>`;
+}
+function heroBarsHtml(x) {
+  const hpPct = x.hpMax ? Math.max(0, Math.min(100, Math.round(x.hp / x.hpMax * 100))) : 0;
+  const manaPct = x.manaMax ? Math.max(0, Math.min(100, Math.round(x.mana / x.manaMax * 100))) : 0;
+  const xpCost = x.level < 5 ? MD2.levelCosts[x.level] : null;
+  const xpPct = xpCost ? Math.max(0, Math.min(100, Math.round(x.xp / xpCost * 100))) : 100;
+  const xpLabel = xpCost ? `${ x.xp } / ${ xpCost }` : `${ x.xp } (Nivel máximo)`;
+  return `<div class="statBars"><div class="statBarRow"><small>Vida</small><div class="statBarTrack"><div class="statBarFill hpFill" style="width:${ hpPct }%"></div></div><span class="statBarNum">${ x.hp }/${ x.hpMax }</span></div><div class="statBarRow"><small>Maná</small><div class="statBarTrack"><div class="statBarFill manaFill" style="width:${ manaPct }%"></div></div><span class="statBarNum">${ x.mana }/${ x.manaMax }</span></div><div class="statBarRow"><small>XP</small><div class="statBarTrack"><div class="statBarFill xpFill" style="width:${ xpPct }%"></div></div><span class="statBarNum">${ xpLabel }</span></div></div>`;
 }
 function summaryHtml(x) {
   return `<div class="card"><h2>Estadísticas</h2><div class="row"><button id="hpDown">− Vida</button><button id="hpUp">+ Vida</button><button id="manaDown">− Maná</button><button id="manaUp">+ Maná</button><button id="toggleZone">Luz/Oscuridad</button></div><div class="row"><button id="xpDown">− XP</button><button id="xpUp">+ XP</button></div><h3>Habilidad propia</h3><div class="passive">${ C[x.cls].ability }</div><h3>Sombras</h3><div class="passive">${ C[x.cls].shadow }</div></div><div class="card"><h2>Mecánica exclusiva</h2>${ classHtml(x) }</div><div class="card"><h2>Estados activos</h2><div class="statusChips">${ (x.statuses || []).map((st, i) => `<span class="statusChip">${ st }<button data-remove-status="${ i }">×</button></span>`).join('') || '<span class="muted">Sin estados activos.</span>' }</div><div class="row"><select id="statusPicker"><option>Quemado</option><option>Congelado</option><option>Envenenado</option><option>Aturdido</option><option>Maldito</option><option>Bendecido</option></select><button id="addStatus">Añadir estado</button></div></div>`;
@@ -1009,6 +1107,13 @@ function classHtml(x) {
   };
   return `<div class="resource">Furia: <b>${ x.berserker.fury }/7</b><div class="row"><button id="fDown">−</button><button id="fUp">+</button></div></div><label class="top">Postura (cambiar cuesta 1 Furia)<select id="stance"><option>Furia Sangrienta</option><option>Temerario</option><option>Provocador</option></select></label><div class="stanceGrid">${ Object.entries(stances).map(([name, desc]) => `<div class="passive ${ x.berserker.stance === name ? 'active' : '' }"><b>${ name }${ x.berserker.stance === name ? ' · ACTIVA' : '' }</b><br>${ desc }</div>`).join('') }</div>`;
 }
+function skillPrereqMet(x, q) {
+  if (!q.grade || q.grade <= 1)
+    return true;
+  const chosenNames = Object.keys(x.lockedChoices).filter(n => x.lockedChoices[n]).map(n => x.choices[n]);
+  const chosenSkills = chosenNames.map(name => skills(x).find(s2 => s2.name === name)).filter(Boolean);
+  return chosenSkills.some(s2 => s2.branch === q.branch && s2.grade === q.grade - 1);
+}
 function skillsHtml(x) {
   let html = '<div class="card"><h2>Elecciones</h2>';
   for (let n = 1; n <= x.level; n++) {
@@ -1016,7 +1121,7 @@ function skillsHtml(x) {
     if (locked)
       html += `<div class="skill skillLocked"><b>Nivel ${ n }</b><br>${ v }<div class="inventoryActions"><button data-undo="${ n }">Deshacer elección</button></div></div>`;
     else
-      html += `<div class="choiceBox"><label>Nivel ${ n }<select data-choice="${ n }"><option value="">Seleccionar</option>${ skills(x).filter(q => q.level <= n).map(q => `<option value="${ q.name }" ${ v === q.name ? 'selected' : '' }>${ q.name }</option>`).join('') }</select></label><button data-confirm="${ n }" class="primary">Confirmar</button></div>`;
+      html += `<div class="choiceBox"><label>Nivel ${ n }<select data-choice="${ n }"><option value="">Seleccionar</option>${ skills(x).filter(q => q.level <= n && skillPrereqMet(x, q)).map(q => `<option value="${ q.name }" ${ v === q.name ? 'selected' : '' }>${ q.name }${ q.grade > 1 ? ` (Grado ${ q.grade })` : '' }</option>`).join('') }</select></label><button data-confirm="${ n }" class="primary">Confirmar</button></div>`;
   }
   html += '</div><div class="card"><h2>Habilidades activas</h2>' + activeSkills(x).map(q => `<div class="skill">${ q.name }</div>`).join('') + '</div>';
   return html;
@@ -1028,7 +1133,7 @@ function missionTurnButton(x) {
   return '';
 }
 function actionsHtml(x) {
-  return `<div class="card"><h2>Turno de ${ x.name }</h2><p class="notice">Acciones restantes: <b>${ x.actions }</b></p><div class="actions"><button id="moveAction">Movimiento</button><button id="attackAction">Ataque</button><button data-action="Recuperación">Recuperación</button><button data-action="Intercambiar y equipar">Intercambiar y equipar</button>${ missionTurnButton(x) }<button id="finishTurn" class="primary">Finalizar turno</button></div></div>${ flowHtml(x) }`;
+  return `<div class="card"><h2>Turno de ${ x.name }</h2><p class="notice">Acciones restantes: <b>${ x.actions }</b></p><div class="actions"><button id="moveAction">Movimiento</button><button id="attackAction">Ataque</button><button data-action="Recuperación">Recuperación</button><button data-action="Intercambiar y equipar">Intercambiar y equipar</button><button data-action="Acción especial">Acción especial (objeto)</button>${ missionTurnButton(x) }<button id="finishTurn" class="primary">Finalizar turno</button></div></div>${ flowHtml(x) }`;
 }
 function flowHtml(x) {
   if (!x.flow.type)
@@ -1041,6 +1146,8 @@ function flowHtml(x) {
     return recoveryFlow(x);
   if (x.flow.type === 'Intercambiar y equipar')
     return swapEquipFlow(x);
+  if (x.flow.type === 'Acción especial')
+    return `<div class="card actionFlow active"><h2>Acción especial de objeto</h2><p class="notice">Algunos objetos tienen una acción especial que se resuelve gastando 1 acción. Anota qué objeto usas y su efecto.</p><label>Objeto y efecto<input id="specialActionText" placeholder="Ej.: Amuleto de Fuego — inflige 1 herida al objetivo"></label><button id="confirmSpecialAction" class="primary top">Confirmar acción especial</button></div>`;
   return `<div class="card"><p class="notice">${ x.flow.type } registrada.</p><button id="finishFlow">Finalizar acción</button></div>`;
 }
 function swapEquipFlow(x) {
@@ -1107,9 +1214,14 @@ function moveFlow(x) {
 function arrowFlow(x) {
   return `<div class="card actionFlow active"><h2>Mazo de Flechas</h2><p class="notice">Saca cartas del mazo de Flechas e indica el resultado obtenido.</p><div class="actions"><button data-arrow="rapido">Disparo rápido (menos de 7)</button><button data-arrow="certero">Disparo certero (7 justas)</button><button data-arrow="lento">Disparo lento o fallido (más de 7)</button></div></div>`;
 }
+function attackTypeSelector(x) {
+  return `<div class="card actionFlow active"><h2>Tipo de Ataque</h2><p class="notice">¿Qué tipo de ataque realiza ${ x.name }?</p><div class="actions"><button data-attacktype="distancia">A distancia</button><button data-attacktype="cuerpo">Cuerpo a cuerpo</button><button data-attacktype="magico">Mágico</button></div></div>`;
+}
 function attackFlow(x) {
   const a = x.flow.attack || {};
-  if (x.cls === 'ranger' && !x.flow.arrowResult)
+  if (!x.flow.attackType)
+    return attackTypeSelector(x);
+  if (x.cls === 'ranger' && x.flow.attackType === 'distancia' && !x.flow.arrowResult)
     return arrowFlow(x);
   const suggestion = berserkerStanceSuggestion(x, 'attack');
   return `<div class="card actionFlow active"><h2>Ataque</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><ol class="notice top"><li>Arma tu reserva de dados según tu tipo de ataque.</li><li>Lanza físicamente los dados.</li><li>Revisa habilidades y efectos disponibles.</li><li>Marca el resultado del ataque y confirma.</li></ol><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<label class="top">Resultado del ataque (puedes marcar varias)<select id="attackResult" multiple size="5"><option value="m1">1 secuaz eliminado</option><option value="m2">2 secuaces eliminados</option><option value="m3">3 secuaces eliminados</option><option value="leader">Líder eliminado</option><option value="roamer">Errante eliminado</option></select></label><button id="attackCalc" class="primary top">Ataque resuelto</button></div>`;
@@ -1550,6 +1662,18 @@ function bindClass(x) {
   }
 }
 function bindFlow(x) {
+  document.querySelectorAll('[data-attacktype]').forEach(b => b.onclick = () => {
+    const type = b.dataset.attacktype;
+    x.flow.attackType = type;
+    const label = type === 'distancia' ? 'a distancia' : type === 'cuerpo' ? 'cuerpo a cuerpo' : 'mágico';
+    log(`${ x.name } declara un ataque ${ label }.`);
+    save();
+    renderHero();
+    if (x.cls === 'ranger' && type === 'distancia')
+      duckAndSay(`Ataque ${ label } declarado. Explorador, saca cartas del mazo de Flechas e indícame el resultado.`);
+    else
+      duckAndSay(`Ataque ${ label } declarado. Arma tu reserva de dados y confirma.`);
+  });
   document.querySelectorAll('[data-arrow]').forEach(b => b.onclick = () => {
     const r = b.dataset.arrow;
     const label = r === 'certero' ? 'Disparo certero' : r === 'rapido' ? 'Disparo rápido' : 'Disparo lento o fallido';
@@ -1561,6 +1685,15 @@ function bindFlow(x) {
   });
   document.querySelectorAll('[data-move]').forEach(b => b.onclick = () => useMove(b.dataset.move));
   bindMissionButtons(x);
+  if ($('confirmSpecialAction'))
+    $('confirmSpecialAction').onclick = () => {
+      const text = $('specialActionText').value.trim();
+      if (!text)
+        return alert('Describe qué objeto usas y su efecto.');
+      log(`${ x.name } usa una acción especial de objeto: ${ text }.`);
+      say(`${ x.name } usa una acción especial de objeto.`);
+      finishFlow();
+    };
   if ($('passSwordBtn'))
     $('passSwordBtn').onclick = () => {
       const selectEl = $('swordPassTo') || $('swordTakeFrom');
@@ -1804,7 +1937,8 @@ function startAction(type) {
       'move',
       'attack',
       'Recuperación',
-      'Intercambiar y equipar'
+      'Intercambiar y equipar',
+      'Acción especial'
     ].includes(type)) {
     if (x.actions <= 0)
       return alert('No quedan acciones.');
@@ -1830,6 +1964,8 @@ function startAction(type) {
       on: true,
       pm: (x.cls === 'ranger' ? 3 : 2) + (x.cls === 'shaman' && x.shaman.unlocked.air ? 1 : 0)
     };
+  if (type === 'attack')
+    x.flow.attackType = null;
   if (type === 'attack' && x.cls === 'ranger')
     x.flow.arrowResult = null;
   if (type === 'attack')
@@ -1837,7 +1973,7 @@ function startAction(type) {
   save();
   renderHero();
   setTimeout(() => document.querySelector('.actionFlow')?.scrollIntoView({ behavior: 'smooth' }), 30);
-  const baseAnnouncement = `Héroe activo ${ heroSpoken(x) }. ${ type === 'move' ? 'Movimiento' : type === 'attack' ? 'Ataque' : type === 'defense' ? 'Defensa' : type }. ${ x.actions } acciones restantes.${ x.cls === 'shaman' && type === 'attack' ? ' Revisa tus Bendiciones y las habilidades del Chamán disponibles según tus elementos.' : '' }${ x.cls === 'ranger' && type === 'attack' ? ' Explorador, saca cartas del mazo de Flechas e indícame el resultado.' : '' }`;
+  const baseAnnouncement = `Héroe activo ${ heroSpoken(x) }. ${ type === 'move' ? 'Movimiento' : type === 'attack' ? 'Ataque' : type === 'defense' ? 'Defensa' : type }. ${ x.actions } acciones restantes.${ x.cls === 'shaman' && type === 'attack' ? ' Revisa tus Bendiciones y las habilidades del Chamán disponibles según tus elementos.' : '' }${ type === 'attack' ? ' Elige primero el tipo de ataque.' : '' }`;
   if (type === 'attack' && x.cls !== 'ranger') {
     duckAndSay(baseAnnouncement);
     if (s.voice === 'yes' && confirm('¿Quieres que el asistente de voz lea los pasos del ataque?'))
@@ -2157,13 +2293,32 @@ function nextPhase() {
   }
 }
 function beginLevelPhase() {
-  s.levelQueue = s.heroes.map((x, i) => ({
-    i,
+  const newlyMaxed = s.heroes.filter(x => x.level >= 5 && !x.maxLevelAnnounced);
+  newlyMaxed.forEach(x => {
+    x.maxLevelAnnounced = true;
+    log(`${ x.name } está en nivel máximo. Ya no se revisa en la fase de subida de nivel.`);
+  });
+  s.levelQueue = s.heroes.filter(x => x.level < 5).map(x => ({
+    i: s.heroes.indexOf(x),
     status: 'pending'
   }));
   s.levelCursor = 0;
   s.levelPhaseResolved = false;
   s.anyLeveledUp = false;
+  if (s.levelQueue.length === 0 && s.heroes.length > 0) {
+    s.levelPhaseResolved = true;
+    save();
+    render();
+    duckAndSay('Todos los héroes están en nivel máximo. Avanzamos a Oscuridad.');
+    setTimeout(nextPhase, 2600);
+    return;
+  }
+  if (newlyMaxed.length) {
+    save();
+    duckAndSay(newlyMaxed.map(x => `${ x.name } en nivel máximo.`).join(' '));
+    setTimeout(processNextLevelHero, 1400);
+    return;
+  }
   processNextLevelHero();
 }
 function processNextLevelHero() {
@@ -2200,13 +2355,18 @@ function processNextLevelHero() {
   x.choices[x.level] = null;
   x.lockedChoices[x.level] = false;
   entry.status = 'waiting-skill';
-  log(`${ x.name } sube a nivel ${ x.level }.`);
+  log(`${ x.name } sube a nivel ${ x.level }. +${ g.hp } vida, +${ g.mana } maná. ${ g.treasure }`);
   save();
   render();
   tab('hero');
   setTimeout(() => document.querySelector('[data-sec="skills"]')?.click(), 30);
   setTimeout(showLevelUpBurst, 60);
-  duckAndSay(`${ heroSpoken(x) } sube a nivel ${ x.level }. Elige una habilidad.`);
+  const gainParts = [];
+  if (g.hp)
+    gainParts.push(`${ g.hp } de vida máxima`);
+  if (g.mana)
+    gainParts.push(`${ g.mana } de maná máximo`);
+  duckAndSay(`${ heroSpoken(x) } sube a nivel ${ x.level }. Gana ${ gainParts.join(' y ') }. ${ g.treasure } Elige una habilidad.`);
 }
 function continueLevelQueueAfterSkill() {
   if (s.phase !== 2)

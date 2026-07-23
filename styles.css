@@ -190,3 +190,22 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 @media(prefers-reduced-motion:reduce){
   .float-number,#phaseCurtain,.cell.pulse,.levelup-burst::before,.spark,.alertDot{animation-duration:.01ms!important}
 }
+
+/* ============ BARRAS DE ESTADÍSTICAS ============ */
+.statBars{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.statBarRow{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:8px}
+.statBarRow small{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
+.statBarTrack{height:10px;background:rgba(0,0,0,.35);border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.statBarFill{height:100%;border-radius:6px;transition:width .5s ease}
+.hpFill{background:linear-gradient(90deg,#8a2410,#ff6b35)}
+.manaFill{background:linear-gradient(90deg,#1a4a7a,#3fa0e6)}
+.xpFill{background:linear-gradient(90deg,#8a6d1a,var(--accent-bright,#f0d488))}
+.statBarNum{font-family:var(--font-display);font-size:.72rem;color:var(--text);white-space:nowrap;min-width:52px;text-align:right}
+
+/* ============ BADGE DE NIVEL EVOLUTIVO ============ */
+.levelBadge{font-family:var(--font-display);font-size:.78rem;padding:5px 10px;border-radius:2px;border:1px solid var(--accent);background:rgba(212,175,90,.1);white-space:nowrap}
+.levelBadge-2{border-color:#c9c9c9;background:rgba(201,201,201,.12)}
+.levelBadge-3{border-color:#7fd0e6;background:rgba(127,208,230,.12)}
+.levelBadge-4{border-color:#d48ae6;background:rgba(212,138,230,.14);box-shadow:0 0 8px rgba(212,138,230,.25)}
+.levelBadge-5{border-color:var(--accent-bright,#f0d488);background:linear-gradient(135deg,rgba(240,212,136,.22),rgba(255,107,53,.14));box-shadow:0 0 14px rgba(240,212,136,.5);animation:levelBadgePulse 2.4s ease-in-out infinite;font-weight:700}
+@keyframes levelBadgePulse{0%,100%{box-shadow:0 0 10px rgba(240,212,136,.4)}50%{box-shadow:0 0 20px rgba(240,212,136,.75)}}

@@ -133,6 +133,7 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 #splash .splash-sub{font-size:.78rem;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:8px;opacity:0;animation:titleFade 1s ease 2.3s forwards;z-index:2;font-family:var(--font-body)}
 @keyframes titleFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none}}
+#splash.dismiss{animation:splashOut .4s ease forwards!important}
 @media(prefers-reduced-motion:reduce){
   #splash *{animation-duration:.01ms!important;animation-iteration-count:1!important}
   #splash{animation:splashOut .01ms ease 1.2s forwards}
@@ -229,3 +230,12 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 .badgeIn{animation:badgeFadeIn .7s cubic-bezier(.34,1.56,.64,1) .35s backwards}
 @keyframes badgeFadeOut{0%{opacity:1;transform:scale(1)}100%{opacity:.15;transform:scale(.7)}}
 @keyframes badgeFadeIn{0%{opacity:0;transform:scale(.3) rotate(-25deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+
+/* ============ NÚMERO DE NIVEL EN TRANSICIÓN ============ */
+.levelUpNumberWrap{position:relative;height:34px;margin-top:16px;display:flex;align-items:center;justify-content:center}
+.levelUpNumber{position:absolute;font-family:var(--font-display);font-weight:700;font-size:1.35rem;color:var(--accent-bright,#f0d488);letter-spacing:.05em;text-shadow:0 0 12px rgba(240,212,136,.4)}
+.levelUpNumberNew{opacity:0}
+.numberFadeOut{animation:numberFadeOut .6s ease forwards}
+.numberFadeIn{animation:numberFadeIn .6s ease forwards}
+@keyframes numberFadeOut{from{opacity:1}to{opacity:0}}
+@keyframes numberFadeIn{from{opacity:0}to{opacity:1}}

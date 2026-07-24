@@ -398,17 +398,54 @@ function stopBossSong() {
     }
   }, fadeStepMs);
 }
+const MICHAEL_SONG_RESTART_AT = 185;
 function michaelSongEl() {
   let el = document.getElementById('michaelSong');
   if (!el) {
     el = document.createElement('audio');
     el.id = 'michaelSong';
     el.src = 'corazon-de-hierro.mp3';
-    el.loop = true;
     el.preload = 'auto';
+    el.addEventListener('timeupdate', () => {
+      if (!el.__restarting && el.currentTime >= MICHAEL_SONG_RESTART_AT)
+        restartMichaelSongSmoothly(el);
+    });
     document.body.appendChild(el);
   }
   return el;
+}
+function restartMichaelSongSmoothly(el) {
+  el.__restarting = true;
+  const targetVol = s.musicMuted ? 0 : 1;
+  const fadeSteps = 8, fadeStepMs = 50;
+  let step = 0;
+  const startVol = el.volume || targetVol;
+  const fadeOut = setInterval(() => {
+    step++;
+    try {
+      el.volume = Math.max(0, startVol * (1 - step / fadeSteps));
+    } catch (err) {
+    }
+    if (step >= fadeSteps) {
+      clearInterval(fadeOut);
+      try {
+        el.currentTime = 0;
+      } catch (err) {
+      }
+      let step2 = 0;
+      const fadeIn = setInterval(() => {
+        step2++;
+        try {
+          el.volume = Math.min(targetVol, targetVol * (step2 / fadeSteps));
+        } catch (err) {
+        }
+        if (step2 >= fadeSteps) {
+          clearInterval(fadeIn);
+          el.__restarting = false;
+        }
+      }, fadeStepMs);
+    }
+  }, fadeStepMs);
 }
 function startMichaelSong() {
   pauseAmbient();
@@ -656,10 +693,6 @@ function classVoiceProfile(x = h()) {
     berserker: {
       rate: 1.08,
       pitch: 0.82
-    },
-    michael: {
-      rate: 0.72,
-      pitch: 0.55
     }
   };
   return x ? p[x.cls] || {
@@ -671,9 +704,6 @@ function classVoiceProfile(x = h()) {
   };
 }
 const speechQueue = [];
-function sayAsMichael(t) {
-  say(t, { cls: 'michael' });
-}
 let speechBusy = false;
 let speechWatchdog = null;
 function clearSpeechWatchdog() {
@@ -2358,7 +2388,7 @@ function bindMissionButtons(x) {
       renderHero();
       renderMissions();
       startMichaelSong();
-      sayAsMichael('Portadores de la Luz... enfrentarán el castigo divino.');
+      duckAndSay('Portadores de la Luz... enfrentarán el castigo divino.');
     };
   const fragBtn = document.getElementById('collectFragmentBtn');
   if (fragBtn)
@@ -2474,7 +2504,7 @@ function triggerMichaelActivation(isLastHero) {
   st.michaelClawStep = 'ask';
   save();
   render();
-  sayAsMichael('El Arcángel Miguel se activa. Lanza 2 dados negros.');
+  duckAndSay('El Arcángel Miguel se activa. Lanza 2 dados negros.');
 }
 function resolveMichaelAfterActivation() {
   const st = s.missionState;
@@ -2576,7 +2606,7 @@ function resolveMichaelAbility(claws) {
     log('Miguel se activa con 0 garras: Justicia Celestial.');
     save();
     render();
-    sayAsMichael('Justicia Celestial.');
+    duckAndSay('Justicia Celestial.');
     return;
   }
   if (claws === 1) {
@@ -2588,7 +2618,7 @@ function resolveMichaelAbility(claws) {
     save();
     render();
     renderMissions();
-    sayAsMichael(`Embestida de Lanza. Una ficha de Corrupción más en la Cámara.`);
+    duckAndSay(`Embestida de Lanza. Una ficha de Corrupción más en la Cámara.`);
     return;
   }
   st.corruptionTokens = (st.corruptionTokens || 0) + 1;
@@ -2601,7 +2631,7 @@ function resolveMichaelAbility(claws) {
   save();
   render();
   renderMissions();
-  sayAsMichael(`Bendición Oscura. Inflige ${ total } Heridas, distribúyanlas como deseen.`);
+  duckAndSay(`Bendición Oscura. Inflige ${ total } Heridas, distribúyanlas como deseen.`);
 }
 function finishFlow(skipGenericVoice = false) {
   const x = h();
@@ -3492,7 +3522,7 @@ function bindMissionMechanics(m) {
       log('Ya no quedan fichas de Corrupción en la Cámara. Miguel deja de ser invulnerable.');
       save();
       renderMissions();
-      sayAsMichael('Mi luz se desvanece... ahora pueden herirme.');
+      duckAndSay('Mi luz se desvanece... ahora pueden herirme.');
     };
   if (m.id === 'free_michael' && $('restoreInvulnBtn'))
     $('restoreInvulnBtn').onclick = () => {

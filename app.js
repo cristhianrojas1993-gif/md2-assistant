@@ -72,6 +72,7 @@ function makeHero(cls = 'rogue') {
     level: 1,
     xp: 0,
     maxLevelAnnounced: false,
+    angelFeathers: 0,
     hp: c.hp,
     hpMax: c.hp,
     mana: c.mana,
@@ -176,6 +177,8 @@ s.heroes.forEach(x => x.statuses = x.statuses || []);
 s.heroes.forEach(x => {
   if (x.maxLevelAnnounced === undefined)
     x.maxLevelAnnounced = false;
+  if (x.angelFeathers === undefined)
+    x.angelFeathers = 0;
 });
 if (!s.mode)
   s.mode = 'coop';
@@ -327,6 +330,64 @@ function stopAttackSong() {
     if (step >= fadeSteps) {
       clearInterval(attackSongFadeInterval);
       attackSongFadeInterval = null;
+      try {
+        el.pause();
+        el.currentTime = 0;
+        el.volume = 1;
+      } catch (err) {
+      }
+      resumeAmbientAfterInterruption();
+    }
+  }, fadeStepMs);
+}
+function bossSongEl() {
+  let el = document.getElementById('bossSong');
+  if (!el) {
+    el = document.createElement('audio');
+    el.id = 'bossSong';
+    el.src = 'la-bestia-terrorifica.mp3';
+    el.preload = 'auto';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+let bossSongFadeInterval = null;
+function playBossSong() {
+  if (bossSongFadeInterval) {
+    clearInterval(bossSongFadeInterval);
+    bossSongFadeInterval = null;
+  }
+  pauseAmbient();
+  const el = bossSongEl();
+  try {
+    el.volume = s.musicMuted ? 0 : 1;
+    el.currentTime = 0;
+    el.play().catch(() => {
+    });
+  } catch (err) {
+  }
+}
+function stopBossSong() {
+  const el = document.getElementById('bossSong');
+  if (!el) {
+    resumeAmbientAfterInterruption();
+    return;
+  }
+  if (bossSongFadeInterval) {
+    clearInterval(bossSongFadeInterval);
+    bossSongFadeInterval = null;
+  }
+  const fadeSteps = 18, fadeStepMs = 100, startVolume = el.volume || 1;
+  let step = 0;
+  bossSongFadeInterval = setInterval(() => {
+    step++;
+    try {
+      el.volume = Math.max(0, startVolume * (1 - step / fadeSteps));
+    } catch (err) {
+    }
+    if (step >= fadeSteps) {
+      clearInterval(bossSongFadeInterval);
+      bossSongFadeInterval = null;
       try {
         el.pause();
         el.currentTime = 0;
@@ -1051,7 +1112,7 @@ function renderHero() {
     return;
   }
   const activeSec = document.querySelector('.sectionTabs [data-sec].active')?.dataset.sec;
-  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader zone-${ x.zone === 'dark' ? 'dark' : 'light' }" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div></div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }<button data-sec="inventory" class="${ activeSec === 'inventory' ? 'active' : '' }">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }<div id="sec-inventory" class="heroSection ${ activeSec === 'inventory' ? 'active' : '' }">${ inventoryHtml(x) }</div>`;
+  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader zone-${ x.zone === 'dark' ? 'dark' : 'light' }" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }<button data-sec="inventory" class="${ activeSec === 'inventory' ? 'active' : '' }">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }<div id="sec-inventory" class="heroSection ${ activeSec === 'inventory' ? 'active' : '' }">${ inventoryHtml(x) }</div>`;
   if (x.unconscious)
     $('heroHeaderCard')?.classList.add('ko-fx');
   document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
@@ -1208,6 +1269,8 @@ function missionTurnButton(x) {
   const m = getActiveMission();
   if (m && m.id === 'cursed_sword' && s.missionState.bearerId === x.id && !s.missionResult)
     return `<button id="destroyCrystalBtn" ${ x.actions < 1 ? 'disabled' : '' }>Destruir Cristal del Pecado</button>`;
+  if (m && m.id === 'terrifying_beast' && !s.missionResult && s.missionState.beastMaxHp !== null && s.missionState.beastMaxHp !== undefined)
+    return `<button id="attackBeastBtn" ${ x.actions < 1 ? 'disabled' : '' }>Atacar a la Bestia</button>`;
   return '';
 }
 function actionsHtml(x) {
@@ -1283,6 +1346,8 @@ function missionInteractOptions(x) {
   const m = getActiveMission();
   if (m && m.id === 'demonic_artifact' && !s.missionResult)
     return `<button data-move="interact">Interactuar (genérico)</button><button id="collectFragmentBtn" ${ x.move.pm < 1 ? 'disabled' : '' }>Recoger fragmento de artefacto</button>`;
+  if (m && m.id === 'terrifying_beast' && !s.missionResult)
+    return `<button data-move="interact">Interactuar (genérico)</button><button id="collectFeatherBtn" ${ x.move.pm < 1 ? 'disabled' : '' }>Recoger Pluma de Ángel</button>`;
   return `<button data-move="interact">Interactuar</button>`;
 }
 function moveFlow(x) {
@@ -1302,7 +1367,11 @@ function attackFlow(x) {
   if (x.cls === 'ranger' && x.flow.attackType === 'distancia' && !x.flow.arrowResult)
     return arrowFlow(x);
   const suggestion = berserkerStanceSuggestion(x, 'attack');
-  return `<div class="card actionFlow active"><h2>Ataque</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><ol class="notice top"><li>Arma tu reserva de dados según tu tipo de ataque.</li><li>Lanza físicamente los dados.</li><li>Revisa habilidades y efectos disponibles.</li><li>Marca el resultado del ataque y confirma.</li></ol><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<label class="top">Resultado del ataque (puedes marcar varias)<select id="attackResult" multiple size="5"><option value="m1">1 secuaz eliminado</option><option value="m2">2 secuaces eliminados</option><option value="m3">3 secuaces eliminados</option><option value="leader">Líder eliminado</option><option value="roamer">Errante eliminado</option></select></label><button id="attackCalc" class="primary top">Ataque resuelto</button></div>`;
+  if (x.flow.attackTarget === 'beast') {
+    const st = s.missionState;
+    return `<div class="card actionFlow active"><h2>Ataque a la Bestia</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><ol class="notice top"><li>Arma tu reserva de dados según tu tipo de ataque.</li><li>Lanza físicamente los dados.</li><li>Revisa habilidades y efectos disponibles.</li><li>Marca el daño causado y confirma.</li></ol><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<p class="notice top">Vida actual de la Bestia: <b>${ st.beastHp }/${ st.beastMaxHp }</b></p><label>Daño causado a la Bestia<select id="beastDamageAmount">${ Array.from({ length: 21 }, (_, i) => i).map(n => `<option value="${ n }">${ n }</option>`).join('') }</select></label><button id="confirmBeastDamage" class="primary top">Confirmar daño a la Bestia</button></div>`;
+  }
+  return `<div class="card actionFlow active"><h2>Ataque</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><ol class="notice top"><li>Arma tu reserva de dados según tu tipo de ataque.</li><li>Lanza físicamente los dados.</li><li>Revisa habilidades y efectos disponibles.</li><li>Marca el resultado del ataque y confirma.</li></ol><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<label class="top">Resultado del ataque (puedes marcar varias)<select id="attackResult" multiple size="5"><option value="m1">1 secuaz eliminado</option><option value="m2">2 secuaces eliminados</option><option value="m3">3 secuaces eliminados</option><option value="leader">Líder eliminado</option><option value="roamer">Errante eliminado</option>${ getActiveMission()?.id === 'infernal_labyrinth' && !s.missionResult ? '<option value="beast">Bestia Errante eliminada</option>' : '' }</select></label><button id="attackCalc" class="primary top">Ataque resuelto</button></div>`;
 }
 function berserkerStanceSuggestion(x, action) {
   if (x.cls !== 'berserker' || x.berserker.fury < 1)
@@ -1913,6 +1982,36 @@ function bindFlow(x) {
       renderHero();
       say('Relanza el dado que elijas.');
     };
+  if ($('confirmBeastDamage'))
+    $('confirmBeastDamage').onclick = () => {
+      const dmg = +$('beastDamageAmount').value;
+      const st = s.missionState;
+      st.beastHp = Math.max(0, st.beastHp - dmg);
+      log(`${ x.name } inflige ${ dmg } de daño a la Bestia. Vida restante: ${ st.beastHp }/${ st.beastMaxHp }.`);
+      save();
+      stopBossSong();
+      if (st.beastHp <= 0) {
+        s.missionResult = 'victory';
+        log('La Bestia ha sido derrotada. Victoria.');
+        save();
+        finishFlow(true);
+        renderMissions();
+        duckAndSay('La Bestia ha sido derrotada. La misión termina en victoria.');
+        return;
+      }
+      if ((st.feathersUsed || 0) >= 5) {
+        s.missionResult = 'defeat';
+        log('Se gastaron las 5 Plumas de Ángel y la Bestia sigue con vida. Derrota.');
+        save();
+        finishFlow(true);
+        renderMissions();
+        duckAndSay('Se agotaron las Plumas de Ángel y la Bestia sigue con vida. La misión termina en derrota.');
+        return;
+      }
+      finishFlow(true);
+      renderMissions();
+      say(`Infliges ${ dmg } de daño a la Bestia. Le quedan ${ st.beastHp } de vida.`);
+    };
   if ($('attackCalc'))
     $('attackCalc').onclick = () => {
       let a = x.flow.attack = x.flow.attack || {};
@@ -1936,7 +2035,24 @@ function bindFlow(x) {
         log('Monstruo errante eliminado. Todo el grupo gana 4 XP.');
         xpMsgs.push('El grupo gana 4 de experiencia por el errante eliminado.');
       }
+      if (selected.includes('beast') && getActiveMission()?.id === 'infernal_labyrinth' && !s.missionResult) {
+        s.heroes.forEach(q => q.xp += 4);
+        s.missionState.beastsKilled = (s.missionState.beastsKilled || 0) + 1;
+        log(`Bestia Errante eliminada. Todo el grupo gana 4 XP. Bestias eliminadas: ${ s.missionState.beastsKilled }/4.`);
+        xpMsgs.push(`El grupo gana 4 de experiencia por la Bestia Errante. Eliminadas: ${ s.missionState.beastsKilled } de 4.`);
+        if (s.missionState.beastsKilled >= 4) {
+          s.missionResult = 'victory';
+          log('Las 4 Bestias Errantes han sido eliminadas. Victoria.');
+        }
+      }
       log('Ataque resuelto.');
+      if (s.missionState.beastsKilled >= 4 && getActiveMission()?.id === 'infernal_labyrinth') {
+        save();
+        finishFlow(true);
+        renderMissions();
+        duckAndSay('Las 4 Bestias Errantes han sido eliminadas. La misión termina en victoria.');
+        return;
+      }
       duckAndSay(`Ataque resuelto. ${ xpMsgs.length ? xpMsgs.join(' ') : 'Sin eliminaciones registradas.' }`);
       finishFlow(true);
     };
@@ -1999,7 +2115,7 @@ function advancePending() {
     say('Comienza la partida.');
   }
 }
-function startAction(type) {
+function startAction(type, targetBeast = false) {
   const x = h();
   if (x.unconscious)
     return alert('Este héroe está inconsciente y no puede realizar acciones.');
@@ -2046,7 +2162,11 @@ function startAction(type) {
     x.flow.attackType = null;
   if (type === 'attack' && x.cls === 'ranger')
     x.flow.arrowResult = null;
-  if (type === 'attack')
+  if (type === 'attack' && targetBeast)
+    x.flow.attackTarget = 'beast';
+  if (type === 'attack' && targetBeast)
+    playBossSong();
+  else if (type === 'attack')
     playAttackSong();
   save();
   renderHero();
@@ -2137,6 +2257,38 @@ function bindMissionButtons(x) {
       renderHero();
       renderMissions();
       say(`${ x.name } recoge un fragmento. Gana 5 de experiencia.`);
+    };
+  const featherBtn = document.getElementById('collectFeatherBtn');
+  if (featherBtn)
+    featherBtn.onclick = () => {
+      if (x.move.pm < 1)
+        return alert('No tienes puntos de movimiento disponibles para esta acción.');
+      if (!confirm(`¿${ x.name } está recogiendo una Pluma de Ángel en esta zona?`))
+        return;
+      x.move.pm--;
+      if (!x.move.pm)
+        x.move.on = false;
+      x.angelFeathers = (x.angelFeathers || 0) + 1;
+      log(`${ x.name } recoge una Pluma de Ángel. Total: ${ x.angelFeathers }.`);
+      save();
+      renderHero();
+      say(`${ x.name } recoge una Pluma de Ángel. Ahora tiene ${ x.angelFeathers }.`);
+    };
+  const attackBeastBtn = document.getElementById('attackBeastBtn');
+  if (attackBeastBtn)
+    attackBeastBtn.onclick = () => {
+      if (!x.angelFeathers || x.angelFeathers < 1) {
+        alert('No tienes Plumas de Ángel. La Bestia sigue invulnerable.');
+        return;
+      }
+      if (!confirm(`¿Gastar 1 Pluma de Ángel para atacar a la Bestia? ${ x.name } tiene ${ x.angelFeathers } disponible${ x.angelFeathers > 1 ? 's' : '' }.`))
+        return;
+      x.angelFeathers--;
+      s.missionState.feathersUsed = (s.missionState.feathersUsed || 0) + 1;
+      log(`${ x.name } gasta 1 Pluma de Ángel para atacar a la Bestia. Plumas gastadas: ${ s.missionState.feathersUsed }/5.`);
+      save();
+      startAction('attack', true);
+      renderMissions();
     };
   const crystalBtn = document.getElementById('destroyCrystalBtn');
   if (crystalBtn)
@@ -2782,6 +2934,16 @@ function initMissions() {
           roundsHeld: 0,
           lastRoundChecked: 0
         };
+      if (s.activeMissionId === 'infernal_labyrinth')
+        s.missionState = {
+          beastsKilled: 0
+        };
+      if (s.activeMissionId === 'terrifying_beast')
+        s.missionState = {
+          beastMaxHp: null,
+          beastHp: null,
+          feathersUsed: 0
+        };
       log(`Misión activada: ${ getActiveMission()?.name || 'ninguna' }.`);
       say(`Misión activada: ${ getActiveMission()?.name }.`);
     }
@@ -2875,6 +3037,18 @@ function renderMissionMechanics(m) {
     const bonusLabel = swordBonusLabel(st.crystalsDestroyed);
     return `<div class="card"><h3>Espada Maldita</h3>${ bearer ? `<p class="notice">${ bearer.name } porta la espada. Rondas consecutivas: ${ st.roundsHeld } / 4.</p>` : `<label>Asignar espada inicial<select id="swordAssign"><option value="">Elige un héroe</option>${ s.heroes.map(h => `<option value="${ h.id }">${ h.name }</option>`).join('') }</select></label>` }<p class="muted top">Cristales del Pecado destruidos: ${ st.crystalsDestroyed } / 5${ bonusLabel ? ` · Bonus de la espada: ${ bonusLabel }` : '' }</p></div>`;
   }
+  if (m.id === 'infernal_labyrinth') {
+    const st = s.missionState;
+    st.beastsKilled = st.beastsKilled || 0;
+    return `<div class="card"><h3>Bestias Errantes</h3><p class="notice">Eliminadas: <b>${ st.beastsKilled } / 4</b></p><p class="muted">Cuando un héroe elimine una Bestia Errante, márcalo en el selector de resultado de ataque como "Bestia Errante eliminada". Se otorgan 4 XP a todo el grupo y el contador sube automáticamente. Al llegar a 4, la partida termina en victoria.</p></div>`;
+  }
+  if (m.id === 'terrifying_beast') {
+    const st = s.missionState;
+    if (st.beastMaxHp === null || st.beastMaxHp === undefined)
+      return `<div class="card"><h3>La Bestia</h3><p class="notice">¿Cuánta vida tiene la Bestia? Elige el valor indicado en la ficha del Monstruo Errante.</p><label>Vida de la Bestia<select id="beastHpSelect">${ Array.from({ length: 100 }, (_, i) => i + 1).map(n => `<option value="${ n }" ${ n === 20 ? 'selected' : '' }>${ n }</option>`).join('') }</select></label><button id="confirmBeastHpBtn" class="primary top">Confirmar vida de la Bestia</button></div>`;
+    const pct = Math.max(0, Math.min(100, Math.round(st.beastHp / st.beastMaxHp * 100)));
+    return `<div class="card"><h3>La Bestia</h3><div class="statBarRow"><small>Vida</small><div class="statBarTrack"><div class="statBarFill hpFill" style="width:${ pct }%"></div></div><span class="statBarNum">${ st.beastHp }/${ st.beastMaxHp }</span></div><p class="muted top">Plumas de Ángel gastadas: ${ st.feathersUsed || 0 } / 5</p><p class="muted">La Bestia es invulnerable salvo que un héroe gaste 1 Pluma de Ángel para atacarla (opción "Atacar a la Bestia" en el turno). Si se gastan las 5 plumas y sigue con vida, derrota.</p></div>`;
+  }
   return '';
 }
 function bindMissionMechanics(m) {
@@ -2938,6 +3112,16 @@ function bindMissionMechanics(m) {
       renderMissions();
       renderHero();
       duckAndSay(`${ heroSpoken(hero) } porta la Espada Maldita. Reemplaza su arma inicial. Si la mantiene 4 rondas seguidas, morirá y la partida se pierde automáticamente.`);
+    };
+  if (m.id === 'terrifying_beast' && $('confirmBeastHpBtn'))
+    $('confirmBeastHpBtn').onclick = () => {
+      const hp = +$('beastHpSelect').value;
+      s.missionState.beastMaxHp = hp;
+      s.missionState.beastHp = hp;
+      log(`Vida de la Bestia confirmada: ${ hp }.`);
+      save();
+      renderMissions();
+      say(`Vida de la Bestia confirmada en ${ hp }. Es invulnerable hasta que un héroe gaste una Pluma de Ángel para atacarla.`);
     };
 }
 initMissions();

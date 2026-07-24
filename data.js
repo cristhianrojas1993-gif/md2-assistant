@@ -773,7 +773,17 @@ MD2.rulesTopics = [
   {
     id: 'resolver_ataque',
     keywords: ['resolver ataque', 'reserva de dados', 'sumar espadas', 'restar escudos', 'lanzar dados'],
-    text: 'Para resolver un ataque: 1) Reunir y lanzar todos los dados (ataque del atacante, defensa del defensor, dado de sombra si aplica, dados de enemigo según secuaces). 2) Aplicar habilidades y efectos en el orden que el jugador que tira los dados decida, sin poder re-tirar un dado ya resuelto. 3) Sumar todas las espadas y restar los escudos; el resultado son las Heridas infligidas. El máximo por tirada es 3 dados de cada color de ataque, 5 azules, 1 de sombra y 6 de enemigo.'
+    text: 'Para resolver un ataque: 1) Reunir y lanzar todos los dados principales (ataque del atacante, defensa del defensor, dado de sombra si aplica, dados de enemigo según corresponda). 2) Aplicar habilidades y efectos en el orden que el jugador que tira los dados decida; toda habilidad se resuelve después de esta tirada principal, así que si alguna obliga a lanzar un dado adicional, ese dado se lanza aparte, después del lanzamiento principal, no junto con él. 3) Sumar todas las espadas y restar los escudos; el resultado son las Heridas infligidas. El máximo por tirada es 3 dados de cada color de ataque, 5 azules, 1 de sombra y 6 de enemigo (limitado por la cantidad de dados físicos que trae el juego).'
+  },
+  {
+    id: 'resolver_defensa',
+    keywords: ['resolver defensa', 'como me defiendo', 'dados de defensa', 'dados azules defensa', 'resuelve la defensa', 'como se resuelve la defensa', 'defensa', 'defenderse'],
+    text: 'Cuando un enemigo ataca a un héroe: el héroe defensor lanza los dados azules que le otorga su equipo (arma, escudo y otros objetos con capacidad de Defensa). El enemigo lanza dados amarillos o naranjas según el tipo de arma que porte, más dados negros: si es una Cuadrilla, la cantidad de dados negros depende del número de Secuaces que sigan activos; si es un Monstruo Errante, la cantidad de dados negros de ataque y de defensa viene impresa directamente en su carta. Tras lanzar todos los dados, se aplican las habilidades de Defensa (en el orden que el jugador decida), y recién entonces se calcula el daño final: las espadas del atacante menos los escudos obtenidos son las Heridas que recibe el héroe.'
+  },
+  {
+    id: 'dados_negros_cantidad',
+    keywords: ['cuantos dados negros', 'dados negros', 'dados negros cantidad', 'dados de enemigo cantidad', 'cuantos dados negros tiro', 'dados negros cuadrilla', 'dados negros monstruo errante', 'numero de dados negros', 'cuantos dados negros debo tirar'],
+    text: 'Si el enemigo es una Cuadrilla: se lanza 1 dado negro por cada Secuaz que siga activo en ese combate (tanto para atacar como para defenderse). Si el enemigo es un Monstruo Errante (incluidos Jefes): la cantidad exacta de dados negros de ataque y de defensa viene impresa directamente en su carta, y no depende de secuaces.'
   },
   {
     id: 'experiencia_combate',
@@ -887,8 +897,8 @@ MD2.rulesTopics = [
   },
   {
     id: 'clase_mago',
-    keywords: ['mago', 'wizard', 'amuleto de hechizos', 'marcador listo'],
-    text: 'El Mago usa un Amuleto de Hechizos dividido en 4 cuadrantes, cada uno con un hechizo básico que se va mejorando con las habilidades de nivel. Solo puede lanzar el hechizo que señala el Marcador Listo; tras lanzarlo, el marcador rota al siguiente cuadrante en sentido horario. Puede forzar la rotación gastando 1 maná por cada cuadrante que avance. Para beneficiarse de un hechizo de ataque, necesita un arma equipada con ataque Mágico.'
+    keywords: ['mago', 'wizard', 'amuleto de hechizos', 'marcador listo', 'talisman', 'girar talisman'],
+    text: 'El Mago usa un Talismán de Hechizos dividido en 4 cuadrantes, cada uno con un hechizo que se va mejorando con las habilidades de nivel; cada cara indica su propio coste de maná, que se paga al lanzarlo. Solo puede lanzar el hechizo que señala el Marcador Listo; tras lanzarlo, el marcador rota al siguiente cuadrante en sentido horario. También puede forzar la rotación sin lanzar el hechizo, gastando 1 maná por cada cuadrante que avance; esto no cuesta ninguna acción y se puede hacer en cualquier momento del turno. Para beneficiarse de un hechizo de ataque, necesita un arma equipada con ataque Mágico.'
   },
   {
     id: 'clase_paladin',
@@ -907,8 +917,8 @@ MD2.rulesTopics = [
   },
   {
     id: 'clase_chaman',
-    keywords: ['chaman', 'shaman', 'elemento', 'fuego agua aire naturaleza', 'espiritu de fuego', 'espiritu de hielo'],
-    text: 'El Chamán tiene 4 pistas de Elemento (Fuego, Agua, Aire, Naturaleza). En vez de ganar maná, puede subir cualquier pista de elemento por esa cantidad. Al llegar una pista a su máximo, puede gastarla entera para obtener una habilidad pasiva permanente para el resto de la misión. También puede invocar un Espíritu de Fuego y uno de Hielo mediante habilidades; cada uno puede activarse una vez gratis por turno del Chamán (acciones adicionales sí cuestan 1 acción), y solo pueden Mover o Atacar (no interactúan, no abren puertas, no recuperan).'
+    keywords: ['chaman', 'shaman', 'elemento', 'fuego agua aire naturaleza', 'espiritu de fuego', 'espiritu de hielo', 'mana lleno elemento'],
+    text: 'El Chamán tiene 4 pistas de Elemento (Fuego, Agua, Aire, Naturaleza). En cualquier momento en que ganaría maná (incluida la acción de Recuperación), puede elegir subir una pista de Elemento por esa misma cantidad en vez de recuperar maná; esto aplica incluso con el maná al máximo, ya que en ese caso es la única forma de aprovechar esos puntos. Al llegar una pista a su máximo, puede gastarla entera para obtener una habilidad pasiva permanente para el resto de la misión. También puede invocar un Espíritu de Fuego y uno de Hielo mediante habilidades; cada uno puede activarse una vez gratis por turno del Chamán (acciones adicionales sí cuestan 1 acción), y solo pueden Mover o Atacar (no interactúan, no abren puertas, no recuperan).'
   },
   {
     id: 'clase_explorador',

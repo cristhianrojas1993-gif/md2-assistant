@@ -247,3 +247,11 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 .bossHealthTrack{position:relative;height:22px;margin-top:12px;background:linear-gradient(180deg,#1a0d05,#0d0a0f);border:1px solid var(--ember,#c73e1d);border-radius:3px;overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,.6)}
 .bossHealthFill{height:100%;background:linear-gradient(180deg,#ff9a5c,#c73e1d 55%,#7a1d0d);transition:width .6s ease;box-shadow:0 0 10px rgba(255,107,53,.5)}
 .bossHealthNum{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:.78rem;color:#fff6d9;text-shadow:0 1px 3px rgba(0,0,0,.9);font-weight:700}
+
+/* ============ PANEL DE JEFE FINAL (LA PARCA) ============ */
+.parcaPanel{border:1px solid #5a2d8a;background:linear-gradient(155deg,rgba(30,10,45,.5),#0d0812);box-shadow:0 0 20px rgba(90,20,120,.35)}
+.parcaTitle{font-family:var(--font-display);font-size:1.05rem;text-align:center;color:#c9a8e8;text-shadow:0 0 16px rgba(140,60,200,.6);letter-spacing:.04em;display:flex;flex-direction:column;gap:2px}
+.parcaSubtitle{font-family:var(--font-body);font-size:.72rem;color:#7a3a9a;text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+.parcaHealthTrack{position:relative;height:22px;margin-top:12px;background:linear-gradient(180deg,#0a0510,#000);border:1px solid #4a1d6a;border-radius:3px;overflow:hidden;box-shadow:inset 0 2px 6px rgba(0,0,0,.8)}
+.parcaHealthFill{height:100%;background:linear-gradient(180deg,#7a3a9a,#3a1050 55%,#150520);transition:width .6s ease;box-shadow:0 0 10px rgba(122,58,154,.6)}
+.parcaHealthNum{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:.78rem;color:#e8d8f8;text-shadow:0 1px 3px rgba(0,0,0,.9);font-weight:700}

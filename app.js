@@ -73,6 +73,7 @@ function makeHero(cls = 'rogue') {
     xp: 0,
     maxLevelAnnounced: false,
     angelFeathers: 0,
+    iceTokens: 0,
     hp: c.hp,
     hpMax: c.hp,
     mana: c.mana,
@@ -179,6 +180,8 @@ s.heroes.forEach(x => {
     x.maxLevelAnnounced = false;
   if (x.angelFeathers === undefined)
     x.angelFeathers = 0;
+  if (x.iceTokens === undefined)
+    x.iceTokens = 0;
 });
 if (!s.mode)
   s.mode = 'coop';
@@ -467,6 +470,61 @@ function startMichaelSong() {
     });
   } catch (err) {
   }
+}
+function parcaSongEl() {
+  let el = document.getElementById('parcaSong');
+  if (!el) {
+    el = document.createElement('audio');
+    el.id = 'parcaSong';
+    el.src = 'batalla-contra-la-parca.mp3';
+    el.loop = true;
+    el.preload = 'auto';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function startParcaSong() {
+  pauseAmbient();
+  const el = parcaSongEl();
+  try {
+    el.volume = s.musicMuted ? 0 : 1;
+    el.currentTime = 0;
+    el.play().catch(() => {
+    });
+  } catch (err) {
+  }
+}
+let parcaSongFadeInterval = null;
+function stopParcaSong() {
+  const el = document.getElementById('parcaSong');
+  if (!el) {
+    resumeAmbientAfterInterruption();
+    return;
+  }
+  if (parcaSongFadeInterval) {
+    clearInterval(parcaSongFadeInterval);
+    parcaSongFadeInterval = null;
+  }
+  const fadeSteps = 18, fadeStepMs = 100, startVolume = el.volume || 1;
+  let step = 0;
+  parcaSongFadeInterval = setInterval(() => {
+    step++;
+    try {
+      el.volume = Math.max(0, startVolume * (1 - step / fadeSteps));
+    } catch (err) {
+    }
+    if (step >= fadeSteps) {
+      clearInterval(parcaSongFadeInterval);
+      parcaSongFadeInterval = null;
+      try {
+        el.pause();
+        el.currentTime = 0;
+        el.volume = 1;
+      } catch (err) {
+      }
+      resumeAmbientAfterInterruption();
+    }
+  }, fadeStepMs);
 }
 let michaelSongFadeInterval = null;
 function stopMichaelSong() {
@@ -1205,6 +1263,10 @@ function renderHero() {
     renderMichaelActivation();
     return;
   }
+  if (s.missionState && s.missionState.awaitingParcaActivation) {
+    renderParcaActivation();
+    return;
+  }
   if (x.cls === 'shaman' && !x.shaman.elementBoostDone && !x.unconscious && !pending(x)) {
     $('heroPage').innerHTML = `<div class="card"><h2>Aumenta un Elemento</h2><p class="notice">Al inicio de tu turno debes aumentar cualquier Elemento en 1. Elige uno para continuar.</p><div class="resource">${ shamanElementControls(x, true) }</div></div>`;
     document.querySelectorAll('[data-boost-el]').forEach(b => b.onclick = () => {
@@ -1381,6 +1443,12 @@ function missionTurnButton(x) {
     return `<button id="breakSealBtn" ${ x.actions < 1 ? 'disabled' : '' }>Romper Sello de Corrupción</button>`;
   if (m && m.id === 'soul_collector' && !s.missionResult)
     return `<button id="destroyCageBtn" ${ x.actions < 1 ? 'disabled' : '' }>Destruir Jaula de Almas</button>`;
+  if (m && m.id === 'soul_keys' && !s.missionResult && !s.missionState.finalCombatActive) {
+    const st = s.missionState;
+    return st.keysCollected.map((done, i) => done ? '' : `<button data-collectkey="${ i }" ${ x.actions < 1 ? 'disabled' : '' }>Recoger Llave ${ i + 1 } (${ st.keyTimeTokens[i] } ficha${ st.keyTimeTokens[i] !== 1 ? 's' : '' } de Tiempo restantes)</button>`).join('');
+  }
+  if (m && m.id === 'soul_keys' && !s.missionResult && s.missionState.finalCombatActive)
+    return `<button data-addtime="1" ${ x.actions < 1 ? 'disabled' : '' }>Añadir ficha de Tiempo (Reloj 1)</button><button data-addtime="2" ${ x.actions < 1 ? 'disabled' : '' }>Añadir ficha de Tiempo (Reloj 2)</button>`;
   return '';
 }
 function actionsHtml(x) {
@@ -1464,7 +1532,7 @@ function missionInteractOptions(x) {
 }
 function moveFlow(x) {
   const suggestion = berserkerStanceSuggestion(x, 'move');
-  return `<div class="card actionFlow active"><h2>Movimiento</h2><div class="flowSteps"><span class="flowStep active">Gastar PM</span><span class="flowStep">Finalizar</span></div><p class="notice">PM disponibles: <b>${ x.move.pm }</b></p>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }<div class="actions"><button data-move="move">Mover 1 zona</button><button data-move="door">Abrir puerta</button>${ missionInteractOptions(x) }${ x.cls === 'berserker' && x.berserker.stance === 'Temerario' ? `<button id="furyExtraPm" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: +1 PM (${ x.berserker.fury }/7)</button>` : '' }<button id="finishMove" class="primary">Finalizar movimiento</button></div>${ missionEscapeButton(x) }${ getActiveMission()?.id === 'free_michael' && s.missionState.sealsBreached >= 4 && !s.missionState.finalCombatActive && !s.missionResult ? `<button id="enterChamberBtn" class="primary top" ${ x.move.pm < 1 ? 'disabled' : '' }>Entrar a la Cámara de la Corrupción (1 PM)</button>` : '' }</div>`;
+  return `<div class="card actionFlow active"><h2>Movimiento</h2><div class="flowSteps"><span class="flowStep active">Gastar PM</span><span class="flowStep">Finalizar</span></div><p class="notice">PM disponibles: <b>${ x.move.pm }</b></p>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }<div class="actions"><button data-move="move">Mover 1 zona</button><button data-move="door">Abrir puerta</button>${ missionInteractOptions(x) }${ x.cls === 'berserker' && x.berserker.stance === 'Temerario' ? `<button id="furyExtraPm" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: +1 PM (${ x.berserker.fury }/7)</button>` : '' }<button id="finishMove" class="primary">Finalizar movimiento</button></div>${ missionEscapeButton(x) }${ getActiveMission()?.id === 'free_michael' && s.missionState.sealsBreached >= 4 && !s.missionState.finalCombatActive && !s.missionResult ? `<button id="enterChamberBtn" class="primary top" ${ x.move.pm < 1 ? 'disabled' : '' }>Entrar a la Cámara de la Corrupción (1 PM)</button>` : '' }${ getActiveMission()?.id === 'soul_keys' && (s.missionState.keysCollectedCount || 0) >= 3 && !s.missionState.finalCombatActive && !s.missionResult ? `<button id="enterTimeChamberBtn" class="primary top" ${ x.move.pm < 1 ? 'disabled' : '' }>Entrar a la Cámara del Tiempo (1 PM)</button>` : '' }</div>`;
 }
 function arrowFlow(x) {
   return `<div class="card actionFlow active"><h2>Mazo de Flechas</h2><p class="notice">Saca cartas del mazo de Flechas e indica el resultado obtenido.</p><div class="actions"><button data-arrow="rapido">Disparo rápido (menos de 7)</button><button data-arrow="certero">Disparo certero (7 justas)</button><button data-arrow="lento">Disparo lento o fallido (más de 7)</button></div></div>`;
@@ -1488,6 +1556,10 @@ function attackFlow(x) {
     if (st.michaelInvulnerable)
       return `<div class="card actionFlow active"><h2>Ataque al Arcángel Miguel</h2><p class="notice">⚠️ Miguel es invulnerable mientras existan fichas de Corrupción en la Cámara (actualmente ${ st.corruptionTokens || 0 }). Este ataque no puede herirlo.</p><button id="finishFlow" class="primary top">Finalizar acción</button></div>`;
     return `<div class="card actionFlow active"><h2>Ataque al Arcángel Miguel</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><ol class="notice top"><li>Arma tu reserva de dados según tu tipo de ataque.</li><li>Lanza físicamente los dados.</li><li>Revisa habilidades y efectos disponibles.</li><li>Marca el daño causado y confirma.</li></ol><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<p class="notice top">Vida actual de Miguel: <b>${ st.michaelHp }/${ st.michaelMaxHp }</b></p><label>Daño causado a Miguel<select id="michaelDamageDealt">${ Array.from({ length: 21 }, (_, i) => i).map(n => `<option value="${ n }">${ n }</option>`).join('') }</select></label><button id="confirmMichaelDamage" class="primary top">Confirmar daño a Miguel</button></div>`;
+  }
+  if (getActiveMission()?.id === 'soul_keys' && s.missionState.finalCombatActive && !s.missionResult) {
+    const st = s.missionState;
+    return `<div class="card actionFlow active"><h2>Ataque a la Parca</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><ol class="notice top"><li>Arma tu reserva de dados según tu tipo de ataque.</li><li>Lanza físicamente los dados.</li><li>Revisa habilidades y efectos disponibles.</li><li>Marca el daño causado y confirma.</li></ol><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<p class="notice top">Vida actual de la Parca: <b>${ st.parcaHp }/${ st.parcaMaxHp }</b></p><label>Daño causado a la Parca<select id="parcaDamageDealt">${ Array.from({ length: 21 }, (_, i) => i).map(n => `<option value="${ n }">${ n }</option>`).join('') }</select></label><button id="confirmParcaDamage" class="primary top">Confirmar daño a la Parca</button></div>`;
   }
   return `<div class="card actionFlow active"><h2>Ataque</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><ol class="notice top"><li>Arma tu reserva de dados según tu tipo de ataque.</li><li>Lanza físicamente los dados.</li><li>Revisa habilidades y efectos disponibles.</li><li>Marca el resultado del ataque y confirma.</li></ol><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<label class="top">Resultado del ataque (puedes marcar varias)<select id="attackResult" multiple size="5"><option value="m1">1 secuaz eliminado</option><option value="m2">2 secuaces eliminados</option><option value="m3">3 secuaces eliminados</option><option value="leader">Líder eliminado</option><option value="roamer">Errante eliminado</option>${ getActiveMission()?.id === 'infernal_labyrinth' && !s.missionResult ? '<option value="beast">Bestia Errante eliminada</option>' : '' }</select></label><button id="attackCalc" class="primary top">Ataque resuelto</button></div>`;
 }
@@ -2151,6 +2223,27 @@ function bindFlow(x) {
       renderMissions();
       say(`Infliges ${ dmg } de daño a Miguel. Le quedan ${ st.michaelHp } de vida.`);
     };
+  if ($('confirmParcaDamage'))
+    $('confirmParcaDamage').onclick = () => {
+      const dmg = +$('parcaDamageDealt').value;
+      const st = s.missionState;
+      st.parcaHp = Math.max(0, st.parcaHp - dmg);
+      log(`${ x.name } inflige ${ dmg } de daño a la Parca. Vida restante: ${ st.parcaHp }/${ st.parcaMaxHp }.`);
+      save();
+      if (st.parcaHp <= 0) {
+        s.missionResult = 'victory';
+        log('La Parca ha sido derrotada. Victoria.');
+        save();
+        stopParcaSong();
+        finishFlow(true);
+        renderMissions();
+        duckAndSay('La Parca ha sido derrotada. La misión termina en victoria.');
+        return;
+      }
+      finishFlow(true);
+      renderMissions();
+      say(`Infliges ${ dmg } de daño a la Parca. Le quedan ${ st.parcaHp } de vida.`);
+    };
   if ($('attackCalc'))
     $('attackCalc').onclick = () => {
       let a = x.flow.attack = x.flow.attack || {};
@@ -2322,7 +2415,7 @@ function startAction(type, targetBeast = false) {
     x.flow.attackTarget = 'beast';
   if (type === 'attack' && targetBeast)
     playBossSong();
-  else if (type === 'attack' && !(getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive))
+  else if (type === 'attack' && !((getActiveMission()?.id === 'free_michael' || getActiveMission()?.id === 'soul_keys') && s.missionState.finalCombatActive))
     playAttackSong();
   save();
   renderHero();
@@ -2403,23 +2496,33 @@ function bindMissionButtons(x) {
         return;
       x.move.pm--;
       x.move.on = false;
-      const heroCountForHp = s.mode === 'solo' ? 2 : s.heroes.length;
-      st.michaelMaxHp = 15 * heroCountForHp;
-      st.michaelHp = st.michaelMaxHp;
-      st.michaelInvulnerable = true;
-      st.finalCombatActive = true;
-      st.corruptionTokens = 0;
-      st.darkLevel = 0;
-      s.heroes.forEach(q => {
-        q.hp = q.hpMax;
-        q.mana = q.manaMax;
-      });
-      log(`${ x.name } entra a la Cámara de la Corrupción. Comienza el Combate Final contra el Arcángel Miguel corrupto. Vida de Miguel: ${ st.michaelHp }.`);
+      log(`${ x.name } entra a la Cámara de la Corrupción. Se realiza una Fase de Subida de Nivel antes de comenzar el Combate Final.`);
+      st.pendingChamberEntry = 'michael';
+      s.phase = 2;
       save();
       renderHero();
-      renderMissions();
-      startMichaelSong();
-      duckAndSay('Comienza el Combate Final.');
+      showPhaseCurtain('Fase de Subida de Nivel');
+      beginLevelPhase();
+    };
+  const enterTimeChamberBtn = document.getElementById('enterTimeChamberBtn');
+  if (enterTimeChamberBtn)
+    enterTimeChamberBtn.onclick = () => {
+      const st = s.missionState;
+      if ((st.keysCollectedCount || 0) < 3)
+        return alert('Todavía no se han recogido las 3 Llaves del Alma.');
+      if (x.move.pm < 1)
+        return alert('No tienes puntos de movimiento disponibles para esta acción.');
+      if (!confirm(`Confirma que ${ x.name } se encuentra en la zona de la puerta de la Cámara del Tiempo y que quieres gastar 1 punto de movimiento para entrar. Esto activa el Combate Final.`))
+        return;
+      x.move.pm--;
+      x.move.on = false;
+      log(`${ x.name } entra a la Cámara del Tiempo. Se realiza una Fase de Subida de Nivel antes de comenzar el Combate Final.`);
+      st.pendingChamberEntry = 'parca';
+      s.phase = 2;
+      save();
+      renderHero();
+      showPhaseCurtain('Fase de Subida de Nivel');
+      beginLevelPhase();
     };
   const fragBtn = document.getElementById('collectFragmentBtn');
   if (fragBtn)
@@ -2537,6 +2640,41 @@ function bindMissionButtons(x) {
       renderMissions();
       say(`Jaula destruida. Ganas 5 de experiencia. El grupo tiene ${ st.souls } de ${ st.soulsNeeded } Almas.`);
     };
+  document.querySelectorAll('[data-collectkey]').forEach(b => b.onclick = () => {
+    if (x.actions < 1)
+      return alert('No quedan acciones disponibles.');
+    const i = +b.dataset.collectkey, st = s.missionState;
+    if (st.keysCollected[i])
+      return;
+    if (!confirm(`Confirma que ${ x.name } se encuentra en la zona de la Llave ${ i + 1 }. Se gastará 1 acción para recogerla.`))
+      return;
+    x.actions--;
+    st.keysCollected[i] = true;
+    st.keysCollectedCount = (st.keysCollectedCount || 0) + 1;
+    s.heroes.forEach(q => q.xp += 8);
+    log(`${ x.name } recoge la Llave ${ i + 1 } del Alma. Todo el grupo gana 8 XP. Llaves recogidas: ${ st.keysCollectedCount }/3.`);
+    save();
+    renderHero();
+    renderMissions();
+    say(`Llave recogida. Todo el grupo gana 8 de experiencia. Llaves: ${ st.keysCollectedCount } de 3.`);
+  });
+  document.querySelectorAll('[data-addtime]').forEach(b => b.onclick = () => {
+    if (x.actions < 1)
+      return alert('No quedan acciones disponibles.');
+    const zone = b.dataset.addtime, st = s.missionState;
+    if (!confirm(`Confirma que ${ x.name } se encuentra en la Zona de Reloj de Arena ${ zone }. Se gastará 1 acción para añadir 1 ficha de Tiempo.`))
+      return;
+    x.actions--;
+    if (zone === '1')
+      st.clockZone1 = (st.clockZone1 || 0) + 1;
+    else
+      st.clockZone2 = (st.clockZone2 || 0) + 1;
+    log(`${ x.name } añade 1 ficha de Tiempo a la Zona de Reloj de Arena ${ zone }.`);
+    save();
+    renderHero();
+    renderMissions();
+    say(`Ficha de Tiempo añadida al Reloj de Arena ${ zone }.`);
+  });
 }
 function michaelBlessingMultiplier(level) {
   if (level >= 5)
@@ -2681,6 +2819,174 @@ function resolveMichaelAbility(claws) {
   renderMissions();
   duckAndSay(`Bendición Oscura. Inflige ${ total } Heridas, distribúyanlas como deseen.`);
 }
+function triggerParcaActivation(isLastHero) {
+  const st = s.missionState;
+  st.awaitingParcaActivation = true;
+  st.parcaPendingAfter = isLastHero ? 'phase' : 'prompt';
+  st.parcaClawStep = 'ask';
+  save();
+  render();
+  duckAndSay('La Parca se activa. Lanza 2 dados negros.');
+}
+function resolveParcaAfterActivation() {
+  const st = s.missionState;
+  st.awaitingParcaActivation = false;
+  st.parcaClawStep = null;
+  const pendingAfter = st.parcaPendingAfter;
+  st.parcaPendingAfter = null;
+  save();
+  if (pendingAfter === 'phase') {
+    renderHero();
+    nextPhase();
+    return;
+  }
+  const pendingHeroes = s.heroes.filter(q => !q.unconscious && !q.turnDone);
+  if (pendingHeroes.length <= 1) {
+    if (pendingHeroes.length === 1)
+      s.active = s.heroes.indexOf(pendingHeroes[0]);
+    save();
+    render();
+    return;
+  }
+  s.turnPrompt = true;
+  save();
+  render();
+}
+function checkParcaClockDefeat() {
+  const st = s.missionState;
+  if ((st.clockZone1 || 0) <= 0 && (st.clockZone2 || 0) <= 0 && !s.missionResult) {
+    s.missionResult = 'defeat';
+    log('Ambas Zonas de Reloj de Arena se quedaron sin fichas de Tiempo. Derrota.');
+    save();
+    renderMissions();
+    duckAndSay('El tiempo se agota. La misión termina en derrota.');
+    return true;
+  }
+  return false;
+}
+function renderParcaActivation() {
+  const st = s.missionState;
+  const panel = $('heroPage');
+  if (!panel)
+    return;
+  if (st.parcaClawStep === 'ask' || !st.parcaClawStep) {
+    panel.innerHTML = `<div class="card"><h2>☠ Activación de la Parca</h2><p class="notice">Lanza 2 dados negros. ¿Cuántas <b>garras</b> (no marcas de garra, esas se ignoran) salieron?</p><div class="actions"><button data-parcaclaws="0" class="primary">0 garras</button><button data-parcaclaws="1" class="primary">1 garra</button><button data-parcaclaws="2" class="primary">2 garras</button></div></div>`;
+    document.querySelectorAll('[data-parcaclaws]').forEach(b => b.onclick = () => resolveParcaAbility(+b.dataset.parcaclaws));
+    return;
+  }
+  if (st.parcaClawStep === 'single-damage') {
+    const available = s.heroes.filter(q => !q.unconscious && !q.exitedMap);
+    panel.innerHTML = `<div class="card"><h2>${ st.parcaAbilityName }</h2><p class="notice">${ st.parcaAbilityText }</p><label>Héroe atacado<select id="parcaTargetHero">${ available.map(q => `<option value="${ s.heroes.indexOf(q) }">${ q.name }</option>`).join('') }</select></label><label>Daño recibido<select id="parcaDamageAmount">${ Array.from({ length: 11 }, (_, i) => i).map(n => `<option value="${ n }">${ n }</option>`).join('') }</select></label><label class="top">¿Salieron 2 garras en los dados negros de este combate?<select id="parcaIceProc"><option value="no">No</option><option value="yes">Sí</option></select></label><button id="confirmParcaSingleDamage" class="primary top">Confirmar daño</button></div>`;
+    $('confirmParcaSingleDamage').onclick = () => {
+      const idx = +$('parcaTargetHero').value, dmg = +$('parcaDamageAmount').value, target = s.heroes[idx];
+      const iceProc = $('parcaIceProc').value === 'yes';
+      target.hp = Math.max(0, target.hp - dmg);
+      log(`${ target.name } recibe ${ dmg } de daño de la Parca (${ st.parcaAbilityName }). Vida restante: ${ target.hp }/${ target.hpMax }.`);
+      if (iceProc && target.mana === 0 && !target.unconscious) {
+        target.iceTokens = (target.iceTokens || 0) + 1;
+        log(`${ target.name } no tenía Maná: gana 1 Ficha de Hielo. Perderá 1 acción al comenzar su próximo turno.`);
+      }
+      if (target.hp === 0 && !target.unconscious)
+        knockOut(target);
+      save();
+      renderHero();
+      renderMissions();
+      resolveParcaAfterActivation();
+    };
+    return;
+  }
+  if (st.parcaClawStep === 'ask-swords') {
+    panel.innerHTML = `<div class="card"><h2>La Muerte se Acerca</h2><p class="notice">La Parca se mueve a la Zona central. Lanza 1 dado amarillo. ¿Cuántas espadas salieron?</p><div class="actions">${ [0, 1, 2, 3].map(n => `<button data-swords="${ n }" class="primary">${ n }</button>`).join('') }</div></div>`;
+    document.querySelectorAll('[data-swords]').forEach(b => b.onclick = () => {
+      const swords = +b.dataset.swords;
+      st.parcaSwordsResult = swords;
+      st.parcaClawStep = 'clock-distribute';
+      st.parcaClockDist = {
+        1: 0,
+        2: 0
+      };
+      s.heroes.forEach(q => {
+        if (!q.unconscious)
+          q.mana = Math.max(0, q.mana - swords);
+      });
+      log(`La Muerte se Acerca: salen ${ swords } espadas. Todos los héroes pierden ${ swords } de Maná. Deben retirarse ${ swords } ficha(s) de Tiempo repartidas entre ambas Zonas de Reloj de Arena.`);
+      save();
+      render();
+      duckAndSay(`Salen ${ swords } espadas. Todos pierden ${ swords } de Maná. Reparte ${ swords } ficha${ swords !== 1 ? 's' : '' } de Tiempo entre ambos relojes.`);
+    });
+    return;
+  }
+  if (st.parcaClawStep === 'clock-distribute') {
+    const swords = st.parcaSwordsResult || 0;
+    const dist = st.parcaClockDist || {
+      1: 0,
+      2: 0
+    };
+    const assigned = (dist[1] || 0) + (dist[2] || 0);
+    const remaining = swords - assigned;
+    panel.innerHTML = `<div class="card"><h2>Repartir pérdida de fichas</h2><p class="notice">Reparte ${ swords } ficha(s) de Tiempo a retirar entre ambos Relojes de Arena (no más de las que tenga cada uno).</p><div class="grid top"><div class="elementRow"><span class="badge">Reloj 1: -${ dist[1] || 0 } (tiene ${ st.clockZone1 || 0 })</span><button data-clockdist="1" data-d="-1" ${ (dist[1] || 0) <= 0 ? 'disabled' : '' }>−</button><button data-clockdist="1" data-d="1" ${ remaining <= 0 || (dist[1] || 0) >= (st.clockZone1 || 0) ? 'disabled' : '' }>+</button></div><div class="elementRow"><span class="badge">Reloj 2: -${ dist[2] || 0 } (tiene ${ st.clockZone2 || 0 })</span><button data-clockdist="2" data-d="-1" ${ (dist[2] || 0) <= 0 ? 'disabled' : '' }>−</button><button data-clockdist="2" data-d="1" ${ remaining <= 0 || (dist[2] || 0) >= (st.clockZone2 || 0) ? 'disabled' : '' }>+</button></div></div><p class="muted top">Por repartir: ${ remaining }</p><button id="confirmParcaClockDist" class="primary top" ${ remaining !== 0 ? 'disabled' : '' }>Confirmar</button></div>`;
+    document.querySelectorAll('[data-clockdist]').forEach(b => b.onclick = () => {
+      const zone = b.dataset.clockdist, d = +b.dataset.d;
+      st.parcaClockDist = st.parcaClockDist || {
+        1: 0,
+        2: 0
+      };
+      st.parcaClockDist[zone] = (st.parcaClockDist[zone] || 0) + d;
+      save();
+      renderParcaActivation();
+    });
+    if ($('confirmParcaClockDist'))
+      $('confirmParcaClockDist').onclick = () => {
+        st.clockZone1 = Math.max(0, (st.clockZone1 || 0) - (st.parcaClockDist[1] || 0));
+        st.clockZone2 = Math.max(0, (st.clockZone2 || 0) - (st.parcaClockDist[2] || 0));
+        log(`Se retiran fichas de Tiempo: Reloj 1 ahora ${ st.clockZone1 }, Reloj 2 ahora ${ st.clockZone2 }.`);
+        st.parcaClockDist = {};
+        save();
+        renderMissions();
+        if (checkParcaClockDefeat())
+          return;
+        resolveParcaAfterActivation();
+      };
+    return;
+  }
+}
+function resolveParcaAbility(claws) {
+  const st = s.missionState;
+  if (claws === 0) {
+    st.parcaAbilityName = 'Drenaje del Alma';
+    st.parcaAbilityText = 'Coloca a la Parca en la Zona del héroe con menos Maná y ataca a ese héroe.';
+    st.parcaClawStep = 'single-damage';
+    log('La Parca se activa con 0 garras: Drenaje del Alma.');
+    save();
+    render();
+    duckAndSay('Drenaje del Alma.');
+    return;
+  }
+  if (claws === 1) {
+    const z1 = st.clockZone1 || 0, z2 = st.clockZone2 || 0;
+    let fromZone;
+    if (z1 >= z2) {
+      st.clockZone1 = Math.max(0, z1 - 1);
+      fromZone = '1';
+    } else {
+      st.clockZone2 = Math.max(0, z2 - 1);
+      fromZone = '2';
+    }
+    log(`La Parca se activa con 1 garra: El Tiempo Vuela. Se retira 1 ficha de Tiempo del Reloj de Arena ${ fromZone }. Reloj 1: ${ st.clockZone1 }, Reloj 2: ${ st.clockZone2 }.`);
+    save();
+    renderMissions();
+    if (checkParcaClockDefeat())
+      return;
+    render();
+    duckAndSay(`El Tiempo Vuela. Se retira 1 ficha del Reloj de Arena ${ fromZone }.`);
+    resolveParcaAfterActivation();
+    return;
+  }
+  st.parcaClawStep = 'ask-swords';
+  log('La Parca se activa con 2 garras: La Muerte se Acerca.');
+  save();
+  render();
+}
 function finishFlow(skipGenericVoice = false) {
   const x = h();
   const wasAttack = x.flow.type === 'attack';
@@ -2694,7 +3000,7 @@ function finishFlow(skipGenericVoice = false) {
     on: false,
     pm: 0
   };
-  if (wasAttack && !(getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive))
+  if (wasAttack && !((getActiveMission()?.id === 'free_michael' || getActiveMission()?.id === 'soul_keys') && s.missionState.finalCombatActive))
     stopAttackSong();
   if (x.actions <= 0) {
     x.turnDone = true;
@@ -2703,6 +3009,12 @@ function finishFlow(skipGenericVoice = false) {
       save();
       renderHero();
       triggerMichaelActivation(pendingHeroes.length === 0);
+      return;
+    }
+    if (getActiveMission()?.id === 'soul_keys' && s.missionState.finalCombatActive && !s.missionResult) {
+      save();
+      renderHero();
+      triggerParcaActivation(pendingHeroes.length === 0);
       return;
     }
     if (s.mode === 'solo' || pendingHeroes.length === 0) {
@@ -2810,6 +3122,12 @@ function finishDarkness() {
       attack: {},
       defense: {}
     };
+    if (x.iceTokens > 0 && !x.unconscious) {
+      const lost = Math.min(x.iceTokens, x.actions);
+      x.actions -= lost;
+      log(`${ x.name } tenía ${ x.iceTokens } Ficha${ x.iceTokens > 1 ? 's' : '' } de Hielo: pierde ${ lost } acción${ lost > 1 ? 'es' : '' } al comenzar su turno.`);
+      x.iceTokens = 0;
+    }
     if (x.cls === 'paladin' && x.paladin.blessed) {
       let old = x.paladin.blessed;
       x.paladin.blessed = '';
@@ -2898,12 +3216,70 @@ function nextPhase() {
     showPhaseCurtain('Fase de Oscuridad');
     if (getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive && !s.missionResult)
       advanceMichaelDarkness();
+    else if (getActiveMission()?.id === 'soul_keys' && s.missionState.finalCombatActive && !s.missionResult)
+      advanceParcaDarkness();
+    else if (getActiveMission()?.id === 'soul_keys' && !s.missionState.finalCombatActive && !s.missionResult)
+      advanceSoulKeysDarkness();
     else
       advanceDark(true);
     save();
     render();
     return;
   }
+}
+function activateParcaChamber() {
+  const st = s.missionState;
+  const heroCountForHp = s.mode === 'solo' ? 2 : s.heroes.length;
+  st.parcaMaxHp = 25 * heroCountForHp;
+  st.parcaHp = st.parcaMaxHp;
+  st.finalCombatActive = true;
+  st.clockZone1 = 2;
+  st.clockZone2 = 2;
+  st.parcaDarkLevel = 0;
+  st.parcaActions = 1;
+  s.heroes.forEach(q => {
+    q.hp = q.hpMax;
+    q.mana = q.manaMax;
+  });
+  log(`Comienza el Combate Final contra la Parca. Vida de la Parca: ${ st.parcaHp }. Se colocan 2 fichas de Tiempo en cada Zona de Reloj de Arena.`);
+  save();
+  renderHero();
+  renderMissions();
+  startParcaSong();
+  duckAndSay('Comienza el Combate Final.');
+}
+function activateMichaelChamber() {
+  const st = s.missionState;
+  const heroCountForHp = s.mode === 'solo' ? 2 : s.heroes.length;
+  st.michaelMaxHp = 15 * heroCountForHp;
+  st.michaelHp = st.michaelMaxHp;
+  st.michaelInvulnerable = true;
+  st.finalCombatActive = true;
+  st.corruptionTokens = 0;
+  st.darkLevel = 0;
+  s.heroes.forEach(q => {
+    q.hp = q.hpMax;
+    q.mana = q.manaMax;
+  });
+  log(`Comienza el Combate Final contra el Arcángel Miguel corrupto. Vida de Miguel: ${ st.michaelHp }.`);
+  save();
+  renderHero();
+  renderMissions();
+  startMichaelSong();
+  duckAndSay('Comienza el Combate Final.');
+}
+function finishLevelPhaseOrChamberEntry() {
+  const pending = s.missionState && s.missionState.pendingChamberEntry;
+  if (pending) {
+    s.missionState.pendingChamberEntry = null;
+    save();
+    if (pending === 'michael')
+      activateMichaelChamber();
+    else if (pending === 'parca')
+      activateParcaChamber();
+    return;
+  }
+  nextPhase();
 }
 function beginLevelPhase() {
   const newlyMaxed = s.heroes.filter(x => x.level >= 5 && !x.maxLevelAnnounced);
@@ -2923,7 +3299,7 @@ function beginLevelPhase() {
     save();
     render();
     duckAndSay('Todos los héroes están en nivel máximo. Avanzamos a Oscuridad.');
-    setTimeout(nextPhase, 2600);
+    setTimeout(finishLevelPhaseOrChamberEntry, 2600);
     return;
   }
   if (newlyMaxed.length) {
@@ -2977,7 +3353,7 @@ function processNextLevelHero() {
     save();
     render();
     duckAndSay(s.anyLeveledUp ? 'Revisión completa. Avanzamos a Oscuridad.' : 'Ningún héroe sube de nivel por falta de experiencia. Avanzamos a Oscuridad.');
-    setTimeout(nextPhase, 2600);
+    setTimeout(finishLevelPhaseOrChamberEntry, 2600);
     return;
   }
   const entry = s.levelQueue[s.levelCursor], x = s.heroes[entry.i];
@@ -3075,6 +3451,48 @@ function advanceDark(voice = true) {
   save();
   renderGame();
   setTimeout(() => document.querySelector('#darkTrack .cell.active')?.classList.add('pulse'), 30);
+}
+function advanceSoulKeysDarkness() {
+  const st = s.missionState;
+  const exhaustedKey = st.keyTimeTokens.findIndex((tokens, i) => !st.keysCollected[i] && tokens <= 0);
+  if (exhaustedKey !== -1) {
+    s.missionResult = 'defeat';
+    log(`La Llave ${ exhaustedKey + 1 } del Alma se quedó sin fichas de Tiempo antes de ser recogida. Derrota.`);
+    save();
+    renderMissions();
+    duckAndSay(`La Llave ${ exhaustedKey + 1 } del Alma desaparece. La misión termina en derrota.`);
+    return;
+  }
+  st.keyTimeTokens = st.keyTimeTokens.map((tokens, i) => st.keysCollected[i] ? tokens : tokens - 1);
+  s.darknessPending = true;
+  const remaining = st.keyTimeTokens.map((tk, i) => st.keysCollected[i] ? 'recogida' : `${ tk } ficha${ tk !== 1 ? 's' : '' }`);
+  const t = `Fase de Oscuridad. Se retira 1 ficha de Tiempo de cada Llave pendiente. Llave 1: ${ remaining[0] }. Llave 2: ${ remaining[1] }. Llave 3: ${ remaining[2] }.`;
+  log(t);
+  save();
+  renderGame();
+  renderMissions();
+  duckAndSay(t);
+}
+function advanceParcaDarkness() {
+  const st = s.missionState;
+  if ((st.parcaDarkLevel || 0) >= 5) {
+    s.darknessPending = true;
+    log('El medidor de la Parca ya está en su nivel máximo. No avanza más.');
+    save();
+    renderGame();
+    duckAndSay('El medidor de la Parca ya está en su nivel máximo. No avanza más.');
+    return;
+  }
+  st.parcaDarkLevel = (st.parcaDarkLevel || 0) + 1;
+  const actions = st.parcaDarkLevel === 1 ? 1 : st.parcaDarkLevel === 5 ? 3 : 2;
+  st.parcaActions = actions;
+  const t = `Fase de Oscuridad de la Parca. El medidor avanza al nivel ${ st.parcaDarkLevel }. La Parca realizará ${ actions } acción${ actions > 1 ? 'es' : '' } en su próxima activación.`;
+  s.darknessPending = true;
+  log(t);
+  save();
+  renderGame();
+  renderMissions();
+  duckAndSay(t);
 }
 function advanceMichaelDarkness() {
   const st = s.missionState;
@@ -3387,6 +3805,19 @@ function initMissions() {
           souls: 0,
           soulsNeeded: 10 * (s.mode === 'solo' ? 2 : s.heroes.length)
         };
+      if (s.activeMissionId === 'soul_keys')
+        s.missionState = {
+          keyTimeTokens: [1, 3, 5],
+          keysCollected: [false, false, false],
+          keysCollectedCount: 0,
+          finalCombatActive: false,
+          parcaMaxHp: null,
+          parcaHp: null,
+          clockZone1: 0,
+          clockZone2: 0,
+          parcaDarkLevel: 0,
+          awaitingParcaActivation: false
+        };
       log(`Misión activada: ${ getActiveMission()?.name || 'ninguna' }.`);
       say(`Misión activada: ${ getActiveMission()?.name }.`);
     }
@@ -3503,6 +3934,15 @@ function renderMissionMechanics(m) {
     const st = s.missionState;
     const pct = Math.max(0, Math.min(100, Math.round((st.souls || 0) / (st.soulsNeeded || 1) * 100)));
     return `<div class="card"><h3>Almas recolectadas</h3><div class="statBarRow"><small>Almas</small><div class="statBarTrack"><div class="statBarFill xpFill" style="width:${ pct }%"></div></div><span class="statBarNum">${ st.souls || 0 }/${ st.soulsNeeded || 0 }</span></div><p class="muted top">Se ganan Almas de forma colectiva: 1 por Secuaz o Líder eliminado, 3 por Monstruo Errante, 5 por Jaula de Almas destruida (además de 5 XP solo para quien la destruye). Al reunir el total necesario, se habilita "Salir de la mazmorra" en Movimiento. Al salir todos los héroes, victoria.</p></div>`;
+  }
+  if (m.id === 'soul_keys') {
+    const st = s.missionState;
+    if (!st.finalCombatActive) {
+      const keyList = st.keyTimeTokens.map((tk, i) => st.keysCollected[i] ? `<li>Llave ${ i + 1 }: recogida ✓</li>` : `<li>Llave ${ i + 1 }: ${ tk } ficha${ tk !== 1 ? 's' : '' } de Tiempo restantes</li>`).join('');
+      return `<div class="card"><h3>Llaves del Alma</h3><p class="notice">Recogidas: <b>${ st.keysCollectedCount || 0 } / 3</b></p><ul>${ keyList }</ul><p class="muted top">Cada Fase de Oscuridad se retira 1 ficha de Tiempo de cada Llave pendiente. Si a alguna se le acaban antes de recogerla, derrota inmediata. Al recoger las 3, se habilita "Entrar a la Cámara del Tiempo" en Movimiento.</p></div>`;
+    }
+    const pct = Math.max(0, Math.min(100, Math.round(st.parcaHp / st.parcaMaxHp * 100)));
+    return `<div class="card parcaPanel"><div class="parcaTitle">☠ LA PARCA ☠<span class="parcaSubtitle">La Muerte Corrupta</span></div><div class="parcaHealthTrack"><div class="parcaHealthFill" style="width:${ pct }%"></div><span class="parcaHealthNum">${ st.parcaHp } / ${ st.parcaMaxHp }</span></div><div class="grid top"><div><small>Nivel del medidor</small><b>${ st.parcaDarkLevel || 0 } / 5</b></div><div><small>Acciones por activación</small><b>${ st.parcaActions || 1 }</b></div><div><small>Reloj de Arena 1</small><b>${ st.clockZone1 || 0 } fichas</b></div><div><small>Reloj de Arena 2</small><b>${ st.clockZone2 || 0 } fichas</b></div></div></div>`;
   }
   return '';
 }

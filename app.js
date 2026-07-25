@@ -266,14 +266,24 @@ async function ensureAudio() {
   return true;
 }
 function stopAmbient() {
-  const el = document.getElementById('ambientSong');
-  if (!el)
-    return;
-  try {
-    el.pause();
-    el.currentTime = 0;
-  } catch (err) {
-  }
+  [attackSongFadeInterval, bossSongFadeInterval, michaelSongFadeInterval, ambientFadeInterval].forEach(interval => {
+    if (interval)
+      clearInterval(interval);
+  });
+  attackSongFadeInterval = null;
+  bossSongFadeInterval = null;
+  michaelSongFadeInterval = null;
+  ambientFadeInterval = null;
+  ['ambientSong', 'attackSong', 'bossSong', 'michaelSong'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el)
+      return;
+    try {
+      el.pause();
+      el.currentTime = 0;
+    } catch (err) {
+    }
+  });
 }
 function playTone() {
 }
@@ -3530,7 +3540,6 @@ function bindMissionMechanics(m) {
       log('Ya no quedan fichas de Corrupción en la Cámara. Miguel deja de ser invulnerable.');
       save();
       renderMissions();
-      duckAndSay('Mi luz se desvanece... ahora pueden herirme.');
     };
   if (m.id === 'free_michael' && $('restoreInvulnBtn'))
     $('restoreInvulnBtn').onclick = () => {

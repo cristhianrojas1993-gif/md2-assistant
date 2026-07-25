@@ -2388,7 +2388,7 @@ function bindMissionButtons(x) {
       renderHero();
       renderMissions();
       startMichaelSong();
-      duckAndSay('Portadores de la Luz... enfrentarán el castigo divino.');
+      duckAndSay('Comienza el Combate Final.');
     };
   const fragBtn = document.getElementById('collectFragmentBtn');
   if (fragBtn)
@@ -2979,6 +2979,14 @@ function continueLevelQueueAfterSkill() {
   const entry = s.levelQueue[s.levelCursor];
   if (!entry)
     return;
+  const x = s.heroes[entry.i];
+  const cost = x.level < 5 ? MD2.levelCosts[x.level] : null;
+  if (cost && x.xp >= cost) {
+    save();
+    render();
+    setTimeout(processNextLevelHero, 800);
+    return;
+  }
   entry.status = 'done';
   s.levelCursor++;
   save();

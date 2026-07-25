@@ -1379,6 +1379,8 @@ function missionTurnButton(x) {
     return `<button id="attackBeastBtn" ${ x.actions < 1 ? 'disabled' : '' }>Atacar a la Bestia</button>`;
   if (m && m.id === 'free_michael' && !s.missionResult && !s.missionState.finalCombatActive && s.missionState.sealsBreached < 4)
     return `<button id="breakSealBtn" ${ x.actions < 1 ? 'disabled' : '' }>Romper Sello de Corrupción</button>`;
+  if (m && m.id === 'soul_collector' && !s.missionResult)
+    return `<button id="destroyCageBtn" ${ x.actions < 1 ? 'disabled' : '' }>Destruir Jaula de Almas</button>`;
   return '';
 }
 function actionsHtml(x) {
@@ -1448,6 +1450,8 @@ function missionEscapeButton(x) {
     return `<button id="missionEscapeBtn" class="primary top" ${ x.move.pm < 1 ? 'disabled' : '' }>Escape de la mazmorra (1 PM)</button>`;
   if (m.id === 'the_step' && s.missionState.reachedRift)
     return `<button id="missionEscapeBtn" class="primary top" ${ x.move.pm < 1 ? 'disabled' : '' }>Salir por la Grieta (1 PM)</button>`;
+  if (m.id === 'soul_collector' && (s.missionState.souls || 0) >= (s.missionState.soulsNeeded || 0))
+    return `<button id="missionEscapeBtn" class="primary top" ${ x.move.pm < 1 ? 'disabled' : '' }>Salir de la mazmorra (1 PM)</button>`;
   return '';
 }
 function missionInteractOptions(x) {
@@ -2155,20 +2159,37 @@ function bindFlow(x) {
       a.leaderDamage = selected.includes('leader') ? 1 : 0;
       a.killedRoamer = selected.includes('roamer') ? 1 : 0;
       let xpMsgs = [];
+      const soulMission = getActiveMission()?.id === 'soul_collector' && !s.missionResult;
+      const st = s.missionState;
       if (a.killedMinions > 0) {
         x.xp += a.killedMinions;
         log(`${ x.name } gana ${ a.killedMinions } XP por eliminar ${ a.killedMinions } secuaz${ a.killedMinions > 1 ? 'ces' : '' }.`);
         xpMsgs.push(`Ganas ${ a.killedMinions } de experiencia por secuaces.`);
+        if (soulMission) {
+          st.souls = (st.souls || 0) + a.killedMinions;
+          log(`El grupo gana ${ a.killedMinions } Alma${ a.killedMinions > 1 ? 's' : '' } por los secuaces eliminados. Total: ${ st.souls }/${ st.soulsNeeded }.`);
+          xpMsgs.push(`El grupo gana ${ a.killedMinions } Alma${ a.killedMinions > 1 ? 's' : '' }.`);
+        }
       }
       if (a.leaderDamage > 0) {
         s.heroes.forEach(q => q.xp += 2);
         log('Líder eliminado. Todo el grupo gana 2 XP.');
         xpMsgs.push('El grupo gana 2 de experiencia por el líder eliminado.');
+        if (soulMission) {
+          st.souls = (st.souls || 0) + 1;
+          log(`El grupo gana 1 Alma por el líder eliminado. Total: ${ st.souls }/${ st.soulsNeeded }.`);
+          xpMsgs.push('El grupo gana 1 Alma por el líder.');
+        }
       }
       if (a.killedRoamer > 0) {
         s.heroes.forEach(q => q.xp += 4);
         log('Monstruo errante eliminado. Todo el grupo gana 4 XP.');
         xpMsgs.push('El grupo gana 4 de experiencia por el errante eliminado.');
+        if (soulMission) {
+          st.souls = (st.souls || 0) + 3;
+          log(`El grupo gana 3 Almas por el Monstruo Errante eliminado. Total: ${ st.souls }/${ st.soulsNeeded }.`);
+          xpMsgs.push('El grupo gana 3 Almas por el errante.');
+        }
       }
       if (selected.includes('beast') && getActiveMission()?.id === 'infernal_labyrinth' && !s.missionResult) {
         s.heroes.forEach(q => q.xp += 4);
@@ -2344,7 +2365,7 @@ function bindMissionButtons(x) {
   if (escapeBtn)
     escapeBtn.onclick = () => {
       const m = getActiveMission();
-      const zoneLabel = m.id === 'road_to_hell' ? 'la zona del Altar' : 'la zona de la Grieta';
+      const zoneLabel = m.id === 'road_to_hell' ? 'la zona del Altar' : m.id === 'soul_collector' ? 'la zona del Portón (ficha de Objetivo gris)' : 'la zona de la Grieta';
       if (x.move.pm < 1)
         return alert('No tienes puntos de movimiento disponibles para esta acción.');
       if (!confirm(`Confirma que ${ x.name } se encuentra en ${ zoneLabel } y quieres gastar 1 punto de movimiento para salir de la mazmorra. ${ x.name } dejará de participar en la partida.`))
@@ -2498,6 +2519,23 @@ function bindMissionButtons(x) {
         say(`Sello roto. ${ st.sealsBreached } de 4. Los 4 Sellos están rotos: ya pueden entrar a la Cámara de la Corrupción gastando 1 punto de movimiento.`);
       else
         say(`Sello roto. ${ st.sealsBreached } de 4. Todo el grupo gana 5 de experiencia.`);
+    };
+  const destroyCageBtn = document.getElementById('destroyCageBtn');
+  if (destroyCageBtn)
+    destroyCageBtn.onclick = () => {
+      if (x.actions < 1)
+        return alert('No quedan acciones disponibles.');
+      const st = s.missionState;
+      if (!confirm(`Confirma que ${ x.name } se encuentra en la zona de una Jaula de Almas. Se gastará 1 acción para destruirla.`))
+        return;
+      x.actions--;
+      st.souls = (st.souls || 0) + 5;
+      x.xp += 5;
+      log(`${ x.name } destruye una Jaula de Almas. Gana 5 XP. El grupo gana 5 Almas. Total: ${ st.souls }/${ st.soulsNeeded }.`);
+      save();
+      renderHero();
+      renderMissions();
+      say(`Jaula destruida. Ganas 5 de experiencia. El grupo tiene ${ st.souls } de ${ st.soulsNeeded } Almas.`);
     };
 }
 function michaelBlessingMultiplier(level) {
@@ -3344,6 +3382,11 @@ function initMissions() {
           darkLevel: 0,
           awaitingMichaelActivation: false
         };
+      if (s.activeMissionId === 'soul_collector')
+        s.missionState = {
+          souls: 0,
+          soulsNeeded: 10 * (s.mode === 'solo' ? 2 : s.heroes.length)
+        };
       log(`Misión activada: ${ getActiveMission()?.name || 'ninguna' }.`);
       say(`Misión activada: ${ getActiveMission()?.name }.`);
     }
@@ -3455,6 +3498,11 @@ function renderMissionMechanics(m) {
       return `<div class="card"><h3>Sellos de Corrupción</h3><p class="notice">Rotos: <b>${ st.sealsBreached || 0 } / 4</b></p><p class="muted">Cada héroe puede gastar 1 acción en la zona de un Sello para romperlo ("Romper Sello de Corrupción" en su turno). Todo el grupo gana 5 XP por sello. Al romper los 4, se habilita "Entrar a la Cámara de la Corrupción" en Movimiento.</p></div>`;
     const pct = Math.max(0, Math.min(100, Math.round(st.michaelHp / st.michaelMaxHp * 100)));
     return `<div class="card bossPanel"><div class="bossTitle">✦ EL ARCÁNGEL MIGUEL ✦<span class="bossSubtitle">El Arcángel Corrupto</span></div><div class="bossHealthTrack"><div class="bossHealthFill" style="width:${ pct }%"></div><span class="bossHealthNum">${ st.michaelHp } / ${ st.michaelMaxHp }</span></div><div class="grid top"><div><small>Nivel del medidor</small><b>${ st.darkLevel || 0 } / 5</b></div><div><small>Fichas de Corrupción</small><b>${ st.corruptionTokens || 0 }</b></div><div><small>Dados negros extra</small><b>+${ st.extraBlackDice || 0 }</b></div><div><small>Estado</small><b>${ st.michaelInvulnerable ? 'Invulnerable' : 'Vulnerable' }</b></div></div>${ st.michaelInvulnerable ? `<button id="removeInvulnBtn" class="primary top">Quitar invulnerabilidad</button>` : `<button id="restoreInvulnBtn" class="top">Restaurar invulnerabilidad</button>` }</div>`;
+  }
+  if (m.id === 'soul_collector') {
+    const st = s.missionState;
+    const pct = Math.max(0, Math.min(100, Math.round((st.souls || 0) / (st.soulsNeeded || 1) * 100)));
+    return `<div class="card"><h3>Almas recolectadas</h3><div class="statBarRow"><small>Almas</small><div class="statBarTrack"><div class="statBarFill xpFill" style="width:${ pct }%"></div></div><span class="statBarNum">${ st.souls || 0 }/${ st.soulsNeeded || 0 }</span></div><p class="muted top">Se ganan Almas de forma colectiva: 1 por Secuaz o Líder eliminado, 3 por Monstruo Errante, 5 por Jaula de Almas destruida (además de 5 XP solo para quien la destruye). Al reunir el total necesario, se habilita "Salir de la mazmorra" en Movimiento. Al salir todos los héroes, victoria.</p></div>`;
   }
   return '';
 }

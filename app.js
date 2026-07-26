@@ -269,15 +269,16 @@ async function ensureAudio() {
   return true;
 }
 function stopAmbient() {
-  [attackSongFadeInterval, bossSongFadeInterval, michaelSongFadeInterval, ambientFadeInterval].forEach(interval => {
+  [attackSongFadeInterval, bossSongFadeInterval, michaelSongFadeInterval, parcaSongFadeInterval, ambientFadeInterval].forEach(interval => {
     if (interval)
       clearInterval(interval);
   });
   attackSongFadeInterval = null;
   bossSongFadeInterval = null;
   michaelSongFadeInterval = null;
+  parcaSongFadeInterval = null;
   ambientFadeInterval = null;
-  ['ambientSong', 'attackSong', 'bossSong', 'michaelSong'].forEach(id => {
+  ['ambientSong', 'attackSong', 'bossSong', 'michaelSong', 'parcaSong'].forEach(id => {
     const el = document.getElementById(id);
     if (!el)
       return;
@@ -412,6 +413,28 @@ function stopBossSong() {
   }, fadeStepMs);
 }
 const MICHAEL_SONG_RESTART_AT = 185;
+function primeAudioElement(el) {
+  try {
+    const wasMuted = el.muted;
+    el.muted = true;
+    const p = el.play();
+    if (p && p.then)
+      p.then(() => {
+        try {
+          el.pause();
+          el.currentTime = 0;
+          el.muted = wasMuted;
+        } catch (err) {
+        }
+      }).catch(() => {
+        try {
+          el.muted = wasMuted;
+        } catch (err) {
+        }
+      });
+  } catch (err) {
+  }
+}
 function michaelSongEl() {
   let el = document.getElementById('michaelSong');
   if (!el) {
@@ -463,13 +486,31 @@ function restartMichaelSongSmoothly(el) {
 function startMichaelSong() {
   pauseAmbient();
   const el = michaelSongEl();
+  if (michaelSongFadeInterval) {
+    clearInterval(michaelSongFadeInterval);
+    michaelSongFadeInterval = null;
+  }
   try {
-    el.volume = s.musicMuted ? 0 : 1;
+    el.volume = 0;
     el.currentTime = 0;
     el.play().catch(() => {
     });
   } catch (err) {
   }
+  const targetVol = s.musicMuted ? 0 : 1;
+  const fadeSteps = 14, fadeStepMs = 80;
+  let step = 0;
+  michaelSongFadeInterval = setInterval(() => {
+    step++;
+    try {
+      el.volume = Math.min(targetVol, targetVol * (step / fadeSteps));
+    } catch (err) {
+    }
+    if (step >= fadeSteps) {
+      clearInterval(michaelSongFadeInterval);
+      michaelSongFadeInterval = null;
+    }
+  }, fadeStepMs);
 }
 function parcaSongEl() {
   let el = document.getElementById('parcaSong');
@@ -486,13 +527,31 @@ function parcaSongEl() {
 function startParcaSong() {
   pauseAmbient();
   const el = parcaSongEl();
+  if (parcaSongFadeInterval) {
+    clearInterval(parcaSongFadeInterval);
+    parcaSongFadeInterval = null;
+  }
   try {
-    el.volume = s.musicMuted ? 0 : 1;
+    el.volume = 0;
     el.currentTime = 0;
     el.play().catch(() => {
     });
   } catch (err) {
   }
+  const targetVol = s.musicMuted ? 0 : 1;
+  const fadeSteps = 14, fadeStepMs = 80;
+  let step = 0;
+  parcaSongFadeInterval = setInterval(() => {
+    step++;
+    try {
+      el.volume = Math.min(targetVol, targetVol * (step / fadeSteps));
+    } catch (err) {
+    }
+    if (step >= fadeSteps) {
+      clearInterval(parcaSongFadeInterval);
+      parcaSongFadeInterval = null;
+    }
+  }, fadeStepMs);
 }
 let parcaSongFadeInterval = null;
 function stopParcaSong() {
@@ -688,6 +747,27 @@ function reactivateAmbient() {
   if (!s.confirmed) {
     startMenuAmbient();
     say('Música de menú reactivada.');
+    return;
+  }
+  const activeMissionId = getActiveMission()?.id;
+  if (activeMissionId === 'free_michael' && s.missionState.finalCombatActive && !s.missionResult) {
+    const el = document.getElementById('michaelSong');
+    if (el && !el.paused) {
+      say('La música ya se está reproduciendo.');
+      return;
+    }
+    startMichaelSong();
+    say('Música del Combate Final reactivada.');
+    return;
+  }
+  if (activeMissionId === 'soul_keys' && s.missionState.finalCombatActive && !s.missionResult) {
+    const el = document.getElementById('parcaSong');
+    if (el && !el.paused) {
+      say('La música ya se está reproduciendo.');
+      return;
+    }
+    startParcaSong();
+    say('Música del Combate Final reactivada.');
     return;
   }
   const el = document.getElementById('ambientSong');
@@ -953,6 +1033,9 @@ function renderGameOver() {
     classes.forEach(c => s.heroes.push(makeHero(c)));
     s.mode = classes.length <= 1 ? 'solo' : 'coop';
     save();
+    stopAmbient();
+    currentGameTrack = null;
+    startMenuAmbient();
     render();
     tab('setup');
     say('Partida reiniciada con los mismos héroes. Prepara el grupo para comenzar de nuevo.');
@@ -973,6 +1056,9 @@ function renderGameOver() {
     s = fresh();
     Object.assign(s, keepVoice);
     save();
+    stopAmbient();
+    currentGameTrack = null;
+    startMenuAmbient();
     render();
     tab('setup');
     say('Lista para preparar una partida nueva.');
@@ -2494,6 +2580,7 @@ function bindMissionButtons(x) {
         return alert('No tienes puntos de movimiento disponibles para esta acción.');
       if (!confirm(`Confirma que ${ x.name } se encuentra en la zona de la puerta de la Cámara de la Corrupción y que quieres gastar 1 punto de movimiento para entrar. Esto activa el Combate Final.`))
         return;
+      primeAudioElement(michaelSongEl());
       x.move.pm--;
       x.move.on = false;
       log(`${ x.name } entra a la Cámara de la Corrupción. Se realiza una Fase de Subida de Nivel antes de comenzar el Combate Final.`);
@@ -2514,6 +2601,7 @@ function bindMissionButtons(x) {
         return alert('No tienes puntos de movimiento disponibles para esta acción.');
       if (!confirm(`Confirma que ${ x.name } se encuentra en la zona de la puerta de la Cámara del Tiempo y que quieres gastar 1 punto de movimiento para entrar. Esto activa el Combate Final.`))
         return;
+      primeAudioElement(parcaSongEl());
       x.move.pm--;
       x.move.on = false;
       log(`${ x.name } entra a la Cámara del Tiempo. Se realiza una Fase de Subida de Nivel antes de comenzar el Combate Final.`);
@@ -3839,6 +3927,8 @@ function deactivateMission() {
         x.turnDone = false;
       });
       save();
+      stopAmbient();
+      startAmbient();
       $('missionSelect').value = '';
       renderMissions();
       render();
@@ -3861,6 +3951,8 @@ function deactivateMission() {
   s.missionResult = '';
   s.missionState = {};
   save();
+  stopAmbient();
+  startAmbient();
   $('missionSelect').value = '';
   renderMissions();
   renderHero();

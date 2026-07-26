@@ -3315,6 +3315,27 @@ function nextPhase() {
     return;
   }
 }
+function startNewHeroPhaseForFinalCombat() {
+  s.phase = 0;
+  s.heroes.forEach(x => {
+    x.actions = x.unconscious ? 0 : s.mode === 'solo' ? 4 : 3;
+    x.turnDone = false;
+    x.flow = {
+      type: null,
+      step: 0,
+      attack: {},
+      defense: {}
+    };
+    x.move = {
+      on: false,
+      pm: 0
+    };
+  });
+  s.turnPrompt = false;
+  s.active = s.heroes.findIndex(x => !x.unconscious);
+  if (s.active < 0)
+    s.active = 0;
+}
 function activateParcaChamber() {
   const st = s.missionState;
   const heroCountForHp = s.mode === 'solo' ? 2 : s.heroes.length;
@@ -3323,14 +3344,16 @@ function activateParcaChamber() {
   st.finalCombatActive = true;
   st.clockZone1 = 2;
   st.clockZone2 = 2;
-  st.parcaDarkLevel = 0;
+  st.parcaDarkLevel = 1;
   st.parcaActions = 1;
   s.heroes.forEach(q => {
     q.hp = q.hpMax;
     q.mana = q.manaMax;
   });
-  log(`Comienza el Combate Final contra la Parca. Vida de la Parca: ${ st.parcaHp }. Se colocan 2 fichas de Tiempo en cada Zona de Reloj de Arena.`);
+  startNewHeroPhaseForFinalCombat();
+  log(`Comienza el Combate Final contra la Parca. Vida de la Parca: ${ st.parcaHp }. Se colocan 2 fichas de Tiempo en cada Zona de Reloj de Arena. El medidor de la Parca inicia en nivel 1 (1 acción por activación).`);
   save();
+  showPhaseCurtain('Fase de Héroes');
   renderHero();
   renderMissions();
   startParcaSong();
@@ -3343,14 +3366,16 @@ function activateMichaelChamber() {
   st.michaelHp = st.michaelMaxHp;
   st.michaelInvulnerable = true;
   st.finalCombatActive = true;
-  st.corruptionTokens = 0;
-  st.darkLevel = 0;
+  st.corruptionTokens = 1;
+  st.darkLevel = 1;
   s.heroes.forEach(q => {
     q.hp = q.hpMax;
     q.mana = q.manaMax;
   });
-  log(`Comienza el Combate Final contra el Arcángel Miguel corrupto. Vida de Miguel: ${ st.michaelHp }.`);
+  startNewHeroPhaseForFinalCombat();
+  log(`Comienza el Combate Final contra el Arcángel Miguel corrupto. Vida de Miguel: ${ st.michaelHp }. El medidor de Miguel inicia en nivel 1: ya hay 1 ficha de Corrupción en la Cámara.`);
   save();
+  showPhaseCurtain('Fase de Héroes');
   renderHero();
   renderMissions();
   startMichaelSong();

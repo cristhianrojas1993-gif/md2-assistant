@@ -74,6 +74,7 @@ function makeHero(cls = 'rogue') {
     maxLevelAnnounced: false,
     angelFeathers: 0,
     iceTokens: 0,
+    personalCorruption: 0,
     hp: c.hp,
     hpMax: c.hp,
     mana: c.mana,
@@ -182,6 +183,8 @@ s.heroes.forEach(x => {
     x.angelFeathers = 0;
   if (x.iceTokens === undefined)
     x.iceTokens = 0;
+  if (x.personalCorruption === undefined)
+    x.personalCorruption = 0;
 });
 if (!s.mode)
   s.mode = 'coop';
@@ -1351,6 +1354,10 @@ function renderHero() {
     renderParcaActivation();
     return;
   }
+  if (s.missionState && s.missionState.awaitingCorruptionRoll) {
+    renderCorruptionRemoval();
+    return;
+  }
   if (x.cls === 'shaman' && !x.shaman.elementBoostDone && !x.unconscious && !pending(x)) {
     $('heroPage').innerHTML = `<div class="card"><h2>Aumenta un Elemento</h2><p class="notice">Al inicio de tu turno debes aumentar cualquier Elemento en 1. Elige uno para continuar.</p><div class="resource">${ shamanElementControls(x, true) }</div></div>`;
     document.querySelectorAll('[data-boost-el]').forEach(b => b.onclick = () => {
@@ -1364,7 +1371,7 @@ function renderHero() {
     return;
   }
   const activeSec = document.querySelector('.sectionTabs [data-sec].active')?.dataset.sec;
-  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader zone-${ x.zone === 'dark' ? 'dark' : 'light' }" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }<button data-sec="inventory" class="${ activeSec === 'inventory' ? 'active' : '' }">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }<div id="sec-inventory" class="heroSection ${ activeSec === 'inventory' ? 'active' : '' }">${ inventoryHtml(x) }</div>`;
+  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader zone-${ x.zone === 'dark' ? 'dark' : 'light' }" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }${ getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive ? `<div><small>Corrupción propia</small><b>${ x.personalCorruption || 0 } 😈</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }<button data-sec="inventory" class="${ activeSec === 'inventory' ? 'active' : '' }">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }<div id="sec-inventory" class="heroSection ${ activeSec === 'inventory' ? 'active' : '' }">${ inventoryHtml(x) }</div>`;
   if (x.unconscious)
     $('heroHeaderCard')?.classList.add('ko-fx');
   document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
@@ -1525,6 +1532,8 @@ function missionTurnButton(x) {
     return `<button id="attackBeastBtn" ${ x.actions < 1 ? 'disabled' : '' }>Atacar a la Bestia</button>`;
   if (m && m.id === 'free_michael' && !s.missionResult && !s.missionState.finalCombatActive && s.missionState.sealsBreached < 4)
     return `<button id="breakSealBtn" ${ x.actions < 1 ? 'disabled' : '' }>Romper Sello de Corrupción</button>`;
+  if (m && m.id === 'free_michael' && !s.missionResult && s.missionState.finalCombatActive && (s.missionState.corruptionTokens || 0) > 0)
+    return `<button id="removeCorruptionBtn" ${ x.actions < 1 ? 'disabled' : '' }>Retirar Ficha de Corrupción</button>`;
   if (m && m.id === 'soul_collector' && !s.missionResult)
     return `<button id="destroyCageBtn" ${ x.actions < 1 ? 'disabled' : '' }>Destruir Jaula de Almas</button>`;
   if (m && m.id === 'soul_keys' && !s.missionResult && !s.missionState.finalCombatActive) {
@@ -2709,6 +2718,18 @@ function bindMissionButtons(x) {
       else
         say(`Sello roto. ${ st.sealsBreached } de 4. Todo el grupo gana 5 de experiencia.`);
     };
+  const removeCorruptionBtn = document.getElementById('removeCorruptionBtn');
+  if (removeCorruptionBtn)
+    removeCorruptionBtn.onclick = () => {
+      if (x.actions < 1)
+        return alert('No quedan acciones disponibles.');
+      if (!confirm(`Confirma que ${ x.name } se encuentra en la zona de una ficha de Corrupción. Se gastará 1 acción para intentar eliminarla.`))
+        return;
+      x.actions--;
+      s.missionState.awaitingCorruptionRoll = x.id;
+      save();
+      renderHero();
+    };
   const destroyCageBtn = document.getElementById('destroyCageBtn');
   if (destroyCageBtn)
     destroyCageBtn.onclick = () => {
@@ -2883,6 +2904,10 @@ function resolveMichaelAbility(claws) {
   }
   if (claws === 1) {
     st.corruptionTokens = (st.corruptionTokens || 0) + 1;
+    if (!st.michaelInvulnerable) {
+      st.michaelInvulnerable = true;
+      log('Nueva ficha de Corrupción en la Cámara: Miguel vuelve a ser invulnerable.');
+    }
     st.michaelAbilityName = 'Embestida de Lanza';
     st.michaelAbilityText = `Coloca 1 ficha de Corrupción en la Zona del héroe con menos Vida. Coloca a Miguel en esa Zona y ataca a ese héroe. Fichas de Corrupción en la Cámara: ${ st.corruptionTokens }.`;
     st.michaelClawStep = 'single-damage';
@@ -2894,6 +2919,10 @@ function resolveMichaelAbility(claws) {
     return;
   }
   st.corruptionTokens = (st.corruptionTokens || 0) + 1;
+  if (!st.michaelInvulnerable) {
+    st.michaelInvulnerable = true;
+    log('Nueva ficha de Corrupción en la Cámara: Miguel vuelve a ser invulnerable.');
+  }
   const mult = michaelBlessingMultiplier(st.darkLevel || 0);
   const total = mult * st.corruptionTokens;
   st.michaelBlessingTotal = total;
@@ -2949,6 +2978,36 @@ function checkParcaClockDefeat() {
     return true;
   }
   return false;
+}
+function renderCorruptionRemoval() {
+  const heroId = s.missionState.awaitingCorruptionRoll;
+  const x = s.heroes.find(q => q.id === heroId) || h();
+  const panel = $('heroPage');
+  if (!panel)
+    return;
+  panel.innerHTML = `<div class="card"><h2>Retirar Ficha de Corrupción</h2><p class="notice">${ x.name } lanza 1 dado negro. ¿Qué símbolo salió?</p><div class="actions"><button data-corruptionroll="none" class="primary">Ninguno (limpio)</button><button data-corruptionroll="claw">Garra</button><button data-corruptionroll="hand">Mano</button><button data-corruptionroll="both">Ambos símbolos</button></div></div>`;
+  document.querySelectorAll('[data-corruptionroll]').forEach(b => b.onclick = () => resolveCorruptionRemoval(x, b.dataset.corruptionroll));
+}
+function resolveCorruptionRemoval(x, result) {
+  const st = s.missionState;
+  st.corruptionTokens = Math.max(0, (st.corruptionTokens || 0) - 1);
+  let msg = `${ x.name } retira 1 ficha de Corrupción. Quedan ${ st.corruptionTokens }.`;
+  if (result === 'claw' || result === 'both') {
+    x.hp = Math.max(0, x.hp - 1);
+    msg += ` Sale garra: ${ x.name } recibe 1 Herida.`;
+    if (x.hp === 0 && !x.unconscious)
+      knockOut(x);
+  }
+  if (result === 'hand' || result === 'both') {
+    x.personalCorruption = (x.personalCorruption || 0) + 1;
+    msg += ` Sale mano: ${ x.name } gana 1 ficha de Corrupción en su propio tablero (total: ${ x.personalCorruption }).`;
+  }
+  log(msg);
+  s.missionState.awaitingCorruptionRoll = null;
+  save();
+  renderHero();
+  renderMissions();
+  say(msg);
 }
 function renderParcaActivation() {
   const st = s.missionState;
@@ -3619,19 +3678,34 @@ function advanceMichaelDarkness() {
   let effectText = '';
   if (st.darkLevel === 1) {
     st.corruptionTokens = (st.corruptionTokens || 0) + 1;
-    effectText = 'Se añade 1 ficha de Corrupción a la Cámara.';
+    if (!st.michaelInvulnerable) {
+      st.michaelInvulnerable = true;
+      effectText = 'Se añade 1 ficha de Corrupción a la Cámara: Miguel vuelve a ser invulnerable.';
+    } else {
+      effectText = 'Se añade 1 ficha de Corrupción a la Cámara.';
+    }
   } else if (st.darkLevel === 2) {
     st.extraBlackDice = 1;
     effectText = 'Miguel lanza 1 dado negro adicional en ataque y defensa.';
   } else if (st.darkLevel === 3) {
     st.corruptionTokens = (st.corruptionTokens || 0) + 2;
-    effectText = 'Se añaden 2 fichas de Corrupción más a la Cámara.';
+    if (!st.michaelInvulnerable) {
+      st.michaelInvulnerable = true;
+      effectText = 'Se añaden 2 fichas de Corrupción más a la Cámara: Miguel vuelve a ser invulnerable.';
+    } else {
+      effectText = 'Se añaden 2 fichas de Corrupción más a la Cámara.';
+    }
   } else if (st.darkLevel === 4) {
     st.extraBlackDice = 2;
     effectText = 'Miguel lanza 2 dados negros adicionales en ataque y defensa.';
   } else if (st.darkLevel === 5) {
     st.corruptionTokens = (st.corruptionTokens || 0) + 3;
-    effectText = 'Se añaden 3 fichas de Corrupción más a la Cámara. El medidor de Miguel llega a su nivel máximo.';
+    if (!st.michaelInvulnerable) {
+      st.michaelInvulnerable = true;
+      effectText = 'Se añaden 3 fichas de Corrupción más a la Cámara: Miguel vuelve a ser invulnerable. El medidor de Miguel llega a su nivel máximo.';
+    } else {
+      effectText = 'Se añaden 3 fichas de Corrupción más a la Cámara. El medidor de Miguel llega a su nivel máximo.';
+    }
   }
   const t = `Fase de Oscuridad del Arcángel. El medidor avanza al nivel ${ st.darkLevel }. ${ effectText }`;
   s.darknessPending = true;

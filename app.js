@@ -415,23 +415,19 @@ function stopBossSong() {
 const MICHAEL_SONG_RESTART_AT = 185;
 function primeAudioElement(el) {
   try {
-    const wasMuted = el.muted;
     el.muted = true;
+    el.volume = 0;
+    const finish = () => {
+      try {
+        el.pause();
+        el.currentTime = 0;
+      } catch (err) {
+      }
+    };
     const p = el.play();
     if (p && p.then)
-      p.then(() => {
-        try {
-          el.pause();
-          el.currentTime = 0;
-          el.muted = wasMuted;
-        } catch (err) {
-        }
-      }).catch(() => {
-        try {
-          el.muted = wasMuted;
-        } catch (err) {
-        }
-      });
+      p.then(finish).catch(finish);
+    setTimeout(finish, 120);
   } catch (err) {
   }
 }
@@ -491,6 +487,7 @@ function startMichaelSong() {
     michaelSongFadeInterval = null;
   }
   try {
+    el.muted = false;
     el.volume = 0;
     el.currentTime = 0;
     el.play().catch(() => {
@@ -532,6 +529,7 @@ function startParcaSong() {
     parcaSongFadeInterval = null;
   }
   try {
+    el.muted = false;
     el.volume = 0;
     el.currentTime = 0;
     el.play().catch(() => {

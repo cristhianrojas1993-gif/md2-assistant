@@ -12,17 +12,21 @@ let mpDb = null;
 let mpRoomRef = null;
 let mpListenerAttached = false;
 let mpApplyingRemote = false;
+let mpLastInitError = '';
 function mpInit() {
   if (mpDb)
     return mpDb;
   try {
-    if (typeof firebase === 'undefined')
+    if (typeof firebase === 'undefined') {
+      mpLastInitError = 'El SDK de Firebase no cargó (revisa tu conexión a internet o si algo bloquea gstatic.com).';
       return null;
+    }
     if (!firebase.apps || !firebase.apps.length)
       firebase.initializeApp(FIREBASE_CONFIG);
     mpDb = firebase.database();
     return mpDb;
   } catch (err) {
+    mpLastInitError = err && err.message || String(err);
     console.error('No se pudo inicializar Firebase:', err);
     return null;
   }
@@ -90,7 +94,7 @@ function mpSubscribe(code) {
 function mpCreateRoom() {
   const db = mpInit();
   if (!db) {
-    alert('No se pudo conectar al servidor multijugador. Revisa tu conexión a internet.');
+    alert('No se pudo conectar al servidor multijugador. ' + (mpLastInitError || 'Revisa tu conexión a internet.'));
     return null;
   }
   const code = mpGenerateRoomCode();
@@ -104,7 +108,7 @@ function mpCreateRoom() {
 function mpJoinRoom(code, cb) {
   const db = mpInit();
   if (!db) {
-    alert('No se pudo conectar al servidor multijugador. Revisa tu conexión a internet.');
+    alert('No se pudo conectar al servidor multijugador. ' + (mpLastInitError || 'Revisa tu conexión a internet.'));
     return;
   }
   db.ref('rooms/' + code + '/state').once('value').then(snap => {
@@ -125,7 +129,7 @@ function mpJoinRoom(code, cb) {
       cb(true);
   }).catch(err => {
     console.error(err);
-    alert('Error al buscar la sala. Revisa tu conexión a internet.');
+    alert(`Error al buscar la sala: ${ (err && err.message) || err || 'desconocido' }`);
     if (cb)
       cb(false);
   });

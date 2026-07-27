@@ -141,7 +141,7 @@ function mpJoinRoom(code, cb) {
       cb(true);
   }).catch(err => {
     console.error(err);
-    alert(`Error al buscar la sala: ${ (err && err.message) || err || 'desconocido' }`);
+    alert(`Error al buscar la sala: ${ (err && err.message) || err || 'desconocido' }\n\n${ (err && err.stack) || '' }`);
     if (cb)
       cb(false);
   });
@@ -446,6 +446,26 @@ if (typeof s.musicVolume !== 'number')
   s.musicVolume = 0.7;
 if (s.lastAnnouncement === undefined)
   s.lastAnnouncement = '';
+s.heroes.forEach(x => {
+  if (!Array.isArray(x.inventory))
+    x.inventory = [];
+  if (!Array.isArray(x.equipped))
+    x.equipped = [];
+  if (x.shaman && !Array.isArray(x.shaman.spirits))
+    x.shaman.spirits = [];
+  if (x.mage && !Array.isArray(x.mage.slots))
+    x.mage.slots = MD2.talismanDefaults.map(q => ({ ...q }));
+  if (!x.choices || typeof x.choices !== 'object')
+    x.choices = { 1: null };
+  if (!x.lockedChoices || typeof x.lockedChoices !== 'object')
+    x.lockedChoices = {};
+});
+if (!Array.isArray(s.history))
+  s.history = [];
+if (!Array.isArray(s.phaseHistory))
+  s.phaseHistory = [];
+if (!Array.isArray(s.xpHistory))
+  s.xpHistory = [];
 }
 normalizeState();
 function heroSpoken(x = h()) {

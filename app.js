@@ -1,4 +1,4 @@
-const APP_VERSION = '20260728b';
+const APP_VERSION = '20260728d';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -68,6 +68,44 @@ function mpPushState() {
     }
   }, 200);
 }
+let mpLastCueSeq = 0;
+let mpApplyingCue = false;
+function mpBroadcastCue(type, payload) {
+  if (!s.roomCode || mpApplyingCue)
+    return;
+  s.mpCue = {
+    type,
+    payload: payload || null,
+    seq: ((s.mpCue && s.mpCue.seq) || 0) + 1
+  };
+  save();
+}
+function mpBroadcastMusicCue(type, track) {
+  mpBroadcastCue('music-' + type, { track: track || null });
+}
+function sayShared(text) {
+  duckAndSay(text);
+  mpBroadcastCue('voice', { text });
+}
+function mpApplyIncomingCue(cue) {
+  if (!cue || cue.seq <= mpLastCueSeq)
+    return;
+  mpLastCueSeq = cue.seq;
+  mpApplyingCue = true;
+  try {
+    if (cue.type === 'voice' && cue.payload && cue.payload.text)
+      duckAndSay(cue.payload.text);
+    else if (cue.type === 'music-ambient' && cue.payload && cue.payload.track)
+      playSpecificGameTrack(cue.payload.track);
+    else if (cue.type === 'music-boss-michael')
+      startMichaelSong();
+    else if (cue.type === 'music-boss-parca')
+      startParcaSong();
+  } catch (err) {
+    console.error('Error al aplicar aviso remoto:', err);
+  }
+  mpApplyingCue = false;
+}
 function mpSubscribe(code) {
   const db = mpInit();
   if (!db)
@@ -97,6 +135,12 @@ function mpSubscribe(code) {
       s.active = myActive;
     if (s.phase !== prevPhase && MD2.phases && MD2.phases[s.phase])
       showPhaseCurtain(MD2.phases[s.phase]);
+    mpApplyIncomingCue(s.mpCue);
+    if (myHeroIndex !== null && myHeroIndex !== undefined && s.heroes[myHeroIndex] && pending(s.heroes[myHeroIndex])) {
+      s.active = myHeroIndex;
+      tab('hero');
+      setTimeout(() => document.querySelector('[data-sec="skills"]')?.click(), 30);
+    }
     localStorage.setItem(KEY, JSON.stringify(s));
     mpApplyingRemote = false;
     render();
@@ -758,6 +802,7 @@ function restartMichaelSongSmoothly(el) {
 }
 function startMichaelSong() {
   pauseAmbient();
+  mpBroadcastMusicCue('boss-michael', null);
   const el = michaelSongEl();
   if (michaelSongFadeInterval) {
     clearInterval(michaelSongFadeInterval);
@@ -800,6 +845,7 @@ function parcaSongEl() {
 }
 function startParcaSong() {
   pauseAmbient();
+  mpBroadcastMusicCue('boss-parca', null);
   const el = parcaSongEl();
   if (parcaSongFadeInterval) {
     clearInterval(parcaSongFadeInterval);
@@ -959,12 +1005,33 @@ function startMenuAmbient() {
   } catch (err) {
   }
 }
+function syncMusicToGameState() {
+  console.log("DEBUG syncMusicToGameState called, confirmed=" + s.confirmed);
+  stopAmbient();
+  const missionId = getActiveMission()?.id;
+  if (missionId === 'free_michael' && s.missionState.finalCombatActive && !s.missionResult) {
+    startMichaelSong();
+    return;
+  }
+  if (missionId === 'soul_keys' && s.missionState.finalCombatActive && !s.missionResult) {
+    startParcaSong();
+    return;
+  }
+  if (s.confirmed)
+    playRandomGameTrack();
+  else
+    startMenuAmbient();
+}
 function playRandomGameTrack(withFadeOutFirst = false) {
+  const options = GAME_TRACKS.filter(t => t !== currentGameTrack);
+  const next = options[Math.floor(Math.random() * options.length)] || GAME_TRACKS[0];
+  playSpecificGameTrack(next, withFadeOutFirst);
+  mpBroadcastMusicCue('ambient', next);
+}
+function playSpecificGameTrack(next, withFadeOutFirst = false) {
   const el = ambientEl();
   const doSwitch = () => {
     el.loop = false;
-    const options = GAME_TRACKS.filter(t => t !== currentGameTrack);
-    const next = options[Math.floor(Math.random() * options.length)] || GAME_TRACKS[0];
     currentGameTrack = next;
     try {
       el.src = next;
@@ -1785,6 +1852,9 @@ function shamanHtml(x) {
   const elementsBlock = inFlow ? `<p class="notice">Estás en tu Turno (${ x.flow.type === 'attack' ? 'Ataque' : 'Defensa' }). Los controles de Elementos y Hechizos están disponibles ahí, en la pestaña Turno.</p>` : `<div class="resource"><p class="notice">Al inicio de tu turno, aumenta cualquier Elemento en 1.</p>${ shamanElementControls(x) }</div><h3>Hechizos disponibles</h3>${ shamanAbilityControls(x) }`;
   return `${ elementsBlock }<h3>Bendiciones permanentes</h3><div class="blessingGrid">${ blessings }</div><p class="notice">Revisa la pestaña Espíritus para ver y gestionar tus invocaciones.</p>`;
 }
+function mageSkillBaseName(name) {
+  return (name || '').replace(/\s+(I{1,3}|IV|V)$/i, '').trim().toLowerCase();
+}
 function talismanFullHtml(x) {
   if (x.mage.pendingReplacement && x.mage.pendingReplacementSlot !== null && x.mage.pendingReplacementSlot !== undefined) {
     const v = x.mage.pendingReplacement;
@@ -2111,9 +2181,18 @@ function bindHero() {
       return;
     x.lockedChoices[n] = true;
     log(`Habilidad bloqueada: ${ v }.`);
-    if (x.cls === 'mage' && (n === 1 || n === 5)) {
+    if (x.cls === 'mage') {
       x.mage.pendingReplacement = v;
       x.mage.pendingReplacementLevel = n;
+      const base = mageSkillBaseName(v);
+      const sameFamilyIdx = x.mage.slots.findIndex(q => mageSkillBaseName(q.name) === base);
+      if (sameFamilyIdx !== -1) {
+        x.mage.pendingReplacementSlot = sameFamilyIdx;
+        save();
+        renderHero();
+        say(`${ v } mejora la misma habilidad. Confirma el maná para la Cara ${ sameFamilyIdx + 1 }.`, x);
+        return;
+      }
       save();
       renderHero();
       say('Elige qué cara del Talismán reemplazar.', x);
@@ -2933,7 +3012,7 @@ function bindMissionButtons(x) {
       save();
       renderHero();
       renderMissions();
-      say(`${ x.name } recoge un fragmento. Gana 5 de experiencia.`);
+      sayShared(`${ x.name } recoge un fragmento. Gana 5 de experiencia.`);
     };
   const featherBtn = document.getElementById('collectFeatherBtn');
   if (featherBtn)
@@ -2977,7 +3056,7 @@ function bindMissionButtons(x) {
         duckAndSay('Se agotaron las Plumas de Ángel y la Bestia sigue con vida. La misión termina en derrota.');
         return;
       }
-      say(`Pluma colocada. La Bestia es vulnerable el resto de la ronda.`);
+      sayShared(`Pluma colocada. La Bestia es vulnerable el resto de la ronda.`);
     };
   const attackBeastBtn = document.getElementById('attackBeastBtn');
   if (attackBeastBtn)
@@ -3009,7 +3088,7 @@ function bindMissionButtons(x) {
       save();
       renderHero();
       renderMissions();
-      say(`Cristal destruido. ${ st.crystalsDestroyed } de 5.${ bonus ? ` La espada gana ${ bonus }.` : '' }`);
+      sayShared(`Cristal destruido. ${ st.crystalsDestroyed } de 5.${ bonus ? ` La espada gana ${ bonus }.` : '' }`);
     };
   const breakSealBtn = document.getElementById('breakSealBtn');
   if (breakSealBtn)
@@ -3027,9 +3106,9 @@ function bindMissionButtons(x) {
       renderHero();
       renderMissions();
       if (st.sealsBreached >= 4)
-        say(`Sello roto. ${ st.sealsBreached } de 4. Los 4 Sellos están rotos: ya pueden entrar a la Cámara de la Corrupción gastando 1 punto de movimiento.`);
+        sayShared(`Sello roto. ${ st.sealsBreached } de 4. Los 4 Sellos están rotos: ya pueden entrar a la Cámara de la Corrupción gastando 1 punto de movimiento.`);
       else
-        say(`Sello roto. ${ st.sealsBreached } de 4. Todo el grupo gana 5 de experiencia.`);
+        sayShared(`Sello roto. ${ st.sealsBreached } de 4. Todo el grupo gana 5 de experiencia.`);
     };
   const removeCorruptionBtn = document.getElementById('removeCorruptionBtn');
   if (removeCorruptionBtn)
@@ -3058,7 +3137,7 @@ function bindMissionButtons(x) {
       save();
       renderHero();
       renderMissions();
-      say(`Jaula destruida. Ganas 5 de experiencia. El grupo tiene ${ st.souls } de ${ st.soulsNeeded } Almas.`);
+      sayShared(`Jaula destruida. Ganas 5 de experiencia. El grupo tiene ${ st.souls } de ${ st.soulsNeeded } Almas.`);
     };
   document.querySelectorAll('[data-collectkey]').forEach(b => b.onclick = () => {
     if (x.actions < 1)
@@ -3076,7 +3155,7 @@ function bindMissionButtons(x) {
     save();
     renderHero();
     renderMissions();
-    say(`Llave recogida. Todo el grupo gana 8 de experiencia. Llaves: ${ st.keysCollectedCount } de 3.`);
+    sayShared(`Llave recogida. Todo el grupo gana 8 de experiencia. Llaves: ${ st.keysCollectedCount } de 3.`);
   });
   document.querySelectorAll('[data-addtime]').forEach(b => b.onclick = () => {
     if (x.actions < 1)
@@ -4271,6 +4350,7 @@ $('mpJoinBtn').onclick = () => {
     if (ok) {
       renderMultiplayerPanel();
       render();
+      syncMusicToGameState();
     }
   });
 };

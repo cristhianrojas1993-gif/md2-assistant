@@ -4156,6 +4156,13 @@ $('mpLeaveBtn').onclick = () => {
 $('mpHeroSelect').onchange = e => {
   s.myHeroIndex = e.target.value === '' ? null : +e.target.value;
   save();
+  if (s.myHeroIndex !== null) {
+    s.active = s.myHeroIndex;
+    save();
+    tab('hero');
+    render();
+    say(`Tu héroe es ${ heroSpoken(h()) }.`);
+  }
 };
 renderMultiplayerPanel();
 $('voiceSetting').onchange = e => {

@@ -84,6 +84,7 @@ function mpSubscribe(code) {
     mpApplyingRemote = true;
     const myHeroIndex = s.myHeroIndex;
     const myActive = s.active;
+    const prevPhase = s.phase;
     s = mpDeepFixArrays(remote);
     try {
       normalizeState();
@@ -93,6 +94,8 @@ function mpSubscribe(code) {
     s.myHeroIndex = myHeroIndex;
     if (myActive !== undefined && myActive !== null && s.heroes && s.heroes[myActive])
       s.active = myActive;
+    if (s.phase !== prevPhase && MD2.phases && MD2.phases[s.phase])
+      showPhaseCurtain(MD2.phases[s.phase]);
     localStorage.setItem(KEY, JSON.stringify(s));
     mpApplyingRemote = false;
     render();

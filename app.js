@@ -1521,6 +1521,10 @@ function renderHero() {
     return;
   }
   const x = h();
+  if (s.roomCode && s.myHeroIndex !== null && s.myHeroIndex !== undefined && s.active !== s.myHeroIndex) {
+    $('heroPage').innerHTML = `<div class="card"><h2>${ x.name } <small class="muted">(héroe de otro jugador — solo lectura)</small></h2><div class="statBarRow"><small>Vida</small><div class="statBarTrack"><div class="statBarFill hpFill" style="width:${ Math.round(x.hp / x.hpMax * 100) }%"></div></div><span class="statBarNum">${ x.hp }/${ x.hpMax }</span></div><div class="statBarRow"><small>Maná</small><div class="statBarTrack"><div class="statBarFill manaFill" style="width:${ Math.round(x.mana / x.manaMax * 100) }%"></div></div><span class="statBarNum">${ x.mana }/${ x.manaMax }</span></div><p class="muted top">No podés actuar sobre este héroe. Elige el tuyo en Configuración → Multijugador, o en la pestaña de héroes arriba.</p></div>`;
+    return;
+  }
   document.documentElement.style.setProperty('--hero', COLORS[x.cls]);
   if (x.lastActiveRound !== s.round && !x.unconscious) {
     x.lastActiveRound = s.round;
@@ -2097,6 +2101,8 @@ function bindHero() {
   $('attackAction').onclick = () => startAction('attack');
   document.querySelectorAll('[data-action]').forEach(b => b.onclick = () => startAction(b.dataset.action));
   $('finishTurn').onclick = () => {
+    if (s.roomCode && s.myHeroIndex !== null && s.myHeroIndex !== undefined && s.active !== s.myHeroIndex)
+      return alert(`Este héroe pertenece a otro jugador. Elige "${ s.heroes[s.myHeroIndex]?.name }" (el tuyo) para actuar.`);
     x.actions = 0;
     finishFlow(true);
   };
@@ -3423,6 +3429,8 @@ function resolveParcaAbility(claws) {
 }
 function finishFlow(skipGenericVoice = false) {
   const x = h();
+  if (s.roomCode && s.myHeroIndex !== null && s.myHeroIndex !== undefined && s.active !== s.myHeroIndex)
+    return alert(`Este héroe pertenece a otro jugador. Elige "${ s.heroes[s.myHeroIndex]?.name }" (el tuyo) para actuar.`);
   const wasAttack = x.flow.type === 'attack';
   x.flow = {
     type: null,

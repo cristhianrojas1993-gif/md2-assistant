@@ -83,9 +83,11 @@ function mpSubscribe(code) {
       return;
     mpApplyingRemote = true;
     const myHeroIndex = s.myHeroIndex;
-    const myClientId = mpClientId();
+    const myActive = s.active;
     s = remote;
     s.myHeroIndex = myHeroIndex;
+    if (myActive !== undefined && myActive !== null && s.heroes && s.heroes[myActive])
+      s.active = myActive;
     localStorage.setItem(KEY, JSON.stringify(s));
     mpApplyingRemote = false;
     render();
@@ -4158,7 +4160,12 @@ $('mpLeaveBtn').onclick = () => {
   renderMultiplayerPanel();
 };
 $('mpHeroSelect').onchange = e => {
-  s.myHeroIndex = e.target.value === '' ? null : +e.target.value;
+  const idx = e.target.value === '' ? null : +e.target.value;
+  if (idx !== null && (!s.heroes || !s.heroes[idx])) {
+    alert('No se pudo cargar ese héroe. Es probable que la sala no se haya sincronizado bien: sal de la sala y vuelve a unirte con el código.');
+    return;
+  }
+  s.myHeroIndex = idx;
   save();
   if (s.myHeroIndex !== null) {
     s.active = s.myHeroIndex;

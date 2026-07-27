@@ -1,4 +1,144 @@
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
+  authDomain: 'asistente-portadores-de-la-luz.firebaseapp.com',
+  databaseURL: 'https://asistente-portadores-de-la-luz-default-rtdb.firebaseio.com',
+  projectId: 'asistente-portadores-de-la-luz',
+  storageBucket: 'asistente-portadores-de-la-luz.firebasestorage.app',
+  messagingSenderId: '198947044570',
+  appId: '1:198947044570:web:53d01596a3e96a7b7639e3'
+};
+let mpDb = null;
+let mpRoomRef = null;
+let mpListenerAttached = false;
+let mpApplyingRemote = false;
+function mpInit() {
+  if (mpDb)
+    return mpDb;
+  try {
+    if (typeof firebase === 'undefined')
+      return null;
+    if (!firebase.apps || !firebase.apps.length)
+      firebase.initializeApp(FIREBASE_CONFIG);
+    mpDb = firebase.database();
+    return mpDb;
+  } catch (err) {
+    console.error('No se pudo inicializar Firebase:', err);
+    return null;
+  }
+}
+function mpClientId() {
+  let id = localStorage.getItem('md2ClientId');
+  if (!id) {
+    id = 'c' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    localStorage.setItem('md2ClientId', id);
+  }
+  return id;
+}
+function mpGenerateRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 5; i++)
+    code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+let mpPushTimer = null;
+function mpPushState() {
+  if (!s.roomCode || mpApplyingRemote)
+    return;
+  const db = mpInit();
+  if (!db)
+    return;
+  if (mpPushTimer)
+    clearTimeout(mpPushTimer);
+  mpPushTimer = setTimeout(() => {
+    const payload = JSON.parse(JSON.stringify(s));
+    payload.__v = (payload.__v || 0) + 1;
+    payload.__lastWriter = mpClientId();
+    s.__v = payload.__v;
+    try {
+      db.ref('rooms/' + s.roomCode + '/state').set(payload);
+    } catch (err) {
+      console.error('Error al sincronizar con la sala:', err);
+    }
+  }, 200);
+}
+function mpSubscribe(code) {
+  const db = mpInit();
+  if (!db)
+    return;
+  if (mpRoomRef)
+    mpRoomRef.off();
+  mpRoomRef = db.ref('rooms/' + code + '/state');
+  mpListenerAttached = true;
+  mpRoomRef.on('value', snap => {
+    const remote = snap.val();
+    if (!remote)
+      return;
+    if (remote.__lastWriter === mpClientId())
+      return;
+    mpApplyingRemote = true;
+    const myHeroIndex = s.myHeroIndex;
+    const myClientId = mpClientId();
+    s = remote;
+    s.myHeroIndex = myHeroIndex;
+    localStorage.setItem(KEY, JSON.stringify(s));
+    mpApplyingRemote = false;
+    render();
+  });
+}
+function mpCreateRoom() {
+  const db = mpInit();
+  if (!db) {
+    alert('No se pudo conectar al servidor multijugador. Revisa tu conexión a internet.');
+    return null;
+  }
+  const code = mpGenerateRoomCode();
+  s.roomCode = code;
+  s.myHeroIndex = null;
+  s.mpHostId = mpClientId();
+  save();
+  mpSubscribe(code);
+  return code;
+}
+function mpJoinRoom(code, cb) {
+  const db = mpInit();
+  if (!db) {
+    alert('No se pudo conectar al servidor multijugador. Revisa tu conexión a internet.');
+    return;
+  }
+  db.ref('rooms/' + code + '/state').once('value').then(snap => {
+    const remote = snap.val();
+    if (!remote) {
+      alert('No se encontró ninguna sala con ese código.');
+      if (cb)
+        cb(false);
+      return;
+    }
+    mpApplyingRemote = true;
+    s = remote;
+    s.myHeroIndex = null;
+    localStorage.setItem(KEY, JSON.stringify(s));
+    mpApplyingRemote = false;
+    mpSubscribe(code);
+    if (cb)
+      cb(true);
+  }).catch(err => {
+    console.error(err);
+    alert('Error al buscar la sala. Revisa tu conexión a internet.');
+    if (cb)
+      cb(false);
+  });
+}
+function mpLeaveRoom() {
+  if (mpRoomRef) {
+    mpRoomRef.off();
+    mpRoomRef = null;
+  }
+  s.roomCode = null;
+  s.myHeroIndex = null;
+  save();
+}
 const COLORS = {
   rogue: '#8b5cf6',
   ranger: '#22c55e',
@@ -819,7 +959,10 @@ function duckAndSay(t) {
 }
 function updateAmbient() {
 }
-const h = () => s.heroes[s.active], cl = () => C[h().cls], save = () => localStorage.setItem(KEY, JSON.stringify(s));
+const h = () => s.heroes[s.active], cl = () => C[h().cls], save = () => {
+  localStorage.setItem(KEY, JSON.stringify(s));
+  mpPushState();
+};
 function classVoiceProfile(x = h()) {
   const p = {
     rogue: {
@@ -1006,6 +1149,7 @@ function renderSettings() {
   $('voicePitchSetting').value = s.voicePitch;
   loadVoiceOptions();
   renderAudioStatus();
+  renderMultiplayerPanel();
 }
 function renderGameOver() {
   const el = $('gameOverScreen');
@@ -1533,8 +1677,8 @@ function missionTurnButton(x) {
   const m = getActiveMission();
   if (m && m.id === 'cursed_sword' && s.missionState.bearerId === x.id && !s.missionResult)
     return `<button id="destroyCrystalBtn" ${ x.actions < 1 ? 'disabled' : '' }>Destruir Cristal del Pecado</button>`;
-  if (m && m.id === 'terrifying_beast' && !s.missionResult && s.missionState.beastMaxHp !== null && s.missionState.beastMaxHp !== undefined)
-    return `<button id="attackBeastBtn" ${ x.actions < 1 ? 'disabled' : '' }>Atacar a la Bestia</button>`;
+  if (m && m.id === 'terrifying_beast' && !s.missionResult && s.missionState.beastMaxHp !== null && s.missionState.beastMaxHp !== undefined && s.missionState.beastVulnerable)
+    return `<button id="attackBeastBtn" ${ x.actions < 1 ? 'disabled' : '' }>Atacar a la Bestia (vulnerable)</button>`;
   if (m && m.id === 'free_michael' && !s.missionResult && !s.missionState.finalCombatActive && s.missionState.sealsBreached < 4)
     return `<button id="breakSealBtn" ${ x.actions < 1 ? 'disabled' : '' }>Romper Sello de Corrupción</button>`;
   if (m && m.id === 'free_michael' && !s.missionResult && s.missionState.finalCombatActive && michaelTotalCorruption() > 0)
@@ -1625,7 +1769,7 @@ function missionInteractOptions(x) {
   if (m && m.id === 'demonic_artifact' && !s.missionResult)
     return `<button data-move="interact">Interactuar (genérico)</button><button id="collectFragmentBtn" ${ x.move.pm < 1 ? 'disabled' : '' }>Recoger fragmento de artefacto</button>`;
   if (m && m.id === 'terrifying_beast' && !s.missionResult)
-    return `<button data-move="interact">Interactuar (genérico)</button><button id="collectFeatherBtn" ${ x.move.pm < 1 ? 'disabled' : '' }>Recoger Pluma de Ángel</button>`;
+    return `<button data-move="interact">Interactuar (genérico)</button><button id="collectFeatherBtn" ${ x.move.pm < 1 ? 'disabled' : '' }>Recoger Pluma de Ángel</button><button id="placeFeatherBtn" ${ x.move.pm < 1 || !x.angelFeathers ? 'disabled' : '' }>Colocar Pluma en la Bestia (${ x.angelFeathers || 0 })</button>`;
   return `<button data-move="interact">Interactuar</button>`;
 }
 function moveFlow(x) {
@@ -2456,6 +2600,8 @@ function advancePending() {
 }
 function startAction(type, targetBeast = false) {
   const x = h();
+  if (s.roomCode && s.myHeroIndex !== null && s.myHeroIndex !== undefined && s.active !== s.myHeroIndex)
+    return alert(`Este héroe pertenece a otro jugador. Elige "${ s.heroes[s.myHeroIndex]?.name }" (el tuyo) para actuar.`);
   if (s.missionResult)
     return alert('La misión ya terminó. Ve a la pestaña Misiones para reiniciar o continuar.');
   if (x.unconscious)
@@ -2689,19 +2835,41 @@ function bindMissionButtons(x) {
       renderHero();
       say(`${ x.name } recoge una Pluma de Ángel. Ahora tiene ${ x.angelFeathers }.`);
     };
+  const placeFeatherBtn = document.getElementById('placeFeatherBtn');
+  if (placeFeatherBtn)
+    placeFeatherBtn.onclick = () => {
+      if (x.move.pm < 1)
+        return alert('No tienes puntos de movimiento disponibles para esta acción.');
+      if (!x.angelFeathers)
+        return alert('No tienes Plumas de Ángel disponibles.');
+      if (!confirm(`Confirma que ${ x.name } se encuentra en la zona de la Bestia. Se gastará 1 punto de movimiento y 1 Pluma de Ángel para volverla vulnerable el resto de la ronda.`))
+        return;
+      x.move.pm--;
+      if (!x.move.pm)
+        x.move.on = false;
+      x.angelFeathers--;
+      const st = s.missionState;
+      st.feathersUsed = (st.feathersUsed || 0) + 1;
+      st.beastVulnerable = true;
+      log(`${ x.name } coloca 1 Pluma de Ángel en la Bestia. Queda vulnerable el resto de la ronda. Plumas gastadas: ${ st.feathersUsed }/5.`);
+      save();
+      renderHero();
+      renderMissions();
+      if (st.feathersUsed >= 5 && st.beastHp > 0) {
+        triggerMissionResult('defeat');
+        log('Se gastaron las 5 Plumas de Ángel y la Bestia sigue con vida. Derrota.');
+        duckAndSay('Se agotaron las Plumas de Ángel y la Bestia sigue con vida. La misión termina en derrota.');
+        return;
+      }
+      say(`Pluma colocada. La Bestia es vulnerable el resto de la ronda.`);
+    };
   const attackBeastBtn = document.getElementById('attackBeastBtn');
   if (attackBeastBtn)
     attackBeastBtn.onclick = () => {
-      if (!x.angelFeathers || x.angelFeathers < 1) {
-        alert('No tienes Plumas de Ángel. La Bestia sigue invulnerable.');
+      if (!s.missionState.beastVulnerable) {
+        alert('La Bestia sigue invulnerable. Coloca una Pluma de Ángel en su zona primero.');
         return;
       }
-      if (!confirm(`¿Gastar 1 Pluma de Ángel para atacar a la Bestia? ${ x.name } tiene ${ x.angelFeathers } disponible${ x.angelFeathers > 1 ? 's' : '' }.`))
-        return;
-      x.angelFeathers--;
-      s.missionState.feathersUsed = (s.missionState.feathersUsed || 0) + 1;
-      log(`${ x.name } gasta 1 Pluma de Ángel para atacar a la Bestia. Plumas gastadas: ${ s.missionState.feathersUsed }/5.`);
-      save();
       startAction('attack', true);
       renderMissions();
     };
@@ -3312,6 +3480,10 @@ function finishDarkness() {
   });
   s.phase = 0;
   s.round++;
+  if (getActiveMission()?.id === 'terrifying_beast' && s.missionState.beastVulnerable) {
+    s.missionState.beastVulnerable = false;
+    log('Nueva ronda: la Bestia vuelve a ser invulnerable hasta que se coloque otra Pluma de Ángel.');
+  }
   reviveScheduled();
   s.heroes.forEach(x => {
     x.actions = x.unconscious ? 0 : s.mode === 'solo' ? 4 : 3;
@@ -3934,6 +4106,58 @@ $('reactivateAmbient').onclick = () => reactivateAmbient();
 $('muteMusicBtn').onclick = () => setMusicMuted(!s.musicMuted);
 $('musicVolumeSlider').oninput = e => setMusicVolume(+e.target.value / 100);
 renderMusicControls();
+function renderMultiplayerPanel() {
+  const statusEl = $('mpStatus'), controlsEl = $('mpControls'), infoEl = $('mpRoomInfo');
+  if (!statusEl)
+    return;
+  if (s.roomCode) {
+    statusEl.textContent = `Conectado a la sala ${ s.roomCode }.`;
+    controlsEl.classList.add('hidden');
+    infoEl.classList.remove('hidden');
+    $('mpRoomCodeDisplay').textContent = s.roomCode;
+    const select = $('mpHeroSelect');
+    select.innerHTML = '<option value="">Solo observar (fase/oscuridad/enemigos)</option>' + s.heroes.map((x, i) => `<option value="${ i }" ${ s.myHeroIndex === i ? 'selected' : '' }>${ x.name } (${ C[x.cls].label })</option>`).join('');
+  } else {
+    statusEl.textContent = 'Sin conectar.';
+    controlsEl.classList.remove('hidden');
+    infoEl.classList.add('hidden');
+  }
+}
+$('mpCreateBtn').onclick = () => {
+  if (!s.heroes.length) {
+    alert('Primero prepara el grupo de héroes antes de crear la sala.');
+    return;
+  }
+  const code = mpCreateRoom();
+  if (code) {
+    renderMultiplayerPanel();
+    alert(`Sala creada. Compartí este código con el resto del grupo: ${ code }`);
+  }
+};
+$('mpJoinBtn').onclick = () => {
+  const code = $('mpJoinCode').value.trim().toUpperCase();
+  if (!code || code.length !== 5) {
+    alert('Ingresa un código de sala válido de 5 caracteres.');
+    return;
+  }
+  mpJoinRoom(code, ok => {
+    if (ok) {
+      renderMultiplayerPanel();
+      render();
+    }
+  });
+};
+$('mpLeaveBtn').onclick = () => {
+  if (!confirm('¿Salir de la sala multijugador? Podrás seguir jugando localmente.'))
+    return;
+  mpLeaveRoom();
+  renderMultiplayerPanel();
+};
+$('mpHeroSelect').onchange = e => {
+  s.myHeroIndex = e.target.value === '' ? null : +e.target.value;
+  save();
+};
+renderMultiplayerPanel();
 $('voiceSetting').onchange = e => {
   s.voice = e.target.value;
   save();
@@ -4180,7 +4404,7 @@ function renderMissionMechanics(m) {
     if (st.beastMaxHp === null || st.beastMaxHp === undefined)
       return `<div class="card"><h3>La Bestia</h3><p class="notice">¿Cuánta vida tiene la Bestia? Elige el valor indicado en la ficha del Monstruo Errante.</p><label>Vida de la Bestia<select id="beastHpSelect">${ Array.from({ length: 100 }, (_, i) => i + 1).map(n => `<option value="${ n }" ${ n === 20 ? 'selected' : '' }>${ n }</option>`).join('') }</select></label><button id="confirmBeastHpBtn" class="primary top">Confirmar vida de la Bestia</button></div>`;
     const pct = Math.max(0, Math.min(100, Math.round(st.beastHp / st.beastMaxHp * 100)));
-    return `<div class="card"><h3>La Bestia</h3><div class="statBarRow"><small>Vida</small><div class="statBarTrack"><div class="statBarFill hpFill" style="width:${ pct }%"></div></div><span class="statBarNum">${ st.beastHp }/${ st.beastMaxHp }</span></div><p class="muted top">Plumas de Ángel gastadas: ${ st.feathersUsed || 0 } / 5</p><p class="muted">La Bestia es invulnerable salvo que un héroe gaste 1 Pluma de Ángel para atacarla (opción "Atacar a la Bestia" en el turno). Si se gastan las 5 plumas y sigue con vida, derrota.</p></div>`;
+    return `<div class="card"><h3>La Bestia</h3><div class="statBarRow"><small>Vida</small><div class="statBarTrack"><div class="statBarFill hpFill" style="width:${ pct }%"></div></div><span class="statBarNum">${ st.beastHp }/${ st.beastMaxHp }</span></div><p class="notice top">Estado: <b>${ st.beastVulnerable ? 'Vulnerable esta ronda' : 'Invulnerable' }</b></p><p class="muted">Plumas de Ángel gastadas: ${ st.feathersUsed || 0 } / 5</p><p class="muted">Recoger una Pluma cuesta 1 PM. Colocarla en la zona de la Bestia (1 PM) la vuelve vulnerable el resto de la ronda; vuelve a ser invulnerable en la ronda siguiente. Si se gastan las 5 plumas y sigue con vida, derrota.</p></div>`;
   }
   if (m.id === 'free_michael') {
     const st = s.missionState;

@@ -84,8 +84,12 @@ function mpSubscribe(code) {
     mpApplyingRemote = true;
     const myHeroIndex = s.myHeroIndex;
     const myActive = s.active;
-    s = remote;
-    normalizeState();
+    s = mpDeepFixArrays(remote);
+    try {
+      normalizeState();
+    } catch (err) {
+      console.error('Error al normalizar estado remoto:', err);
+    }
     s.myHeroIndex = myHeroIndex;
     if (myActive !== undefined && myActive !== null && s.heroes && s.heroes[myActive])
       s.active = myActive;
@@ -123,8 +127,12 @@ function mpJoinRoom(code, cb) {
       return;
     }
     mpApplyingRemote = true;
-    s = remote;
-    normalizeState();
+    s = mpDeepFixArrays(remote);
+    try {
+      normalizeState();
+    } catch (err) {
+      console.error('Error al normalizar estado remoto:', err);
+    }
     s.myHeroIndex = null;
     localStorage.setItem(KEY, JSON.stringify(s));
     mpApplyingRemote = false;
@@ -324,6 +332,30 @@ function fresh() {
   };
 }
 let s = JSON.parse(localStorage.getItem(KEY) || 'null') || fresh();
+function mpDeepFixArrays(obj, seen) {
+  seen = seen || new Set();
+  if (!obj || typeof obj !== 'object' || seen.has(obj))
+    return obj;
+  seen.add(obj);
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++)
+      obj[i] = mpDeepFixArrays(obj[i], seen);
+    return obj;
+  }
+  const keys = Object.keys(obj);
+  const looksLikeArray = keys.length > 0 && keys.every(k => /^\d+$/.test(k));
+  if (looksLikeArray) {
+    const arr = [];
+    keys.forEach(k => {
+      arr[+k] = mpDeepFixArrays(obj[k], seen);
+    });
+    return arr;
+  }
+  keys.forEach(k => {
+    obj[k] = mpDeepFixArrays(obj[k], seen);
+  });
+  return obj;
+}
 function normalizeState() {
 s.heroes.forEach(x => x.statuses = x.statuses || []);
 s.heroes.forEach(x => {

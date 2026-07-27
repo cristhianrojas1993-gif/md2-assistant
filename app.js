@@ -1,3 +1,4 @@
+const APP_VERSION = '20260728b';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -101,6 +102,53 @@ function mpSubscribe(code) {
     render();
   });
 }
+let mpPresenceRef = null;
+let mpPresenceListRef = null;
+function mpSetupPresence(code) {
+  const db = mpInit();
+  if (!db)
+    return;
+  const clientId = mpClientId();
+  mpPresenceRef = db.ref('rooms/' + code + '/presence/' + clientId);
+  mpPresenceRef.set({
+    name: 'Sin héroe elegido',
+    connected: true,
+    lastSeen: Date.now()
+  });
+  mpPresenceRef.onDisconnect().update({
+    connected: false,
+    lastSeen: Date.now()
+  });
+  if (mpPresenceListRef)
+    mpPresenceListRef.off();
+  mpPresenceListRef = db.ref('rooms/' + code + '/presence');
+  let prevPresence = {};
+  mpPresenceListRef.on('value', snap => {
+    const data = snap.val() || {};
+    Object.keys(data).forEach(cid => {
+      if (cid === clientId)
+        return;
+      const wasConnected = prevPresence[cid] && prevPresence[cid].connected;
+      const isConnected = data[cid].connected;
+      if (wasConnected === true && isConnected === false)
+        say(`${ data[cid].name || 'Un jugador' } se ha desconectado de la sala.`);
+      if (wasConnected === false && isConnected === true)
+        say(`${ data[cid].name || 'Un jugador' } se ha reconectado a la sala.`);
+    });
+    prevPresence = data;
+    mpPresenceData = data;
+    renderMultiplayerPanel();
+  });
+}
+function mpUpdatePresenceName(name) {
+  if (mpPresenceRef)
+    mpPresenceRef.update({
+      name,
+      connected: true,
+      lastSeen: Date.now()
+    });
+}
+let mpPresenceData = {};
 function mpCreateRoom() {
   const db = mpInit();
   if (!db) {
@@ -113,6 +161,7 @@ function mpCreateRoom() {
   s.mpHostId = mpClientId();
   save();
   mpSubscribe(code);
+  mpSetupPresence(code);
   return code;
 }
 function mpJoinRoom(code, cb) {
@@ -140,6 +189,7 @@ function mpJoinRoom(code, cb) {
     localStorage.setItem(KEY, JSON.stringify(s));
     mpApplyingRemote = false;
     mpSubscribe(code);
+    mpSetupPresence(code);
     if (cb)
       cb(true);
   }).catch(err => {
@@ -154,6 +204,15 @@ function mpLeaveRoom() {
     mpRoomRef.off();
     mpRoomRef = null;
   }
+  if (mpPresenceRef) {
+    mpPresenceRef.remove();
+    mpPresenceRef = null;
+  }
+  if (mpPresenceListRef) {
+    mpPresenceListRef.off();
+    mpPresenceListRef = null;
+  }
+  mpPresenceData = {};
   s.roomCode = null;
   s.myHeroIndex = null;
   save();
@@ -271,7 +330,9 @@ function makeHero(cls = 'rogue') {
     },
     mage: {
       amulet: 0,
-      slots: MD2.talismanDefaults.map(q => ({ ...q }))
+      slots: MD2.talismanDefaults.map(q => ({ ...q })),
+      pendingReplacement: null,
+      pendingReplacementSlot: null
     },
     berserker: {
       fury: 0,
@@ -458,6 +519,10 @@ s.heroes.forEach(x => {
     x.shaman.spirits = [];
   if (x.mage && !Array.isArray(x.mage.slots))
     x.mage.slots = MD2.talismanDefaults.map(q => ({ ...q }));
+  if (x.mage && x.mage.pendingReplacement === undefined)
+    x.mage.pendingReplacement = null;
+  if (x.mage && x.mage.pendingReplacementSlot === undefined)
+    x.mage.pendingReplacementSlot = null;
   if (!x.choices || typeof x.choices !== 'object')
     x.choices = { 1: null };
   if (!x.lockedChoices || typeof x.lockedChoices !== 'object')
@@ -1216,6 +1281,8 @@ function renderSettings() {
   loadVoiceOptions();
   renderAudioStatus();
   renderMultiplayerPanel();
+  if ($('appVersionDisplay'))
+    $('appVersionDisplay').textContent = APP_VERSION;
 }
 function renderGameOver() {
   const el = $('gameOverScreen');
@@ -1501,6 +1568,13 @@ function renderDefenseForm(available) {
     say(`${ finalTarget.name } recibe ${ dmg } de daño. Le quedan ${ finalTarget.hp } de ${ finalTarget.hpMax } de vida. ¿Algún enemigo resultó eliminado por un efecto especial?`);
   };
 }
+function canResolveSharedPhase() {
+  if (!s.roomCode)
+    return true;
+  if (!s.lastActingClientId)
+    return true;
+  return mpClientId() === s.lastActingClientId;
+}
 function renderGame() {
   if (!$('round'))
     return;
@@ -1508,11 +1582,14 @@ function renderGame() {
   $('phase').textContent = MD2.phases[s.phase];
   $('dungeon').textContent = dungeon();
   $('darkPos').textContent = s.heroes.length ? `${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' } ${ darkNow()[0] }` : '\u2014';
-  $('phaseHelp').textContent = s.phase === 3 && s.darknessPending ? 'Resuelve el efecto anunciado y luego pulsa Siguiente fase para confirmarlo.' : phaseHelp();
+  const canResolve = canResolveSharedPhase();
+  $('phaseHelp').textContent = !canResolve ? 'Estas fases las resuelve quien jugó el último turno de héroe.' : s.phase === 3 && s.darknessPending ? 'Resuelve el efecto anunciado y luego pulsa Siguiente fase para confirmarlo.' : phaseHelp();
   $('darkTrack').innerHTML = `<div class="badge top">${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' }</div>` + darkArr().map((x, i) => `<div class="cell ${ i === s.dark.i ? 'active' : '' }">${ x[0] }</div>`).join('');
   $('darkEvent').textContent = `${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' } · Casilla ${ darkNow()[0] }: ${ darkNow()[1] }`;
   $('resolveDarkness').classList.toggle('hidden', !(s.phase === 3 && s.darknessPending));
   $('nextPhase').classList.toggle('hidden', s.phase === 3 && s.darknessPending);
+  $('nextPhase').disabled = !canResolve;
+  $('resolveDarkness').disabled = !canResolve;
   renderEnemyDefense();
 }
 function renderHero() {
@@ -1521,21 +1598,12 @@ function renderHero() {
     return;
   }
   const x = h();
-  if (s.roomCode && s.myHeroIndex !== null && s.myHeroIndex !== undefined && s.active !== s.myHeroIndex) {
-    $('heroPage').innerHTML = `<div class="card"><h2>${ x.name } <small class="muted">(héroe de otro jugador — solo lectura)</small></h2><div class="statBarRow"><small>Vida</small><div class="statBarTrack"><div class="statBarFill hpFill" style="width:${ Math.round(x.hp / x.hpMax * 100) }%"></div></div><span class="statBarNum">${ x.hp }/${ x.hpMax }</span></div><div class="statBarRow"><small>Maná</small><div class="statBarTrack"><div class="statBarFill manaFill" style="width:${ Math.round(x.mana / x.manaMax * 100) }%"></div></div><span class="statBarNum">${ x.mana }/${ x.manaMax }</span></div><p class="muted top">No podés actuar sobre este héroe. Elige el tuyo en Configuración → Multijugador, o en la pestaña de héroes arriba.</p></div>`;
-    return;
-  }
-  document.documentElement.style.setProperty('--hero', COLORS[x.cls]);
-  if (x.lastActiveRound !== s.round && !x.unconscious) {
-    x.lastActiveRound = s.round;
-    startHeroTurn(x);
-  }
   if (s.turnPrompt && s.phase !== 0) {
     s.turnPrompt = false;
     save();
   }
   if (s.turnPrompt) {
-    const options = s.heroes.filter(q => !q.unconscious && !q.turnDone && q !== x);
+    const options = s.heroes.filter(q => !q.unconscious && !q.turnDone);
     if (options.length === 0) {
       s.turnPrompt = false;
       save();
@@ -1551,7 +1619,7 @@ function renderHero() {
       renderHero();
       return;
     }
-    $('heroPage').innerHTML = `<div class="card"><h2>¿Quién juega a continuación?</h2><p class="notice">El turno de ${ x.name } ha terminado. El grupo decide libremente qué héroe actúa ahora.</p><div class="actions">${ options.map(q => `<button data-next-hero="${ s.heroes.indexOf(q) }" class="primary">${ q.name }</button>`).join('') }</div></div>`;
+    $('heroPage').innerHTML = `<div class="card"><h2>¿Quién juega a continuación?</h2><p class="notice">El grupo decide libremente qué héroe actúa ahora.</p><div class="actions">${ options.map(q => `<button data-next-hero="${ s.heroes.indexOf(q) }" class="primary">${ q.name } (${ C[q.cls].label })</button>`).join('') }</div></div>`;
     document.querySelectorAll('[data-next-hero]').forEach(b => b.onclick = () => {
       s.active = +b.dataset.nextHero;
       s.turnPrompt = false;
@@ -1560,6 +1628,15 @@ function renderHero() {
       duckAndSay(`Héroe activo: ${ heroSpoken(h()) }.`);
     });
     return;
+  }
+  if (s.roomCode && s.myHeroIndex !== null && s.myHeroIndex !== undefined && s.active !== s.myHeroIndex) {
+    $('heroPage').innerHTML = `<div class="card"><h2>${ x.name } <small class="muted">(héroe de otro jugador — solo lectura)</small></h2><div class="statBarRow"><small>Vida</small><div class="statBarTrack"><div class="statBarFill hpFill" style="width:${ Math.round(x.hp / x.hpMax * 100) }%"></div></div><span class="statBarNum">${ x.hp }/${ x.hpMax }</span></div><div class="statBarRow"><small>Maná</small><div class="statBarTrack"><div class="statBarFill manaFill" style="width:${ Math.round(x.mana / x.manaMax * 100) }%"></div></div><span class="statBarNum">${ x.mana }/${ x.manaMax }</span></div><p class="muted top">No podés actuar sobre este héroe. Elige el tuyo en Configuración → Multijugador, o en la pestaña de héroes arriba.</p></div>`;
+    return;
+  }
+  document.documentElement.style.setProperty('--hero', COLORS[x.cls]);
+  if (x.lastActiveRound !== s.round && !x.unconscious) {
+    x.lastActiveRound = s.round;
+    startHeroTurn(x);
   }
   if (s.missionState && s.missionState.awaitingMichaelActivation) {
     renderMichaelActivation();
@@ -1589,8 +1666,10 @@ function renderHero() {
     });
     return;
   }
-  const activeSec = document.querySelector('.sectionTabs [data-sec].active')?.dataset.sec;
-  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader zone-${ x.zone === 'dark' ? 'dark' : 'light' }" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Zona</small><b>${ x.zone === 'dark' ? 'Oscuridad' : 'Luz' }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }${ getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive ? `<div><small>Corrupción propia</small><b>${ x.personalCorruption || 0 } 😈</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }<button data-sec="inventory" class="${ activeSec === 'inventory' ? 'active' : '' }">Inventario</button></div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }<div id="sec-inventory" class="heroSection ${ activeSec === 'inventory' ? 'active' : '' }">${ inventoryHtml(x) }</div>`;
+  let activeSec = document.querySelector('.sectionTabs [data-sec].active')?.dataset.sec;
+  if (x.cls === 'mage' && x.mage.pendingReplacement)
+    activeSec = 'talisman';
+  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }${ getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive ? `<div><small>Corrupción propia</small><b>${ x.personalCorruption || 0 } 😈</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }${ x.cls === 'mage' ? `<button data-sec="talisman" class="${ activeSec === 'talisman' ? 'active' : '' }">Talismán</button>` : '' }</div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }${ x.cls === 'mage' ? `<div id="sec-talisman" class="heroSection ${ activeSec === 'talisman' ? 'active' : '' }"><div class="card"><h2>Talismán Arcano</h2>${ talismanFullHtml(x) }</div></div>` : '' }`;
   if (x.unconscious)
     $('heroHeaderCard')?.classList.add('ko-fx');
   document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
@@ -1645,7 +1724,7 @@ function heroBarsHtml(x) {
   return `<div class="statBars"><div class="statBarRow"><small>Vida</small><div class="statBarTrack"><div class="statBarFill hpFill" style="width:${ hpPct }%"></div></div><span class="statBarNum">${ x.hp }/${ x.hpMax }</span></div><div class="statBarRow"><small>Maná</small><div class="statBarTrack"><div class="statBarFill manaFill" style="width:${ manaPct }%"></div></div><span class="statBarNum">${ x.mana }/${ x.manaMax }</span></div><div class="statBarRow"><small>XP</small><div class="statBarTrack"><div class="statBarFill xpFill" style="width:${ xpPct }%"></div></div><span class="statBarNum">${ xpLabel }</span></div></div>`;
 }
 function summaryHtml(x) {
-  return `<div class="card"><h2>Estadísticas</h2><div class="row"><button id="hpDown">− Vida</button><button id="hpUp">+ Vida</button><button id="manaDown">− Maná</button><button id="manaUp">+ Maná</button><button id="toggleZone">Luz/Oscuridad</button></div><div class="row"><button id="xpDown">− XP</button><button id="xpUp">+ XP</button></div><h3>Habilidad propia</h3><div class="passive">${ C[x.cls].ability }</div><h3>Sombras</h3><div class="passive">${ C[x.cls].shadow }</div></div><div class="card"><h2>Mecánica exclusiva</h2>${ classHtml(x) }</div><div class="card"><h2>Estados activos</h2><div class="statusChips">${ (x.statuses || []).map((st, i) => `<span class="statusChip">${ st }<button data-remove-status="${ i }">×</button></span>`).join('') || '<span class="muted">Sin estados activos.</span>' }</div><div class="row"><select id="statusPicker"><option>Quemado</option><option>Congelado</option><option>Envenenado</option><option>Aturdido</option><option>Maldito</option><option>Bendecido</option></select><button id="addStatus">Añadir estado</button></div></div>`;
+  return `<div class="card"><h2>Estadísticas</h2><div class="row"><button id="hpDown">− Vida</button><button id="hpUp">+ Vida</button><button id="manaDown">− Maná</button><button id="manaUp">+ Maná</button></div><div class="row"><button id="xpDown">− XP</button><button id="xpUp">+ XP</button></div><h3>Habilidad propia</h3><div class="passive">${ C[x.cls].ability }</div><h3>Sombras</h3><div class="passive">${ C[x.cls].shadow }</div></div><div class="card"><h2>Mecánica exclusiva</h2>${ classHtml(x) }</div><div class="card"><h2>Estados activos</h2><div class="statusChips">${ (x.statuses || []).map((st, i) => `<span class="statusChip">${ st }<button data-remove-status="${ i }">×</button></span>`).join('') || '<span class="muted">Sin estados activos.</span>' }</div><div class="row"><select id="statusPicker"><option>Quemado</option><option>Congelado</option><option>Envenenado</option><option>Aturdido</option><option>Maldito</option><option>Bendecido</option></select><button id="addStatus">Añadir estado</button></div></div>`;
 }
 function shamanCostText(cost) {
   return Object.entries(cost || {}).map(([k, v]) => `${ v } ${ MD2.shamanElements[k] }`).join(' + ');
@@ -1706,6 +1785,17 @@ function shamanHtml(x) {
   const elementsBlock = inFlow ? `<p class="notice">Estás en tu Turno (${ x.flow.type === 'attack' ? 'Ataque' : 'Defensa' }). Los controles de Elementos y Hechizos están disponibles ahí, en la pestaña Turno.</p>` : `<div class="resource"><p class="notice">Al inicio de tu turno, aumenta cualquier Elemento en 1.</p>${ shamanElementControls(x) }</div><h3>Hechizos disponibles</h3>${ shamanAbilityControls(x) }`;
   return `${ elementsBlock }<h3>Bendiciones permanentes</h3><div class="blessingGrid">${ blessings }</div><p class="notice">Revisa la pestaña Espíritus para ver y gestionar tus invocaciones.</p>`;
 }
+function talismanFullHtml(x) {
+  if (x.mage.pendingReplacement && x.mage.pendingReplacementSlot !== null && x.mage.pendingReplacementSlot !== undefined) {
+    const v = x.mage.pendingReplacement;
+    return `<p class="notice"><b>${ v }</b> va a reemplazar la Cara ${ x.mage.pendingReplacementSlot + 1 }.</p><label>¿Cuánto maná cuesta usar esta habilidad?<select id="talismanManaCost">${ Array.from({ length: 8 }, (_, i) => i).map(n => `<option value="${ n }" ${ n === 1 ? 'selected' : '' }>${ n }</option>`).join('') }</select></label><button id="confirmTalismanReplace" class="primary top">Confirmar reemplazo</button>`;
+  }
+  if (x.mage.pendingReplacement) {
+    const v = x.mage.pendingReplacement;
+    return `<p class="notice"><b>${ v }</b> reemplaza una cara del Talismán. Elige cuál:</p><div class="talismanGrid">${ x.mage.slots.map((q, i) => `<div class="talismanSlot"><b>Cara ${ i + 1 }</b><p class="muted">${ q.name } (${ q.manaCost } maná)</p><button data-replace-slot="${ i }" class="primary">Reemplazar esta</button></div>`).join('') }</div>`;
+  }
+  return `<div class="talismanGrid">${ x.mage.slots.map((q, i) => `<div class="talismanSlot ${ i === x.mage.amulet ? 'active' : '' }"><b>Cara ${ i + 1 }${ i === x.mage.amulet ? ' · ACTIVA' : '' }</b><input data-slot="${ i }" value="${ q.name }"><small>Coste: ${ q.manaCost } maná</small>${ i === x.mage.amulet ? `<button data-use-talisman="${ i }" ${ x.mana < q.manaCost ? 'disabled' : '' }>Usar capacidad</button>` : '' }</div>`).join('') }</div><button id="rotateTalisman" class="top" ${ x.mana < 1 ? 'disabled' : '' }>Girar forzado a la siguiente cara (1 maná)</button>`;
+}
 function classHtml(x) {
   if (x.cls === 'rogue')
     return `<div class="resource">Fichas en mano: <b>${ x.rogue.hand }</b> · Gastadas: ${ x.rogue.spent }<div class="row"><button id="rDraw">Robar ficha</button><button id="rSpend">Gastar ficha</button></div></div>`;
@@ -1715,8 +1805,10 @@ function classHtml(x) {
     return shamanHtml(x);
   if (x.cls === 'paladin')
     return `<div class="resource">Consagraciones registradas: <b>${ x.paladin.consecrations }</b><div class="row"><button id="conAdd">Consagrar (−1 maná)</button><button id="conRem">Retirar</button></div><small>Comprueba LdV y que la zona no tenga otra Consagración.</small></div><label class="top">Habilidad bendecida<select id="blessed"><option value="">Ninguna</option>${ activeSkills(x).map(q => `<option ${ x.paladin.blessed === q.name ? 'selected' : '' }>${ q.name }</option>`).join('') }</select></label>`;
-  if (x.cls === 'mage')
-    return `<div class="talismanGrid">${ x.mage.slots.map((q, i) => `<div class="talismanSlot ${ i === x.mage.amulet ? 'active' : '' }"><b>Cara ${ i + 1 }${ i === x.mage.amulet ? ' · ACTIVA' : '' }</b><input data-slot="${ i }" value="${ q.name }"><small>Coste: ${ q.manaCost } maná · Tipo: ${ q.type }</small>${ i === x.mage.amulet ? `<button data-use-talisman="${ i }" ${ x.mana < q.manaCost ? 'disabled' : '' }>Usar capacidad</button>` : '' }</div>`).join('') }</div><button id="rotateTalisman" class="top" ${ x.mana < 1 ? 'disabled' : '' }>Girar forzado a la siguiente cara (1 maná)</button>`;
+  if (x.cls === 'mage') {
+    const active = x.mage.slots[x.mage.amulet];
+    return `<div class="resource"><b>Cara activa del Talismán:</b> ${ active.name } <small>(${ active.manaCost } maná)</small><p class="muted top">Revisa la pestaña "Talismán" para ver las 4 caras, usar la activa o forzar el giro.</p></div>`;
+  }
   const stances = {
     'Furia Sangrienta': 'Ataque: gasta 1 Furia para relanzar cualquier dado.',
     'Temerario': 'Movimiento: gasta 1 Furia para obtener +1 PM.',
@@ -1850,6 +1942,10 @@ function arrowFlow(x) {
   return `<div class="card actionFlow active"><h2>Mazo de Flechas</h2><p class="notice">Saca cartas del mazo de Flechas e indica el resultado obtenido.</p><div class="actions"><button data-arrow="rapido">Disparo rápido (menos de 7)</button><button data-arrow="certero">Disparo certero (7 justas)</button><button data-arrow="lento">Disparo lento o fallido (más de 7)</button></div></div>`;
 }
 function attackTypeSelector(x) {
+  if (x.cls === 'mage') {
+    const active = x.mage.slots[x.mage.amulet];
+    return `<div class="card actionFlow active"><h2>Ataque del Mago</h2><p class="notice">Revisa la cara activa del Talismán (pestaña "Talismán") para ver qué habilidad podés usar, o gasta 1 maná para forzar el giro a otra cara.</p><p class="muted">Cara activa ahora: <b>${ active.name }</b> (${ active.manaCost } maná).</p><button id="mageAttackContinue" class="primary top">Continuar con el ataque</button></div>`;
+  }
   return `<div class="card actionFlow active"><h2>Tipo de Ataque</h2><p class="notice">¿Qué tipo de ataque realiza ${ x.name }?</p><div class="actions"><button data-attacktype="distancia">A distancia</button><button data-attacktype="cuerpo">Cuerpo a cuerpo</button><button data-attacktype="magico">Mágico</button></div></div>`;
 }
 function attackFlow(x) {
@@ -1904,8 +2000,7 @@ function shamanAbilityControls(x, kindFilter) {
 }
 function attackReminders(x) {
   let arr = [];
-  if (x.zone === 'dark')
-    arr.push('Añade el dado de Oscuridad y aplica Sombras.');
+  arr.push('Si estás en Zona de Oscuridad: añade el dado de Oscuridad y aplica Sombras.');
   if (x.cls === 'shaman') {
     if (x.shaman.unlocked.fire)
       arr.push('Bendición de Fuego activa: añade 1 dado amarillo.');
@@ -1924,15 +2019,6 @@ function attackReminders(x) {
     html += `<div class="resource top">${ shamanElementControls(x) }</div>${ attackAbilities ? `<h3>Hechizos de ataque disponibles</h3>${ attackAbilities }` : '' }`;
   }
   return html;
-}
-function inventoryHtml(x) {
-  return `<div class="card"><h2>Registrar objeto</h2><div class="grid"><label>Nombre<input id="itemName"></label><label>Destino<select id="itemDest"><option value="equip">Equipar ahora</option><option value="inventory">Guardar</option></select></label></div><button id="addItem" class="top">Registrar</button></div><div class="card"><h2>Equipo e inventario</h2><div id="inventoryList">${ inventoryRows(x) }</div></div>`;
-}
-function inventoryRows(x) {
-  let r = [];
-  x.equipped.forEach((q, i) => r.push(`<div class="inventoryItem"><b>Equipado:</b> ${ q }<div class="inventoryActions"><button data-store="${ i }">Guardar</button><button data-delete-e="${ i }">Eliminar</button></div></div>`));
-  x.inventory.forEach((q, i) => r.push(`<div class="inventoryItem"><b>Inventario:</b> ${ q }<div class="inventoryActions"><button data-equip="${ i }">Equipar</button><button data-delete-i="${ i }">Consumir/Eliminar</button></div></div>`));
-  return r.join('') || '<p class="muted">Sin objetos.</p>';
 }
 function bindHero() {
   const x = h();
@@ -2013,13 +2099,6 @@ function bindHero() {
     save();
     renderHero();
   };
-  $('toggleZone').onclick = () => {
-    x.zone = x.zone === 'dark' ? 'light' : 'dark';
-    save();
-    renderHero();
-    if (x.zone === 'dark')
-      say('Estás en oscuridad. No olvides el dado de Oscuridad y la habilidad de Sombras.');
-  };
   document.querySelectorAll('[data-choice]').forEach(q => q.onchange = () => {
     x.choices[+q.dataset.choice] = q.value || null;
     save();
@@ -2030,55 +2109,16 @@ function bindHero() {
       return alert('Selecciona una habilidad.');
     if (!confirm(`¿Confirmas ${ v }? La elección será permanente y solo podrá cambiarse con Deshacer.`))
       return;
-    if (x.cls === 'mage' && (n === 1 || n === 5)) {
-      const options = x.mage.slots.map((slot, i) => `Cara ${ i + 1 }: ${ slot.name }`).join('\n');
-      let choice = prompt(`${ v } reemplaza una cara del Talismán. Escribe el número de la cara a reemplazar (1-4):\n${ options }`, '1');
-      let idx = parseInt(choice, 10) - 1;
-      while (isNaN(idx) || idx < 0 || idx > 3) {
-        choice = prompt(`Número no válido. Escribe 1, 2, 3 o 4:\n${ options }`, '1');
-        if (choice === null) {
-          idx = 0;
-          break;
-        }
-        idx = parseInt(choice, 10) - 1;
-      }
-      let manaChoice = prompt(`¿Cuánto maná cuesta usar ${ v }?`, '1');
-      let manaCost = parseInt(manaChoice, 10);
-      while (isNaN(manaCost) || manaCost < 0) {
-        manaChoice = prompt('Escribe un número válido de maná (0 o más):', '1');
-        if (manaChoice === null) {
-          manaCost = 1;
-          break;
-        }
-        manaCost = parseInt(manaChoice, 10);
-      }
-      let typeChoice = prompt(`¿${ v } es de tipo Ataque, Defensa, Combate, Curación o Movimiento? Escribe una: ataque / defensa / combate / curacion / movimiento`, 'ataque');
-      const validTypes = [
-        'ataque',
-        'defensa',
-        'combate',
-        'curacion',
-        'movimiento'
-      ];
-      let type = (typeChoice || '').toLowerCase().trim();
-      while (!validTypes.includes(type)) {
-        typeChoice = prompt('Escribe exactamente una de estas opciones: ataque / defensa / combate / curacion / movimiento', 'ataque');
-        if (typeChoice === null) {
-          type = 'ataque';
-          break;
-        }
-        type = (typeChoice || '').toLowerCase().trim();
-      }
-      const oldFace = x.mage.slots[idx];
-      x.mage.slots[idx] = {
-        name: v,
-        manaCost,
-        type
-      };
-      log(`${ x.name } reemplaza la Cara ${ idx + 1 } del Talismán (${ oldFace.name }) por ${ v } (coste ${ manaCost } maná, tipo ${ type }).`);
-    }
     x.lockedChoices[n] = true;
     log(`Habilidad bloqueada: ${ v }.`);
+    if (x.cls === 'mage' && (n === 1 || n === 5)) {
+      x.mage.pendingReplacement = v;
+      x.mage.pendingReplacementLevel = n;
+      save();
+      renderHero();
+      say('Elige qué cara del Talismán reemplazar.', x);
+      return;
+    }
     save();
     renderHero();
     if (s.phase === 2)
@@ -2107,7 +2147,6 @@ function bindHero() {
     finishFlow(true);
   };
   bindFlow(x);
-  bindInventory(x);
 }
 function bindClass(x) {
   if (x.cls === 'rogue') {
@@ -2263,19 +2302,52 @@ function bindClass(x) {
       renderHero();
       say(`${ face.name }. ${ face.type === 'ataque' ? 'Recuerda que necesitas un arma con alcance mágico equipada para usar hechizos de ataque. ' : '' }El Talismán gira. Cara activa ahora: ${ nextFace.name }.`);
     });
-    $('rotateTalisman').onclick = () => {
-      if (x.mana < 1)
-        return alert('No tienes maná suficiente para girar el Talismán.');
-      if (!confirm('¿Gastar 1 maná para girar el Talismán a la siguiente cara?'))
-        return;
-      x.mana--;
-      x.mage.amulet = (x.mage.amulet + 1) % 4;
-      let a = x.mage.slots[x.mage.amulet];
-      log(`${ x.name } gasta 1 maná para girar el Talismán.`);
+    if ($('rotateTalisman'))
+      $('rotateTalisman').onclick = () => {
+        if (x.mana < 1)
+          return alert('No tienes maná suficiente para girar el Talismán.');
+        if (!confirm('¿Gastar 1 maná para girar el Talismán a la siguiente cara?'))
+          return;
+        x.mana--;
+        x.mage.amulet = (x.mage.amulet + 1) % 4;
+        let a = x.mage.slots[x.mage.amulet];
+        log(`${ x.name } gasta 1 maná para girar el Talismán.`);
+        save();
+        renderHero();
+        const activeSlotEl = document.querySelector('.talismanSlot.active');
+        if (activeSlotEl) {
+          activeSlotEl.classList.add('talismanSpin');
+          setTimeout(() => activeSlotEl.classList.remove('talismanSpin'), 700);
+        }
+        say(`Talismán girado. Activa: ${ a.name }.`);
+      };
+    document.querySelectorAll('[data-replace-slot]').forEach(b => b.onclick = () => {
+      x.mage.pendingReplacementSlot = +b.dataset.replaceSlot;
       save();
       renderHero();
-      say(`Talismán girado. Activa: ${ a.name }.`);
-    };
+    });
+    if ($('confirmTalismanReplace'))
+      $('confirmTalismanReplace').onclick = () => {
+        const idx = x.mage.pendingReplacementSlot;
+        const manaCost = +$('talismanManaCost').value;
+        const v = x.mage.pendingReplacement;
+        const oldFace = x.mage.slots[idx];
+        x.mage.slots[idx] = {
+          name: v,
+          manaCost,
+          type: ''
+        };
+        log(`${ x.name } reemplaza la Cara ${ idx + 1 } del Talismán (${ oldFace.name }) por ${ v } (coste ${ manaCost } maná).`);
+        x.mage.pendingReplacement = null;
+        x.mage.pendingReplacementSlot = null;
+        save();
+        renderHero();
+        if (s.phase === 2)
+          continueLevelQueueAfterSkill();
+        else
+          advancePending();
+        say('Talismán actualizado.', x);
+      };
   }
   if (x.cls === 'berserker') {
     $('fDown').onclick = () => {
@@ -2313,6 +2385,14 @@ function bindClass(x) {
   }
 }
 function bindFlow(x) {
+  if ($('mageAttackContinue'))
+    $('mageAttackContinue').onclick = () => {
+      x.flow.attackType = 'magico';
+      log(`${ x.name } declara un ataque mágico.`);
+      save();
+      renderHero();
+      say('Ataque declarado.');
+    };
   document.querySelectorAll('[data-attacktype]').forEach(b => b.onclick = () => {
     const type = b.dataset.attacktype;
     x.flow.attackType = type;
@@ -2610,42 +2690,6 @@ function bindFlow(x) {
       duckAndSay(`Ataque resuelto. ${ xpMsgs.length ? xpMsgs.join(' ') : 'Sin eliminaciones registradas.' }`);
       finishFlow(true);
     };
-}
-function bindInventory(x) {
-  $('addItem').onclick = () => {
-    let n = $('itemName').value.trim();
-    if (!n)
-      return;
-    ($('itemDest').value === 'equip' ? x.equipped : x.inventory).push(n);
-    save();
-    renderHero();
-  };
-  document.querySelectorAll('[data-store]').forEach(b => b.onclick = () => {
-    let q = x.equipped.splice(+b.dataset.store, 1)[0];
-    x.inventory.push(q);
-    save();
-    renderHero();
-  });
-  document.querySelectorAll('[data-equip]').forEach(b => b.onclick = () => {
-    let q = x.inventory.splice(+b.dataset.equip, 1)[0];
-    x.equipped.push(q);
-    save();
-    renderHero();
-  });
-  document.querySelectorAll('[data-delete-e]').forEach(b => b.onclick = () => {
-    if (confirm('\xBFEliminar objeto?')) {
-      x.equipped.splice(+b.dataset.deleteE, 1);
-      save();
-      renderHero();
-    }
-  });
-  document.querySelectorAll('[data-delete-i]').forEach(b => b.onclick = () => {
-    if (confirm('\xBFConsumir o eliminar objeto?')) {
-      x.inventory.splice(+b.dataset.deleteI, 1);
-      save();
-      renderHero();
-    }
-  });
 }
 function startHeroTurn(x) {
   x.turnAnnounced = false;
@@ -3446,6 +3490,8 @@ function finishFlow(skipGenericVoice = false) {
     stopAttackSong();
   if (x.actions <= 0) {
     x.turnDone = true;
+    if (s.roomCode)
+      s.lastActingClientId = mpClientId();
     const pendingHeroes = s.heroes.filter(q => !q.unconscious && !q.turnDone);
     if (getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive && !s.missionResult) {
       save();
@@ -3582,6 +3628,8 @@ function finishDarkness() {
   });
   applyCursedSwordDamage();
   log('Comienza la Fase de Héroes.');
+  if (s.roomCode)
+    s.turnPrompt = true;
   save();
   render();
   showPhaseCurtain(`Ronda ${ s.round } · Fase de Héroes`);
@@ -4191,6 +4239,11 @@ function renderMultiplayerPanel() {
     $('mpRoomCodeDisplay').textContent = s.roomCode;
     const select = $('mpHeroSelect');
     select.innerHTML = '<option value="">Solo observar (fase/oscuridad/enemigos)</option>' + s.heroes.map((x, i) => `<option value="${ i }" ${ s.myHeroIndex === i ? 'selected' : '' }>${ x.name } (${ C[x.cls].label })</option>`).join('');
+    const presenceTable = $('mpPresenceTable');
+    if (presenceTable) {
+      const entries = Object.values(mpPresenceData || {});
+      presenceTable.innerHTML = entries.length ? entries.map(p => `<div class="elementRow"><span>${ p.connected ? '🟢' : '🔴' } ${ p.name || 'Sin héroe elegido' }</span></div>`).join('') : '<p class="muted">Todavía no hay datos de otros jugadores.</p>';
+    }
   } else {
     statusEl.textContent = 'Sin conectar.';
     controlsEl.classList.remove('hidden');
@@ -4240,7 +4293,10 @@ $('mpHeroSelect').onchange = e => {
     save();
     tab('hero');
     render();
+    mpUpdatePresenceName(`${ h().name } (${ C[h().cls].label })`);
     say(`Tu héroe es ${ heroSpoken(h()) }.`);
+  } else {
+    mpUpdatePresenceName('Sin héroe elegido');
   }
 };
 renderMultiplayerPanel();

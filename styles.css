@@ -302,3 +302,7 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 .f9{top:78%;left:52%;animation:fireflyDrift3 12.5s ease-in-out infinite reverse,fireflyBlink 5.8s ease-in-out infinite 1.4s}
 .f10{top:93%;left:65%;animation:fireflyDrift1 10.5s ease-in-out infinite,fireflyBlink 3.9s ease-in-out infinite .2s}
 @media(prefers-reduced-motion:reduce){#ambientGlow,.firefly{animation:none!important}}
+
+/* ============ ANIMACIÓN DE GIRO DEL TALISMÁN ============ */
+@keyframes talismanSpin{0%{transform:rotate(0deg) scale(1)}50%{transform:rotate(200deg) scale(1.08)}100%{transform:rotate(360deg) scale(1)}}
+.talismanSlot.talismanSpin{animation:talismanSpin .7s ease-in-out;box-shadow:0 0 18px rgba(212,175,90,.6)}

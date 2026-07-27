@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260727g">
+<link rel="stylesheet" href="styles.css?v=20260728b">
 <title>Asistente para los Portadores de la Luz</title>
 </head>
 <body>
@@ -182,8 +182,9 @@
 <div class="grid"><label>Narración<select id="voiceSetting"><option value="yes">Activada</option><option value="no">Desactivada</option></select></label><label>Velocidad<input id="voiceRateSetting" type="range" min=".7" max="1.3" step=".1" value="1"></label><label>Tono base<input id="voicePitchSetting" type="range" min=".7" max="1.3" step=".1" value="1"></label><label>Voz disponible<select id="voiceSelect"></select></label></div>
 </div>
 <div class="card"><h2>Música</h2><p class="muted">Suena una pista de menú en Preparación, y 3 pistas rotan al azar de fondo durante la partida; cambia a otra pista al declarar un ataque. Si por algún motivo se corta, usa el botón de reactivar.</p><div class="actions"><button id="muteMusicBtn">Silenciar música</button><button id="reactivateAmbient" class="primary">Reactivar música</button></div><label class="top">Volumen de la música<input id="musicVolumeSlider" type="range" min="0" max="100" value="70"></label></div>
-<div class="card"><h2>Multijugador</h2><p class="muted">Cada jugador entra desde su propio celular con conexión a internet. Uno crea la sala y comparte el código; el resto se une con ese código.</p><div id="mpStatus" class="notice">Sin conectar.</div><div id="mpControls"><div class="actions"><button id="mpCreateBtn" class="primary">Crear sala</button></div><div class="row top"><input id="mpJoinCode" placeholder="Código de sala" maxlength="5" style="text-transform:uppercase"><button id="mpJoinBtn">Unirse</button></div></div><div id="mpRoomInfo" class="hidden"><p class="notice">Código de la sala: <b id="mpRoomCodeDisplay"></b></p><label>Mi héroe en esta partida<select id="mpHeroSelect"></select></label><button id="mpLeaveBtn" class="danger top">Salir de la sala</button></div></div>
-<div class="card"><h2>Partida y datos</h2><div class="actions"><button id="exportSettings">Exportar partida</button><label>Importar partida<input id="importSettings" type="file" accept=".json"></label><button id="newGameSettings" class="danger">Nueva partida</button></div></div></section>
+<div class="card"><h2>Multijugador</h2><p class="muted">Cada jugador entra desde su propio celular con conexión a internet. Uno crea la sala y comparte el código; el resto se une con ese código.</p><div id="mpStatus" class="notice">Sin conectar.</div><div id="mpControls"><div class="actions"><button id="mpCreateBtn" class="primary">Crear sala</button></div><div class="row top"><input id="mpJoinCode" placeholder="Código de sala" maxlength="5" style="text-transform:uppercase"><button id="mpJoinBtn">Unirse</button></div></div><div id="mpRoomInfo" class="hidden"><p class="notice">Código de la sala: <b id="mpRoomCodeDisplay"></b></p><label>Mi héroe en esta partida<select id="mpHeroSelect"></select></label><h3 class="top">Jugadores en la sala</h3><div id="mpPresenceTable"></div><button id="mpLeaveBtn" class="danger top">Salir de la sala</button></div></div>
+<div class="card"><h2>Partida y datos</h2><div class="actions"><button id="exportSettings">Exportar partida</button><label>Importar partida<input id="importSettings" type="file" accept=".json"></label><button id="newGameSettings" class="danger">Nueva partida</button></div></div>
+<div class="card"><p class="muted" style="text-align:center">Versión de la app: <b id="appVersionDisplay"></b></p></div></section>
 
 </main>
 
@@ -196,6 +197,6 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-<script src="data.js?v=20260727g"></script>
-<script src="app.js?v=20260727g"></script>
+<script src="data.js?v=20260728b"></script>
+<script src="app.js?v=20260728b"></script>
 </body></html>

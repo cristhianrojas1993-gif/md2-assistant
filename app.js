@@ -85,6 +85,7 @@ function mpSubscribe(code) {
     const myHeroIndex = s.myHeroIndex;
     const myActive = s.active;
     s = remote;
+    normalizeState();
     s.myHeroIndex = myHeroIndex;
     if (myActive !== undefined && myActive !== null && s.heroes && s.heroes[myActive])
       s.active = myActive;
@@ -123,6 +124,7 @@ function mpJoinRoom(code, cb) {
     }
     mpApplyingRemote = true;
     s = remote;
+    normalizeState();
     s.myHeroIndex = null;
     localStorage.setItem(KEY, JSON.stringify(s));
     mpApplyingRemote = false;
@@ -322,6 +324,7 @@ function fresh() {
   };
 }
 let s = JSON.parse(localStorage.getItem(KEY) || 'null') || fresh();
+function normalizeState() {
 s.heroes.forEach(x => x.statuses = x.statuses || []);
 s.heroes.forEach(x => {
   if (x.maxLevelAnnounced === undefined)
@@ -411,6 +414,8 @@ if (typeof s.musicVolume !== 'number')
   s.musicVolume = 0.7;
 if (s.lastAnnouncement === undefined)
   s.lastAnnouncement = '';
+}
+normalizeState();
 function heroSpoken(x = h()) {
   return `${ x.name }, ${ C[x.cls].label === 'Mago' ? 'el Mago' : C[x.cls].label === 'Pícaro' ? 'el Pícaro' : C[x.cls].label === 'Explorador' ? 'el Explorador' : C[x.cls].label === 'Chamán' ? 'el Chamán' : C[x.cls].label === 'Paladín' ? 'el Paladín' : 'el Berserker' }`;
 }

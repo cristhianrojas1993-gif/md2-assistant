@@ -1,4 +1,4 @@
-const APP_VERSION = '20260729c';
+const APP_VERSION = '20260729d';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -1838,7 +1838,7 @@ function shamanSpiritHtml(x) {
 }
 function shamanElementsBoardHtml(x) {
   return `
-  <div class="elementsBoard">
+  <div class="elementsBoard" id="elementsBoardRoot">
     <div class="boardRule">La primera vez que cada Elemento alcance el Máx., puedes gastarlo entero para activar su Bendición permanente hasta el final de la misión.</div>
     <div class="elementsGrid">
       <div class="elementCol fire">
@@ -1973,7 +1973,7 @@ function bindShamanElementBoard(x, positionOnly) {
 
     function commitLevel(level) {
       x.shaman[prefix] = level;
-      save();
+      setTimeout(save, 60);
     }
 
     if (positionOnly) {
@@ -2019,6 +2019,7 @@ function bindShamanElementBoard(x, positionOnly) {
         cachedStackTop = stack.getBoundingClientRect().top;
         medallion.style.transition = 'none';
         medallion.setPointerCapture(e.pointerId);
+        document.getElementById('elementsBoardRoot')?.classList.add('dragActive');
       });
       medallion.addEventListener('pointermove', e => {
         if (!dragging)
@@ -2034,6 +2035,7 @@ function bindShamanElementBoard(x, positionOnly) {
           return;
         dragging = false;
         medallion.style.transition = '';
+        document.getElementById('elementsBoardRoot')?.classList.remove('dragActive');
         let best = 0, bestDist = Infinity;
         for (let i = 0; i <= 4; i++) {
           const c = document.getElementById(prefix + '-circle-' + i);

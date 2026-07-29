@@ -1,4 +1,4 @@
-const APP_VERSION = '20260729d';
+const APP_VERSION = '20260729e';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -2002,7 +2002,7 @@ function bindShamanElementBoard(x, positionOnly) {
       const stack = document.getElementById(prefix + 'Stack');
       if (!medallion || !stack)
         return;
-      let dragging = false, offsetY = 0, cachedStackTop = 0, pendingY = null, rafScheduled = false;
+      let dragging = false, offsetY = 0, cachedStackTop = 0, pendingY = null, rafScheduled = false, minTop = 0, maxTop = 0;
 
       function applyPendingMove() {
         rafScheduled = false;
@@ -2017,6 +2017,14 @@ function bindShamanElementBoard(x, positionOnly) {
         const r = medallion.getBoundingClientRect();
         offsetY = e.clientY - r.top;
         cachedStackTop = stack.getBoundingClientRect().top;
+        const topSlot = document.getElementById(prefix + '-circle-4');
+        const bottomSlot = document.getElementById(prefix + '-circle-0');
+        if (topSlot && bottomSlot) {
+          const topRect = topSlot.getBoundingClientRect();
+          const bottomRect = bottomSlot.getBoundingClientRect();
+          minTop = topRect.top - cachedStackTop + topRect.height / 2 - 22;
+          maxTop = bottomRect.top - cachedStackTop + bottomRect.height / 2 - 22;
+        }
         medallion.style.transition = 'none';
         medallion.setPointerCapture(e.pointerId);
         document.getElementById('elementsBoardRoot')?.classList.add('dragActive');
@@ -2024,7 +2032,8 @@ function bindShamanElementBoard(x, positionOnly) {
       medallion.addEventListener('pointermove', e => {
         if (!dragging)
           return;
-        pendingY = e.clientY - cachedStackTop - offsetY;
+        const raw = e.clientY - cachedStackTop - offsetY;
+        pendingY = Math.max(minTop, Math.min(maxTop, raw));
         if (!rafScheduled) {
           rafScheduled = true;
           requestAnimationFrame(applyPendingMove);

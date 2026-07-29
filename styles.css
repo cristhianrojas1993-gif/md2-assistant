@@ -431,22 +431,22 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   /* Fuego: efecto de lava real, burbujas moviéndose dentro del símbolo */
   .fireCircle.lit{background:radial-gradient(circle at 50% 60%, #7a2410, #3a1006)!important;
     border-color:#e0562a!important;color:#e0562a;overflow:hidden}
-  .lavaBlob{position:absolute;border-radius:50%;filter:blur(1.5px);mix-blend-mode:screen}
-  .lavaTrail{position:absolute;border-radius:50%;filter:blur(1.5px);mix-blend-mode:screen}
+  .lavaBlob{position:absolute;border-radius:50%}
+  .lavaTrail{position:absolute;border-radius:50%}
   .lavaBlob.b1{width:26px;height:22px;background:radial-gradient(circle,#fff3c4,#ff8a3d 55%,#d1421c 85%,transparent);
-    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite;mix-blend-mode:screen;filter:blur(1px)}
+    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite}
   .lavaBlob.b2{width:19px;height:16px;background:radial-gradient(circle,#ffb347,#e0562a 60%,#7a1a08 90%,transparent);
-    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s;mix-blend-mode:screen;filter:blur(1px)}
+    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s}
   .lavaBlob.b3{width:17px;height:14px;background:radial-gradient(circle,#fff8e0,#ffd27a 55%,#e0562a 85%,transparent);
-    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s;mix-blend-mode:screen;filter:blur(1px)}
+    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s}
 
   /* rastro que deja el medallón al pasar: rojo-anaranjado más intenso, distinto del propio medallón */
   .lavaTrail.ft1{width:26px;height:22px;background:radial-gradient(circle,#ffd23d,#ff4d1c 50%,#a30f02 85%,transparent);
-    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite;mix-blend-mode:screen;filter:blur(1px)}
+    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite}
   .lavaTrail.ft2{width:19px;height:16px;background:radial-gradient(circle,#ff7a1a,#e02e0e 60%,#5c0e02 90%,transparent);
-    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s;mix-blend-mode:screen;filter:blur(1px)}
+    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s}
   .lavaTrail.ft3{width:17px;height:14px;background:radial-gradient(circle,#ffc23d,#ff4d1c 55%,#a30f02 85%,transparent);
-    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s;mix-blend-mode:screen;filter:blur(1px)}
+    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s}
   @keyframes lavaMove1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4px,-5px) scale(1.15)}}
   @keyframes lavaMove2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-5px,-3px) scale(.9)}}
   @keyframes lavaMove3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(3px,4px) scale(1.1)}}
@@ -466,7 +466,7 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
     transition:top .3s cubic-bezier(.4,1.4,.4,1);
     background:radial-gradient(circle at 50% 60%, #7a2410, #3a1006)!important;
     border:2px solid #e0562a!important;color:#e0562a;overflow:hidden;
-    box-shadow:0 0 0 2px #241a05, 0 0 0 4px #fff3c4, 0 0 0 7px #b6903e, 0 0 0 9px #4a3510, 0 3px 7px rgba(0,0,0,.6)}
+    box-shadow:0 0 0 2px #241a05, 0 0 0 6px #b6903e, 0 0 0 8px #4a3510}
   .fireMedallion:active{cursor:grabbing;transition:none}
   .fireMedallion .lvl{position:relative;z-index:2;font-size:1.15rem}
 
@@ -476,7 +476,7 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   .fireSlot, .waterSlot, .airSlot, .natureSlot{position:relative}
   .fireSlot::after, .waterSlot::after, .airSlot::after, .natureSlot::after{
     content:'';position:absolute;inset:-2px;border-radius:50%;pointer-events:none;z-index:3;
-    box-shadow:0 0 0 2px #241a05, 0 0 0 3px #fff3c4, 0 0 0 6px #b6903e, 0 0 0 8px #4a3510, 0 2px 4px rgba(0,0,0,.55)}
+    box-shadow:0 0 0 2px #241a05, 0 0 0 5px #b6903e, 0 0 0 7px #4a3510}
 
   /* colores por elemento, del más pálido (nivel 1) al más intenso (Máx) */
   .water .symbolCell.lit{color:#3f6fd6;border-color:#3f6fd6!important}
@@ -506,25 +506,25 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
     transition:top .3s cubic-bezier(.4,1.4,.4,1);
     background:radial-gradient(circle at 50% 60%, #164a99, #051433)!important;
     border:2px solid #3f8ee0!important;color:#3f8ee0;overflow:hidden;
-    box-shadow:0 0 0 2px #241a05, 0 0 0 4px #fff3c4, 0 0 0 7px #b6903e, 0 0 0 9px #4a3510, 0 3px 7px rgba(0,0,0,.6)}
+    box-shadow:0 0 0 2px #241a05, 0 0 0 6px #b6903e, 0 0 0 8px #4a3510}
   .waterEnergy:active{cursor:grabbing;transition:none}
   .waterEnergy .lvl{position:relative;z-index:2;font-size:1.15rem}
 
-  .waterBlob{position:absolute;border-radius:50%;filter:blur(1.5px);mix-blend-mode:screen}
+  .waterBlob{position:absolute;border-radius:50%}
   .waterBlob.wb1{width:26px;height:22px;background:radial-gradient(circle,#eaf7ff,#5fb3ff 55%,#164a99 85%,transparent);
-    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite;mix-blend-mode:screen;filter:blur(1px)}
+    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite}
   .waterBlob.wb2{width:19px;height:16px;background:radial-gradient(circle,#9fd3ff,#2f74d6 60%,#0a2a66 90%,transparent);
-    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s;mix-blend-mode:screen;filter:blur(1px)}
+    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s}
   .waterBlob.wb3{width:17px;height:14px;background:radial-gradient(circle,#ffffff,#bfe6ff 55%,#2f74d6 85%,transparent);
-    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s;mix-blend-mode:screen;filter:blur(1px)}
+    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s}
 
-  .waterTrail{position:absolute;border-radius:50%;filter:blur(1.5px);mix-blend-mode:screen}
+  .waterTrail{position:absolute;border-radius:50%}
   .waterTrail.wt1{width:26px;height:22px;background:radial-gradient(circle,#d6f0ff,#3fa0ff 50%,#0a3380 85%,transparent);
-    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite;mix-blend-mode:screen;filter:blur(1px)}
+    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite}
   .waterTrail.wt2{width:19px;height:16px;background:radial-gradient(circle,#5fc3ff,#1667c9 60%,#051c47 90%,transparent);
-    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s;mix-blend-mode:screen;filter:blur(1px)}
+    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s}
   .waterTrail.wt3{width:17px;height:14px;background:radial-gradient(circle,#f0fbff,#8fd6ff 55%,#1667c9 85%,transparent);
-    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s;mix-blend-mode:screen;filter:blur(1px)}
+    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s}
 
   .blessingRow.unlockedWater{border-color:#5fb3ff;background:rgba(50,120,220,.12);
     animation:blessingWaterGlow 2.2s ease-in-out infinite}
@@ -551,26 +551,26 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
     transition:top .3s cubic-bezier(.4,1.4,.4,1);
     background:radial-gradient(circle at 50% 60%, #6fa8bf, #2d4d59)!important;
     border:2px solid #bfe6f0!important;color:#bfe6f0;overflow:hidden;
-    box-shadow:0 0 0 2px #241a05, 0 0 0 4px #fff3c4, 0 0 0 7px #b6903e, 0 0 0 9px #4a3510, 0 3px 7px rgba(0,0,0,.6);
+    box-shadow:0 0 0 2px #241a05, 0 0 0 6px #b6903e, 0 0 0 8px #4a3510;
     display:flex;align-items:center;justify-content:center}
   .airEnergy:active{cursor:grabbing;transition:none}
   .airEnergy .airIcon{position:relative;z-index:2}
 
-  .airBlob{position:absolute;border-radius:50%;filter:blur(1.5px);mix-blend-mode:screen}
+  .airBlob{position:absolute;border-radius:50%}
   .airBlob.ab1{width:26px;height:22px;background:radial-gradient(circle,#ffffff,#cdeef8 55%,#6fa8bf 85%,transparent);
-    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite;mix-blend-mode:screen;filter:blur(1px)}
+    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite}
   .airBlob.ab2{width:19px;height:16px;background:radial-gradient(circle,#e0f4fb,#8fc2d6 60%,#2d4d59 90%,transparent);
-    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s;mix-blend-mode:screen;filter:blur(1px)}
+    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s}
   .airBlob.ab3{width:17px;height:14px;background:radial-gradient(circle,#ffffff,#eaf7ff 55%,#8fc2d6 85%,transparent);
-    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s;mix-blend-mode:screen;filter:blur(1px)}
+    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s}
 
-  .airTrail{position:absolute;border-radius:50%;filter:blur(1.5px);mix-blend-mode:screen}
+  .airTrail{position:absolute;border-radius:50%}
   .airTrail.at1{width:26px;height:22px;background:radial-gradient(circle,#ffffff,#bfe6f0 50%,#4d7d8f 85%,transparent);
-    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite;mix-blend-mode:screen;filter:blur(1px)}
+    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite}
   .airTrail.at2{width:19px;height:16px;background:radial-gradient(circle,#d6f0f8,#6fa8bf 60%,#2d4d59 90%,transparent);
-    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s;mix-blend-mode:screen;filter:blur(1px)}
+    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s}
   .airTrail.at3{width:17px;height:14px;background:radial-gradient(circle,#ffffff,#eaf7ff 55%,#6fa8bf 85%,transparent);
-    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s;mix-blend-mode:screen;filter:blur(1px)}
+    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s}
 
   .blessingRow.unlockedAir{border-color:#cdeef8;background:rgba(160,210,225,.12);
     animation:blessingAirGlow 2.2s ease-in-out infinite}
@@ -597,25 +597,25 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
     transition:top .3s cubic-bezier(.4,1.4,.4,1);
     background:radial-gradient(circle at 50% 60%, #123d1a, #081f0c)!important;
     border:2px solid #2f8a3e!important;color:#2f8a3e;overflow:hidden;
-    box-shadow:0 0 0 2px #241a05, 0 0 0 4px #fff3c4, 0 0 0 7px #b6903e, 0 0 0 9px #4a3510, 0 3px 7px rgba(0,0,0,.6)}
+    box-shadow:0 0 0 2px #241a05, 0 0 0 6px #b6903e, 0 0 0 8px #4a3510}
   .natureEnergy:active{cursor:grabbing;transition:none}
   .natureEnergy .lvl{position:relative;z-index:2;font-size:1.15rem}
 
-  .natureBlob{position:absolute;border-radius:50%;filter:blur(1.5px);mix-blend-mode:screen}
+  .natureBlob{position:absolute;border-radius:50%}
   .natureBlob.nb1{width:26px;height:22px;background:radial-gradient(circle,#e0ffd0,#5fd66e 55%,#123d1a 85%,transparent);
-    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite;mix-blend-mode:screen;filter:blur(1px)}
+    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite}
   .natureBlob.nb2{width:19px;height:16px;background:radial-gradient(circle,#8fe89c,#2f8a3e 60%,#081f0c 90%,transparent);
-    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s;mix-blend-mode:screen;filter:blur(1px)}
+    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s}
   .natureBlob.nb3{width:17px;height:14px;background:radial-gradient(circle,#f3ffe8,#a8f0b3 55%,#2f8a3e 85%,transparent);
-    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s;mix-blend-mode:screen;filter:blur(1px)}
+    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s}
 
-  .natureTrail{position:absolute;border-radius:50%;filter:blur(1.5px);mix-blend-mode:screen}
+  .natureTrail{position:absolute;border-radius:50%}
   .natureTrail.nt1{width:26px;height:22px;background:radial-gradient(circle,#c8ffb0,#4dcf5e 50%,#0a3312 85%,transparent);
-    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite;mix-blend-mode:screen;filter:blur(1px)}
+    left:5px;bottom:2px;animation:lavaMove1 2.6s ease-in-out infinite}
   .natureTrail.nt2{width:19px;height:16px;background:radial-gradient(circle,#6fe07f,#1f7a2e 60%,#051c08 90%,transparent);
-    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s;mix-blend-mode:screen;filter:blur(1px)}
+    right:3px;bottom:8px;animation:lavaMove2 2.1s ease-in-out infinite .4s}
   .natureTrail.nt3{width:17px;height:14px;background:radial-gradient(circle,#eaffdc,#9ff0a8 55%,#1f7a2e 85%,transparent);
-    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s;mix-blend-mode:screen;filter:blur(1px)}
+    left:13px;top:5px;animation:lavaMove3 3.1s ease-in-out infinite .8s}
 
   .blessingRow.unlockedNature{border-color:#8fe89c;background:rgba(60,150,75,.12);
     animation:blessingNatureGlow 2.2s ease-in-out infinite}

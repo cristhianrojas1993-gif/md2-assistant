@@ -1,4 +1,4 @@
-const APP_VERSION = '20260729e';
+const APP_VERSION = '20260729f';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -2095,7 +2095,7 @@ function mageSkillBaseName(name) {
   return (name || '').replace(/\s+(I{1,3}|IV|V)$/i, '').trim().toLowerCase();
 }
 function spinTalismanThenRender(x) {
-  save();
+  setTimeout(save, 60);
   const rot = (x.mage.totalRotations || 0) * 90;
   const arrowEl = document.getElementById('svgArrowGroup');
   const clawsEl = document.getElementById('clawsGroup');
@@ -2106,6 +2106,89 @@ function spinTalismanThenRender(x) {
   } else {
     renderHero();
   }
+}
+function bindTalismanDrag(x) {
+  const touchArea = document.getElementById('talismanCoreTouch');
+  const arrowEl = document.getElementById('svgArrowGroup');
+  const clawsEl = document.getElementById('clawsGroup');
+  if (!touchArea || !arrowEl || !clawsEl)
+    return;
+  let dragging = false, centerX = 0, centerY = 0, lastAngle = 0, startRotation = 0, accumulatedDelta = 0, pendingRotation = null, rafScheduled = false;
+
+  function angleAt(e) {
+    return Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+  }
+
+  function applyPending() {
+    rafScheduled = false;
+    if (pendingRotation === null)
+      return;
+    arrowEl.style.transform = `rotate(${ pendingRotation }deg)`;
+    clawsEl.style.transform = `rotate(${ pendingRotation }deg)`;
+    pendingRotation = null;
+  }
+
+  touchArea.addEventListener('pointerdown', e => {
+    dragging = true;
+    const r = touchArea.getBoundingClientRect();
+    centerX = r.left + r.width / 2;
+    centerY = r.top + r.height / 2;
+    lastAngle = angleAt(e);
+    startRotation = (x.mage.totalRotations || 0) * 90;
+    accumulatedDelta = 0;
+    arrowEl.style.transition = 'none';
+    clawsEl.style.transition = 'none';
+    touchArea.setPointerCapture(e.pointerId);
+  });
+  touchArea.addEventListener('pointermove', e => {
+    if (!dragging)
+      return;
+    const angle = angleAt(e);
+    let step = angle - lastAngle;
+    if (step > 180)
+      step -= 360;
+    if (step < -180)
+      step += 360;
+    accumulatedDelta += step;
+    lastAngle = angle;
+    pendingRotation = startRotation + accumulatedDelta;
+    if (!rafScheduled) {
+      rafScheduled = true;
+      requestAnimationFrame(applyPending);
+    }
+  });
+  touchArea.addEventListener('pointerup', () => {
+    if (!dragging)
+      return;
+    dragging = false;
+    arrowEl.style.transition = '';
+    clawsEl.style.transition = '';
+    const netDelta = Math.round(accumulatedDelta / 90);
+    const faceDelta = ((netDelta % 4) + 4) % 4;
+    if (faceDelta === 0) {
+      arrowEl.style.transform = `rotate(${ startRotation }deg)`;
+      clawsEl.style.transform = `rotate(${ startRotation }deg)`;
+      return;
+    }
+    if (x.mana < 1) {
+      arrowEl.style.transform = `rotate(${ startRotation }deg)`;
+      clawsEl.style.transform = `rotate(${ startRotation }deg)`;
+      alert('No tienes maná suficiente para girar el Talismán.');
+      say('Maná insuficiente.');
+      return;
+    }
+    x.mana--;
+    x.mage.totalRotations = (x.mage.totalRotations || 0) + netDelta;
+    x.mage.amulet = ((x.mage.totalRotations % 4) + 4) % 4;
+    const finalRot = startRotation + netDelta * 90;
+    arrowEl.style.transform = `rotate(${ finalRot }deg)`;
+    clawsEl.style.transform = `rotate(${ finalRot }deg)`;
+    let a = x.mage.slots[x.mage.amulet];
+    log(`${ x.name } gasta 1 maná para girar el Talismán.`);
+    setTimeout(save, 60);
+    setTimeout(() => renderHero(), 1150);
+    say(`Talismán girado. Activa: ${ a.name }.`);
+  });
 }
 function talismanFullHtml(x) {
   if (x.mage.pendingReplacement && x.mage.pendingReplacementSlot !== null && x.mage.pendingReplacementSlot !== undefined) {
@@ -2126,7 +2209,7 @@ function talismanFullHtml(x) {
     <div class="runeStone e ${ a === 1 ? 'active usable' : '' }" ${ a === 1 ? `data-use-talisman="1"` : '' }><span class="num">Cara 2${ a === 1 ? ' · ACTIVA' : '' }</span><span class="name">${ s1.name }</span><span class="cost">${ s1.manaCost } maná</span></div>
     <div class="runeStone s ${ a === 2 ? 'active usable' : '' }" ${ a === 2 ? `data-use-talisman="2"` : '' }><span class="num">Cara 3${ a === 2 ? ' · ACTIVA' : '' }</span><span class="name">${ s2.name }</span><span class="cost">${ s2.manaCost } maná</span></div>
     <div class="runeStone w ${ a === 3 ? 'active usable' : '' }" ${ a === 3 ? `data-use-talisman="3"` : '' }><span class="num">Cara 4${ a === 3 ? ' · ACTIVA' : '' }</span><span class="name">${ s3.name }</span><span class="cost">${ s3.manaCost } maná</span></div>
-    <div class="talismanCore">
+    <div class="talismanCore" id="talismanCoreTouch">
       <svg class="coreArtifactSvg" viewBox="0 0 120 120">
         <defs>
           <radialGradient id="sharedGold" gradientUnits="userSpaceOnUse" cx="53" cy="43" r="130">
@@ -2160,7 +2243,7 @@ function talismanFullHtml(x) {
           <path d="M47.2,19.4 L51.9,16.3 L43.8,13.4 L55.4,3.6 L49.6,1.6 L60.0,-16.0 L70.4,1.6 L64.6,3.6 L76.2,13.4 L68.1,16.3 L72.8,19.4 L100.6,11.3 L97.1,40.3 L118.0,60.0 L97.1,79.7 L100.6,108.7 L72.8,100.6 L60.0,118.0 L47.2,100.6 L19.4,108.7 L22.9,79.7 L2.0,60.0 L22.9,40.3 L19.4,11.3 Z" fill="url(#sheenStreak)"/>
         </g>
         <clipPath id="artifactClip"><path d="M47.2,19.4 L51.9,16.3 L43.8,13.4 L55.4,3.6 L49.6,1.6 L60.0,-16.0 L70.4,1.6 L64.6,3.6 L76.2,13.4 L68.1,16.3 L72.8,19.4 L100.6,11.3 L97.1,40.3 L118.0,60.0 L97.1,79.7 L100.6,108.7 L72.8,100.6 L60.0,118.0 L47.2,100.6 L19.4,108.7 L22.9,79.7 L2.0,60.0 L22.9,40.3 L19.4,11.3 Z"/></clipPath>
-        <g id="clawsGroup" style="transform-origin:60px 60px;transform-box:view-box;transition:transform 1.1s cubic-bezier(.4,1.4,.4,1);transform:rotate(${ rot }deg)">
+        <g id="clawsGroup" style="transform-origin:60px 60px;transform-box:view-box;transition:transform 1.1s cubic-bezier(.4,1.4,.4,1);will-change:transform;transform:rotate(${ rot }deg)">
           <path d="M52,32 L68,32 L60,39 Z" fill="url(#sharedGold)" stroke="#000" stroke-width="0.6"/>
           <path d="M52,88 L68,88 L60,81 Z" fill="url(#sharedGold)" stroke="#000" stroke-width="0.6"/>
           <path d="M32,52 L32,68 L39,60 Z" fill="url(#sharedGold)" stroke="#000" stroke-width="0.6"/>
@@ -2173,7 +2256,7 @@ function talismanFullHtml(x) {
       </div>
     </div>
     <div class="goldRing3"><div class="runeSymbol3" style="transform:rotate(0deg) translateY(-50px) rotate(-0deg)">ᛊ</div><div class="runeSymbol3" style="transform:rotate(30deg) translateY(-50px) rotate(-30deg)">ᛋ</div><div class="runeSymbol3" style="transform:rotate(60deg) translateY(-50px) rotate(-60deg)">ᛇ</div><div class="runeSymbol3" style="transform:rotate(90deg) translateY(-50px) rotate(-90deg)">ᛈ</div><div class="runeSymbol3" style="transform:rotate(120deg) translateY(-50px) rotate(-120deg)">ᛉ</div><div class="runeSymbol3" style="transform:rotate(150deg) translateY(-50px) rotate(-150deg)">ᚺ</div><div class="runeSymbol3" style="transform:rotate(180deg) translateY(-50px) rotate(-180deg)">ᚾ</div><div class="runeSymbol3" style="transform:rotate(210deg) translateY(-50px) rotate(-210deg)">ᛁ</div><div class="runeSymbol3" style="transform:rotate(240deg) translateY(-50px) rotate(-240deg)">ᛃ</div><div class="runeSymbol3" style="transform:rotate(270deg) translateY(-50px) rotate(-270deg)">ᚹ</div><div class="runeSymbol3" style="transform:rotate(300deg) translateY(-50px) rotate(-300deg)">ᚲ</div><div class="runeSymbol3" style="transform:rotate(330deg) translateY(-50px) rotate(-330deg)">ᚷ</div></div>
-  </div><button id="rotateTalisman" class="top" ${ x.mana < 1 ? 'disabled' : '' }>Girar forzado a la siguiente cara (1 maná)</button>`;
+  </div><p class="notice top">Toca y arrastra el artefacto central para forzar el giro (1 maná, sin importar cuánto gires — siempre encaja en la cara más cercana).</p>`;
 }
 function classHtml(x) {
   if (x.cls === 'rogue')
@@ -2692,20 +2775,7 @@ function bindClass(x) {
       spinTalismanThenRender(x);
       say(`${ face.name }. ${ face.type === 'ataque' ? 'Recuerda que necesitas un arma con alcance mágico equipada para usar hechizos de ataque. ' : '' }El Talismán gira. Cara activa ahora: ${ nextFace.name }.`);
     });
-    if ($('rotateTalisman'))
-      $('rotateTalisman').onclick = () => {
-        if (x.mana < 1)
-          return alert('No tienes maná suficiente para girar el Talismán.');
-        if (!confirm('¿Gastar 1 maná para girar el Talismán a la siguiente cara?'))
-          return;
-        x.mana--;
-        x.mage.amulet = (x.mage.amulet + 1) % 4;
-        x.mage.totalRotations = (x.mage.totalRotations || 0) + 1;
-        let a = x.mage.slots[x.mage.amulet];
-        log(`${ x.name } gasta 1 maná para girar el Talismán.`);
-        spinTalismanThenRender(x);
-        say(`Talismán girado. Activa: ${ a.name }.`);
-      };
+    bindTalismanDrag(x);
     document.querySelectorAll('[data-replace-slot]').forEach(b => b.onclick = () => {
       x.mage.pendingReplacementSlot = +b.dataset.replaceSlot;
       save();

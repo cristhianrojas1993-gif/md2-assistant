@@ -344,10 +344,11 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   font-size:.72rem;font-weight:700;color:var(--arcane-bright,#67e8f9);
   text-shadow:-1px 0 #000,1px 0 #000,0 -1px #000,0 1px #000,-1px -1px #000,1px 1px #000,-1px 1px #000,1px -1px #000,0 0 5px var(--arcane-bright,#67e8f9),0 0 10px rgba(103,232,249,.8);
   animation:runeGlow 3.2s ease-in-out infinite;z-index:2}
-.talismanCore{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:120px;height:120px;z-index:4}
+.talismanCore{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:120px;height:120px;z-index:4;cursor:grab;touch-action:none}
+.talismanCore:active{cursor:grabbing}
 .coreArtifactSvg{position:absolute;inset:0;overflow:visible}
 .coreClawsSvg{position:absolute;inset:0;overflow:visible;z-index:5}
-.svgArrowGroup{transform-origin:60px 60px;transform-box:view-box;transition:transform 1.1s cubic-bezier(.4,1.4,.4,1)}
+.svgArrowGroup{transform-origin:60px 60px;transform-box:view-box;transition:transform 1.1s cubic-bezier(.4,1.4,.4,1);will-change:transform}
 .mountSocket{position:absolute;inset:24px;border-radius:50%;background:#0d0a0f;
   box-shadow:inset 0 3px 8px rgba(0,0,0,.85),0 0 0 3px rgba(0,0,0,.4);z-index:3}
 .coreGem{position:absolute;inset:26px;border-radius:50%;
@@ -356,21 +357,23 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   animation:corePulse 3s ease-in-out infinite;z-index:5}
 @keyframes corePulse{0%,100%{box-shadow:0 0 8px 3px rgba(103,232,249,.6),0 0 20px 6px rgba(255,107,91,.35),inset 0 3px 8px rgba(255,255,255,.55),inset 0 -3px 8px rgba(0,0,0,.4)}50%{box-shadow:0 0 13px 5px rgba(103,232,249,.9),0 0 34px 11px rgba(255,107,91,.65),inset 0 3px 8px rgba(255,255,255,.7),inset 0 -3px 8px rgba(0,0,0,.4)}}
 .runeStone{position:absolute;width:76px;height:76px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:linear-gradient(160deg,#241c2c,#130f18);border:2px solid rgba(219,179,85,.4);
-  box-shadow:0 4px 10px rgba(0,0,0,.5);text-align:center;padding:4px;box-sizing:border-box;z-index:3;
-  transition:box-shadow .3s ease, border-color .3s ease}
+  border:3px solid transparent;background-clip:padding-box, border-box;
+  background-image:linear-gradient(160deg,#f2e8d0,#e8dcbe), linear-gradient(115deg,#fff9e6,#c9971f 30%,#5a3f0a 55%,#fff3c4 70%,#8a6212 90%,#3a2a08);
+  background-origin:padding-box, border-box;
+  box-shadow:0 4px 10px rgba(0,0,0,.5), inset 0 1px 2px rgba(255,255,255,.6), 0 0 10px 1px rgba(80,160,255,.35);text-align:center;padding:4px;box-sizing:border-box;z-index:3;
+  animation:runeStonePulse 2.6s ease-in-out infinite;
+  transition:box-shadow .3s ease}
+@keyframes runeStonePulse{0%,100%{box-shadow:0 4px 10px rgba(0,0,0,.5), inset 0 1px 2px rgba(255,255,255,.6), 0 0 8px 1px rgba(80,160,255,.3)}50%{box-shadow:0 4px 10px rgba(0,0,0,.5), inset 0 1px 2px rgba(255,255,255,.6), 0 0 16px 3px rgba(100,180,255,.65)}}
 .runeStone.n{top:-10px;left:50%;transform:translateX(-50%)}
 .runeStone.e{top:50%;right:-10px;transform:translateY(-50%)}
 .runeStone.s{bottom:-10px;left:50%;transform:translateX(-50%)}
 .runeStone.w{top:50%;left:-10px;transform:translateY(-50%)}
-.runeStone .num{font-family:'Cinzel',serif;font-size:.6rem;color:#8a7d6a}
-.runeStone .name{font-size:.62rem;line-height:1.15;color:#d8cdb8;margin-top:2px}
-.runeStone .cost{font-size:.58rem;color:var(--arcane-bright,#67e8f9);margin-top:2px}
-.runeStone.active{border-color:var(--arcane-bright,#67e8f9);
-  box-shadow:0 0 18px rgba(103,232,249,.65),0 4px 10px rgba(0,0,0,.5);
-  animation:stoneGlow 2.4s ease-in-out infinite}
-@keyframes stoneGlow{0%,100%{box-shadow:0 0 14px rgba(103,232,249,.45),0 4px 10px rgba(0,0,0,.5)}50%{box-shadow:0 0 26px rgba(103,232,249,.8),0 4px 10px rgba(0,0,0,.5)}}
-.runeStone.active .name{color:var(--arcane-bright,#67e8f9);font-weight:600}
+.runeStone .num{font-family:'Cinzel',serif;font-size:.6rem;color:#7a6a4a}
+.runeStone .name{font-size:.62rem;line-height:1.15;color:#2a2015;margin-top:2px;font-weight:600}
+.runeStone .cost{font-size:.58rem;color:#8a5a1a;margin-top:2px;font-weight:700}
+.runeStone.active{animation:stoneGlow 2.4s ease-in-out infinite}
+@keyframes stoneGlow{0%,100%{box-shadow:0 0 14px rgba(103,232,249,.45),0 4px 10px rgba(0,0,0,.5), inset 0 1px 2px rgba(255,255,255,.6)}50%{box-shadow:0 0 26px rgba(103,232,249,.8),0 4px 10px rgba(0,0,0,.5), inset 0 1px 2px rgba(255,255,255,.6)}}
+.runeStone.active .name{color:#1a3a5a;font-weight:700}
 .runeStone.usable{cursor:pointer;transition:transform .15s ease}
 .runeStone.usable:active{transform:scale(.94)}
 

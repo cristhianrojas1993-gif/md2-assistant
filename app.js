@@ -1,4 +1,4 @@
-const APP_VERSION = '20260729a';
+const APP_VERSION = '20260729c';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -1732,7 +1732,7 @@ function renderHero() {
   let activeSec = document.querySelector('.sectionTabs [data-sec].active')?.dataset.sec;
   if (x.cls === 'mage' && x.mage.pendingReplacement)
     activeSec = 'talisman';
-  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }${ getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive ? `<div><small>Corrupción propia</small><b>${ x.personalCorruption || 0 } 😈</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }${ x.cls === 'mage' ? `<button data-sec="talisman" class="${ activeSec === 'talisman' ? 'active' : '' }">Talismán</button>` : '' }</div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }${ x.cls === 'mage' ? `<div id="sec-talisman" class="heroSection ${ activeSec === 'talisman' ? 'active' : '' }"><div class="card"><h2>Talismán Arcano</h2>${ talismanFullHtml(x) }</div></div>` : '' }`;
+  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }${ getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive ? `<div><small>Corrupción propia</small><b>${ x.personalCorruption || 0 } 😈</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }${ x.cls === 'shaman' ? `<button data-sec="elements" class="${ activeSec === 'elements' ? 'active' : '' }">Elementos</button>` : '' }${ x.cls === 'mage' ? `<button data-sec="talisman" class="${ activeSec === 'talisman' ? 'active' : '' }">Talismán</button>` : '' }</div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }${ x.cls === 'shaman' ? `<div id="sec-elements" class="heroSection ${ activeSec === 'elements' ? 'active' : '' }"><div class="card"><h2>Tablero de Elementos</h2>${ shamanElementsBoardHtml(x) }</div></div>` : '' }${ x.cls === 'mage' ? `<div id="sec-talisman" class="heroSection ${ activeSec === 'talisman' ? 'active' : '' }"><div class="card"><h2>Talismán Arcano</h2>${ talismanFullHtml(x) }</div></div>` : '' }`;
   if (x.unconscious)
     $('heroHeaderCard')?.classList.add('ko-fx');
   document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
@@ -1741,7 +1741,7 @@ function renderHero() {
     document.querySelectorAll('.heroSection').forEach(q => q.classList.remove('active'));
     $('sec-' + b.dataset.sec).classList.add('active');
     if (x.cls === 'shaman' && document.getElementById('fireMedallionCircle'))
-      bindShamanElementBoard(x, true);
+      requestAnimationFrame(() => requestAnimationFrame(() => bindShamanElementBoard(x, true)));
   });
   bindHero();
 }
@@ -1902,6 +1902,14 @@ function shamanElementsBoardHtml(x) {
   `;
 }
 function bindShamanElementBoard(x, positionOnly) {
+  if (!window.__shamanResizeBound) {
+    window.__shamanResizeBound = true;
+    window.addEventListener('resize', () => {
+      const cur = h();
+      if (cur && cur.cls === 'shaman' && document.getElementById('fireMedallionCircle'))
+        bindShamanElementBoard(cur, true);
+    });
+  }
   const configs = [
     { prefix: 'fire', trail: 'lavaTrail' },
     { prefix: 'water', trail: 'waterTrail' },
@@ -1994,20 +2002,32 @@ function bindShamanElementBoard(x, positionOnly) {
       const stack = document.getElementById(prefix + 'Stack');
       if (!medallion || !stack)
         return;
-      let dragging = false, offsetY = 0;
+      let dragging = false, offsetY = 0, cachedStackTop = 0, pendingY = null, rafScheduled = false;
+
+      function applyPendingMove() {
+        rafScheduled = false;
+        if (pendingY === null)
+          return;
+        medallion.style.top = pendingY + 'px';
+        pendingY = null;
+      }
 
       medallion.addEventListener('pointerdown', e => {
         dragging = true;
         const r = medallion.getBoundingClientRect();
         offsetY = e.clientY - r.top;
+        cachedStackTop = stack.getBoundingClientRect().top;
         medallion.style.transition = 'none';
         medallion.setPointerCapture(e.pointerId);
       });
       medallion.addEventListener('pointermove', e => {
         if (!dragging)
           return;
-        const stackRect = stack.getBoundingClientRect();
-        medallion.style.top = (e.clientY - stackRect.top - offsetY) + 'px';
+        pendingY = e.clientY - cachedStackTop - offsetY;
+        if (!rafScheduled) {
+          rafScheduled = true;
+          requestAnimationFrame(applyPendingMove);
+        }
       });
       medallion.addEventListener('pointerup', e => {
         if (!dragging)
@@ -2057,7 +2077,7 @@ function bindShamanElementBoard(x, positionOnly) {
 
 function shamanHtml(x) {
   const inFlow = x.flow.type === 'attack' || x.flow.type === 'defense';
-  const elementsBlock = inFlow ? `<p class="notice">Estás en tu Turno (${ x.flow.type === 'attack' ? 'Ataque' : 'Defensa' }). Los controles de Elementos y Hechizos están disponibles ahí, en la pestaña Turno.</p>` : `${ shamanElementsBoardHtml(x) }<h3>Hechizos disponibles</h3>${ shamanAbilityControls(x) }`;
+  const elementsBlock = inFlow ? `<p class="notice">Estás en tu Turno (${ x.flow.type === 'attack' ? 'Ataque' : 'Defensa' }). Los controles de Elementos y Hechizos están disponibles ahí, en la pestaña Turno.</p>` : `<p class="notice">Revisa la pestaña Elementos para ver y usar tu Tablero de Elementos.</p><h3>Hechizos disponibles</h3>${ shamanAbilityControls(x) }`;
   return `${ elementsBlock }<p class="notice">Revisa la pestaña Espíritus para ver y gestionar tus invocaciones.</p>`;
 }
 function mageSkillBaseName(name) {
@@ -2091,10 +2111,10 @@ function talismanFullHtml(x) {
   return `<div class="talismanWheel">
     <div class="goldRing"><div class="runeSymbol" style="transform:rotate(0deg) translateY(-114px) rotate(-0deg)">ᚠ</div><div class="runeSymbol" style="transform:rotate(15deg) translateY(-114px) rotate(-15deg)">ᚢ</div><div class="runeSymbol" style="transform:rotate(30deg) translateY(-114px) rotate(-30deg)">ᚦ</div><div class="runeSymbol" style="transform:rotate(45deg) translateY(-114px) rotate(-45deg)">ᚨ</div><div class="runeSymbol" style="transform:rotate(60deg) translateY(-114px) rotate(-60deg)">ᚱ</div><div class="runeSymbol" style="transform:rotate(75deg) translateY(-114px) rotate(-75deg)">ᚲ</div><div class="runeSymbol" style="transform:rotate(90deg) translateY(-114px) rotate(-90deg)">ᚷ</div><div class="runeSymbol" style="transform:rotate(105deg) translateY(-114px) rotate(-105deg)">ᚹ</div><div class="runeSymbol" style="transform:rotate(120deg) translateY(-114px) rotate(-120deg)">ᚺ</div><div class="runeSymbol" style="transform:rotate(135deg) translateY(-114px) rotate(-135deg)">ᚾ</div><div class="runeSymbol" style="transform:rotate(150deg) translateY(-114px) rotate(-150deg)">ᛁ</div><div class="runeSymbol" style="transform:rotate(165deg) translateY(-114px) rotate(-165deg)">ᛃ</div><div class="runeSymbol" style="transform:rotate(180deg) translateY(-114px) rotate(-180deg)">ᛇ</div><div class="runeSymbol" style="transform:rotate(195deg) translateY(-114px) rotate(-195deg)">ᛈ</div><div class="runeSymbol" style="transform:rotate(210deg) translateY(-114px) rotate(-210deg)">ᛉ</div><div class="runeSymbol" style="transform:rotate(225deg) translateY(-114px) rotate(-225deg)">ᛊ</div><div class="runeSymbol" style="transform:rotate(240deg) translateY(-114px) rotate(-240deg)">ᛏ</div><div class="runeSymbol" style="transform:rotate(255deg) translateY(-114px) rotate(-255deg)">ᛒ</div><div class="runeSymbol" style="transform:rotate(270deg) translateY(-114px) rotate(-270deg)">ᛖ</div><div class="runeSymbol" style="transform:rotate(285deg) translateY(-114px) rotate(-285deg)">ᛗ</div><div class="runeSymbol" style="transform:rotate(300deg) translateY(-114px) rotate(-300deg)">ᛚ</div><div class="runeSymbol" style="transform:rotate(315deg) translateY(-114px) rotate(-315deg)">ᛜ</div><div class="runeSymbol" style="transform:rotate(330deg) translateY(-114px) rotate(-330deg)">ᛞ</div><div class="runeSymbol" style="transform:rotate(345deg) translateY(-114px) rotate(-345deg)">ᛟ</div></div>
     <div class="goldRing2"><div class="runeSymbol2" style="transform:rotate(0deg) translateY(-85px) rotate(-0deg)">ᛞ</div><div class="runeSymbol2" style="transform:rotate(30deg) translateY(-85px) rotate(-30deg)">ᛏ</div><div class="runeSymbol2" style="transform:rotate(60deg) translateY(-85px) rotate(-60deg)">ᛒ</div><div class="runeSymbol2" style="transform:rotate(90deg) translateY(-85px) rotate(-90deg)">ᛖ</div><div class="runeSymbol2" style="transform:rotate(120deg) translateY(-85px) rotate(-120deg)">ᛗ</div><div class="runeSymbol2" style="transform:rotate(150deg) translateY(-85px) rotate(-150deg)">ᛚ</div><div class="runeSymbol2" style="transform:rotate(180deg) translateY(-85px) rotate(-180deg)">ᛜ</div><div class="runeSymbol2" style="transform:rotate(210deg) translateY(-85px) rotate(-210deg)">ᚠ</div><div class="runeSymbol2" style="transform:rotate(240deg) translateY(-85px) rotate(-240deg)">ᚢ</div><div class="runeSymbol2" style="transform:rotate(270deg) translateY(-85px) rotate(-270deg)">ᚦ</div><div class="runeSymbol2" style="transform:rotate(300deg) translateY(-85px) rotate(-300deg)">ᚨ</div><div class="runeSymbol2" style="transform:rotate(330deg) translateY(-85px) rotate(-330deg)">ᚱ</div></div>
-    <div class="runeStone n ${ a === 0 ? 'active' : '' }"><span class="num">Cara 1${ a === 0 ? ' · ACTIVA' : '' }</span><span class="name">${ s0.name }</span><span class="cost">${ s0.manaCost } maná</span>${ a === 0 ? `<button data-use-talisman="0" ${ x.mana < s0.manaCost ? 'disabled' : '' } class="top">Usar capacidad</button>` : '' }</div>
-    <div class="runeStone e ${ a === 1 ? 'active' : '' }"><span class="num">Cara 2${ a === 1 ? ' · ACTIVA' : '' }</span><span class="name">${ s1.name }</span><span class="cost">${ s1.manaCost } maná</span>${ a === 1 ? `<button data-use-talisman="1" ${ x.mana < s1.manaCost ? 'disabled' : '' } class="top">Usar capacidad</button>` : '' }</div>
-    <div class="runeStone s ${ a === 2 ? 'active' : '' }"><span class="num">Cara 3${ a === 2 ? ' · ACTIVA' : '' }</span><span class="name">${ s2.name }</span><span class="cost">${ s2.manaCost } maná</span>${ a === 2 ? `<button data-use-talisman="2" ${ x.mana < s2.manaCost ? 'disabled' : '' } class="top">Usar capacidad</button>` : '' }</div>
-    <div class="runeStone w ${ a === 3 ? 'active' : '' }"><span class="num">Cara 4${ a === 3 ? ' · ACTIVA' : '' }</span><span class="name">${ s3.name }</span><span class="cost">${ s3.manaCost } maná</span>${ a === 3 ? `<button data-use-talisman="3" ${ x.mana < s3.manaCost ? 'disabled' : '' } class="top">Usar capacidad</button>` : '' }</div>
+    <div class="runeStone n ${ a === 0 ? 'active usable' : '' }" ${ a === 0 ? `data-use-talisman="0"` : '' }><span class="num">Cara 1${ a === 0 ? ' · ACTIVA' : '' }</span><span class="name">${ s0.name }</span><span class="cost">${ s0.manaCost } maná</span></div>
+    <div class="runeStone e ${ a === 1 ? 'active usable' : '' }" ${ a === 1 ? `data-use-talisman="1"` : '' }><span class="num">Cara 2${ a === 1 ? ' · ACTIVA' : '' }</span><span class="name">${ s1.name }</span><span class="cost">${ s1.manaCost } maná</span></div>
+    <div class="runeStone s ${ a === 2 ? 'active usable' : '' }" ${ a === 2 ? `data-use-talisman="2"` : '' }><span class="num">Cara 3${ a === 2 ? ' · ACTIVA' : '' }</span><span class="name">${ s2.name }</span><span class="cost">${ s2.manaCost } maná</span></div>
+    <div class="runeStone w ${ a === 3 ? 'active usable' : '' }" ${ a === 3 ? `data-use-talisman="3"` : '' }><span class="num">Cara 4${ a === 3 ? ' · ACTIVA' : '' }</span><span class="name">${ s3.name }</span><span class="cost">${ s3.manaCost } maná</span></div>
     <div class="talismanCore">
       <svg class="coreArtifactSvg" viewBox="0 0 120 120">
         <defs>

@@ -371,8 +371,16 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   animation:stoneGlow 2.4s ease-in-out infinite}
 @keyframes stoneGlow{0%,100%{box-shadow:0 0 14px rgba(103,232,249,.45),0 4px 10px rgba(0,0,0,.5)}50%{box-shadow:0 0 26px rgba(103,232,249,.8),0 4px 10px rgba(0,0,0,.5)}}
 .runeStone.active .name{color:var(--arcane-bright,#67e8f9);font-weight:600}
+.runeStone.usable{cursor:pointer;transition:transform .15s ease}
+.runeStone.usable:active{transform:scale(.94)}
 
 /* ============ TABLERO DE ELEMENTOS DEL CHAMÁN ============ */
+/* Optimización de rendimiento: pausar TODAS las animaciones cuando la pestaña no está visible,
+   y limitar el área de repintado del navegador a la zona del tablero */
+.heroSection:not(.active) .elementsBoard,
+.heroSection:not(.active) .elementsBoard *{animation-play-state:paused!important}
+.elementsBoard{contain:layout style paint;will-change:auto}
+.petal,.petal::after{will-change:box-shadow}
 
   /* marco tipo tablero, bordes teal/dorado */
   .elementsBoard{width:100%;max-width:360px;border:5px solid transparent;border-radius:10px;background-clip:padding-box, border-box;
@@ -380,7 +388,7 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
     background-origin:padding-box, border-box;background-size:100% 100%, 260% 260%;background-position:0 0, 0% 50%;
     animation:goldFrameShimmer 26s linear infinite;
     box-shadow:inset 0 0 20px rgba(0,0,0,.5), 0 4px 14px rgba(0,0,0,.5), 0 0 0 1px #1a1004;
-    padding:14px 10px}
+    padding:14px 10px;margin-bottom:24px}
   @keyframes goldFrameShimmer{0%{background-position:0 0, 0% 50%}100%{background-position:0 0, 260% 50%}}
   .boardRule{font-family:'Cinzel',serif;font-size:.68rem;text-align:center;color:#1a1204;line-height:1.4;
     border:6px solid transparent;border-radius:4px;background-clip:padding-box, border-box;
@@ -451,6 +459,7 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
     animation:magmaGlow 2.4s ease-in-out infinite}
   @keyframes magmaGlow{0%,100%{box-shadow:0 0 10px 2px rgba(255,120,50,.55),inset 0 2px 4px rgba(255,220,150,.35)}50%{box-shadow:0 0 18px 5px rgba(255,150,60,.85),inset 0 2px 4px rgba(255,220,150,.5)}}
   .fireSlot .lvl{color:#6b6058}
+.fireMedallion,.waterEnergy,.airEnergy,.natureEnergy{will-change:top;transform:translateZ(0)}
   .fireMedallion{position:absolute;left:50%;margin:0 0 0 -22px;z-index:20;cursor:grab;touch-action:none;box-sizing:border-box;
     transition:top .3s cubic-bezier(.4,1.4,.4,1);
     background:radial-gradient(circle at 50% 60%, #7a2410, #3a1006)!important;

@@ -1,4 +1,4 @@
-const APP_VERSION = '20260728d';
+const APP_VERSION = '20260729a';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -376,7 +376,8 @@ function makeHero(cls = 'rogue') {
       amulet: 0,
       slots: MD2.talismanDefaults.map(q => ({ ...q })),
       pendingReplacement: null,
-      pendingReplacementSlot: null
+      pendingReplacementSlot: null,
+      totalRotations: 0
     },
     berserker: {
       fury: 0,
@@ -567,6 +568,8 @@ s.heroes.forEach(x => {
     x.mage.pendingReplacement = null;
   if (x.mage && x.mage.pendingReplacementSlot === undefined)
     x.mage.pendingReplacementSlot = null;
+  if (x.mage && x.mage.totalRotations === undefined)
+    x.mage.totalRotations = x.mage.amulet || 0;
   if (!x.choices || typeof x.choices !== 'object')
     x.choices = { 1: null };
   if (!x.lockedChoices || typeof x.lockedChoices !== 'object')
@@ -1722,15 +1725,8 @@ function renderHero() {
     return;
   }
   if (x.cls === 'shaman' && !x.shaman.elementBoostDone && !x.unconscious && !pending(x)) {
-    $('heroPage').innerHTML = `<div class="card"><h2>Aumenta un Elemento</h2><p class="notice">Al inicio de tu turno debes aumentar cualquier Elemento en 1. Elige uno para continuar.</p><div class="resource">${ shamanElementControls(x, true) }</div></div>`;
-    document.querySelectorAll('[data-boost-el]').forEach(b => b.onclick = () => {
-      x.shaman[b.dataset.boostEl] = Math.min(4, x.shaman[b.dataset.boostEl] + 1);
-      x.shaman.elementBoostDone = true;
-      log(`${ x.name } aumenta ${ MD2.shamanElements[b.dataset.boostEl] } en 1 (obligatorio de inicio de turno).`);
-      save();
-      renderHero();
-      say(`Aumentas ${ MD2.shamanElements[b.dataset.boostEl] }.`);
-    });
+    $('heroPage').innerHTML = `<div class="card"><h2>Aumenta un Elemento</h2><p class="notice">Al inicio de tu turno debes aumentar cualquier Elemento en 1. Toca el medallón del elemento que quieras aumentar.</p>${ shamanElementsBoardHtml(x) }</div>`;
+    bindShamanElementBoard(x);
     return;
   }
   let activeSec = document.querySelector('.sectionTabs [data-sec].active')?.dataset.sec;
@@ -1744,6 +1740,8 @@ function renderHero() {
     b.classList.add('active');
     document.querySelectorAll('.heroSection').forEach(q => q.classList.remove('active'));
     $('sec-' + b.dataset.sec).classList.add('active');
+    if (x.cls === 'shaman' && document.getElementById('fireMedallionCircle'))
+      bindShamanElementBoard(x, true);
   });
   bindHero();
 }
@@ -1838,22 +1836,245 @@ function shamanSpiritHtml(x) {
     return `<div class="spiritCard"><div class="row between"><b>${ p.name }</b><span class="badge">Vida ${ p.hp }/${ p.hpMax }</span></div><p>🛡 Defensa ${ p.defense } · ⚔ ${ p.attack }</p><p>${ p.effect }</p><p class="muted">${ p.usedFreeAction ? 'Su próxima acción este turno costará 1 acción del Chamán.' : 'Su próxima acción este turno es gratuita.' }</p><div class="row"><button data-spirit-dmg="${ x.shaman.spirits.indexOf(p) }">− Vida</button><button data-spirit-heal="${ x.shaman.spirits.indexOf(p) }">+ Vida</button><button data-spirit-turn="${ x.shaman.spirits.indexOf(p) }">Actuar (${ p.usedFreeAction ? '1 acción' : 'gratis' })</button></div></div>`;
   }).join('');
 }
+function shamanElementsBoardHtml(x) {
+  return `
+  <div class="elementsBoard">
+    <div class="boardRule">La primera vez que cada Elemento alcance el Máx., puedes gastarlo entero para activar su Bendición permanente hasta el final de la misión.</div>
+    <div class="elementsGrid">
+      <div class="elementCol fire">
+        <div class="petalStack" id="fireStack">
+          <div class="tunnel"><div class="tunnelFill fireFill" id="fireTunnelFill" style="height:0%"></div></div>
+          <div class="petal fireSlot" id="fire-circle-4" data-level="4"><span class="lvl">Máx</span></div>
+          <div class="petal fireSlot" id="fire-circle-3" data-level="3"></div>
+          <div class="petal fireSlot" id="fire-circle-2" data-level="2"></div>
+          <div class="petal fireSlot" id="fire-circle-1" data-level="1"></div>
+          <div class="petal symbolCell fireSlot fireBaseLit" id="fire-circle-0" data-level="0"><div class="lavaTrail ft1"></div><div class="lavaTrail ft2"></div><div class="lavaTrail ft3"></div></div>
+          <div class="petal fireMedallion" id="fireMedallionCircle" style="top:-9999px"><div class="lavaBlob b1"></div><div class="lavaBlob b2"></div><div class="lavaBlob b3"></div><span class="lvl">🔥</span></div>
+        </div>
+      </div>
+      <div class="elementCol water">
+        <div class="petalStack" id="waterStack">
+          <div class="tunnel"><div class="tunnelFill waterFill" id="waterTunnelFill" style="height:0%"></div></div>
+          <div class="petal waterSlot" id="water-circle-4" data-level="4"><span class="lvl">Máx</span></div>
+          <div class="petal waterSlot" id="water-circle-3" data-level="3"></div>
+          <div class="petal waterSlot" id="water-circle-2" data-level="2"></div>
+          <div class="petal waterSlot" id="water-circle-1" data-level="1"></div>
+          <div class="petal symbolCell waterSlot waterBaseLit" id="water-circle-0" data-level="0"><div class="waterTrail wt1"></div><div class="waterTrail wt2"></div><div class="waterTrail wt3"></div></div>
+          <div class="petal waterEnergy" id="waterMedallionCircle" style="top:-9999px"><div class="waterBlob wb1"></div><div class="waterBlob wb2"></div><div class="waterBlob wb3"></div><span class="lvl">💧</span></div>
+        </div>
+      </div>
+      <div class="elementCol air">
+        <div class="petalStack" id="airStack">
+          <div class="tunnel"><div class="tunnelFill airFill" id="airTunnelFill" style="height:0%"></div></div>
+          <div class="petal airSlot" id="air-circle-4" data-level="4"><span class="lvl">Máx</span></div>
+          <div class="petal airSlot" id="air-circle-3" data-level="3"></div>
+          <div class="petal airSlot" id="air-circle-2" data-level="2"></div>
+          <div class="petal airSlot" id="air-circle-1" data-level="1"></div>
+          <div class="petal symbolCell airSlot airBaseLit" id="air-circle-0" data-level="0"><div class="airTrail at1"></div><div class="airTrail at2"></div><div class="airTrail at3"></div></div>
+          <div class="petal airEnergy" id="airMedallionCircle" style="top:-9999px"><div class="airBlob ab1"></div><div class="airBlob ab2"></div><div class="airBlob ab3"></div><svg class="airIcon" viewBox="0 0 40 40" width="22" height="22"><path d="M6,15 Q14,10 20,15 T34,15" fill="none" stroke="#eaf7ff" stroke-width="2.4" stroke-linecap="round"/><path d="M6,25 Q14,30 20,25 T34,25" fill="none" stroke="#eaf7ff" stroke-width="2.4" stroke-linecap="round" transform="scale(-1,1) translate(-40,0)"/></svg></div>
+        </div>
+      </div>
+      <div class="elementCol nature">
+        <div class="petalStack" id="natureStack">
+          <div class="tunnel"><div class="tunnelFill natureFill" id="natureTunnelFill" style="height:0%"></div></div>
+          <div class="petal natureSlot" id="nature-circle-4" data-level="4"><span class="lvl">Máx</span></div>
+          <div class="petal natureSlot" id="nature-circle-3" data-level="3"></div>
+          <div class="petal natureSlot" id="nature-circle-2" data-level="2"></div>
+          <div class="petal natureSlot" id="nature-circle-1" data-level="1"></div>
+          <div class="petal symbolCell natureSlot natureBaseLit" id="nature-circle-0" data-level="0"><div class="natureTrail nt1"></div><div class="natureTrail nt2"></div><div class="natureTrail nt3"></div></div>
+          <div class="petal natureEnergy" id="natureMedallionCircle" style="top:-9999px"><div class="natureBlob nb1"></div><div class="natureBlob nb2"></div><div class="natureBlob nb3"></div><span class="lvl">🌿</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button id="consumeFireBtn" class="rotateBtn" style="display:none;margin-top:14px;background:linear-gradient(180deg,#ff9f5a,#e0562a 60%,#7a1a08);box-shadow:0 3px 0 #4a0e02,0 5px 10px rgba(224,86,42,.4),inset 0 1px 0 rgba(255,255,255,.35)">Consumir Fuego (activar Bendición)</button>
+  <button id="consumeWaterBtn" class="rotateBtn" style="display:none;margin-top:8px;background:linear-gradient(180deg,#7fd0ff,#2f74d6 60%,#0a2a66);box-shadow:0 3px 0 #051433,0 5px 10px rgba(47,116,214,.4),inset 0 1px 0 rgba(255,255,255,.35)">Consumir Agua (activar Bendición)</button>
+  <button id="consumeAirBtn" class="rotateBtn" style="display:none;margin-top:8px;background:linear-gradient(180deg,#eaf7ff,#8fc2d6 60%,#2d4d59);box-shadow:0 3px 0 #16262b,0 5px 10px rgba(143,194,214,.4),inset 0 1px 0 rgba(255,255,255,.35);color:#1a2226">Consumir Aire (activar Bendición)</button>
+  <button id="consumeNatureBtn" class="rotateBtn" style="display:none;margin-top:8px;background:linear-gradient(180deg,#8fe89c,#2f8a3e 60%,#081f0c);box-shadow:0 3px 0 #040f06,0 5px 10px rgba(47,138,62,.4),inset 0 1px 0 rgba(255,255,255,.35)">Consumir Naturaleza (activar Bendición)</button>
+  <div class="blessingsList">
+    <div class="blessingRow" id="blessingFire"><div class="dot"></div><div class="txt"><b>Bendición de Fuego</b>Ataque: +1 dado amarillo.</div></div>
+    <div class="blessingRow" id="blessingWater"><div class="dot"></div><div class="txt"><b>Bendición de Agua</b>Ataque: mueve al defensor 1 Zona.</div></div>
+    <div class="blessingRow" id="blessingAir"><div class="dot"></div><div class="txt"><b>Bendición de Aire</b>Movimiento: +1 PM.</div></div>
+    <div class="blessingRow" id="blessingNature"><div class="dot"></div><div class="txt"><b>Bendición de Naturaleza</b>Los Espíritus tienen +1 Vida.</div></div>
+  </div>
+</div>
+  `;
+}
+function bindShamanElementBoard(x, positionOnly) {
+  const configs = [
+    { prefix: 'fire', trail: 'lavaTrail' },
+    { prefix: 'water', trail: 'waterTrail' },
+    { prefix: 'air', trail: 'airTrail' },
+    { prefix: 'nature', trail: 'natureTrail' }
+  ];
+  configs.forEach(({ prefix, trail }) => {
+    const LAVA_HTML = `<div class="${ trail } ${ prefix[0] }t1"></div><div class="${ trail } ${ prefix[0] }t2"></div><div class="${ trail } ${ prefix[0] }t3"></div>`;
+    const capName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+
+    function updateFill(level) {
+      for (let i = 1; i <= 4; i++) {
+        const circle = document.getElementById(prefix + '-circle-' + i);
+        if (!circle)
+          continue;
+        const isLit = i <= level;
+        circle.classList.toggle(prefix + 'BaseLit', isLit);
+        const hasTrail = circle.querySelector('.' + trail);
+        if (isLit && !hasTrail) {
+          const lvlSpan = circle.querySelector('.lvl');
+          circle.insertAdjacentHTML('afterbegin', LAVA_HTML);
+          if (lvlSpan)
+            circle.appendChild(lvlSpan);
+        } else if (!isLit && hasTrail) {
+          circle.querySelectorAll('.' + trail).forEach(b => b.remove());
+        }
+      }
+    }
+
+    function position(level, animate) {
+      const slot = document.getElementById(prefix + '-circle-' + level);
+      const medallion = document.getElementById(prefix + 'MedallionCircle');
+      const stack = document.getElementById(prefix + 'Stack');
+      if (!slot || !medallion || !stack)
+        return;
+      const stackRect = stack.getBoundingClientRect();
+      const slotRect = slot.getBoundingClientRect();
+      const centerY = slotRect.top - stackRect.top + slotRect.height / 2;
+      if (!animate)
+        medallion.style.transition = 'none';
+      medallion.style.top = (centerY - 22) + 'px';
+      if (!animate)
+        requestAnimationFrame(() => {
+          medallion.style.transition = '';
+        });
+      medallion.dataset.level = level;
+      const fillEl = document.getElementById(prefix + 'TunnelFill');
+      if (fillEl)
+        fillEl.style.height = (level / 4 * 100) + '%';
+      updateFill(level);
+      const blessingEl = document.getElementById('blessing' + capName);
+      const alreadyUnlocked = x.shaman.unlocked[prefix];
+      if (blessingEl)
+        blessingEl.classList.toggle('unlocked' + capName, !!alreadyUnlocked);
+      const btn = document.getElementById('consume' + capName + 'Btn');
+      if (btn)
+        btn.style.display = (level === 4 && !alreadyUnlocked) ? 'block' : 'none';
+    }
+
+    const boostMode = x.cls === 'shaman' && !x.shaman.elementBoostDone && !x.unconscious;
+
+    function commitLevel(level) {
+      x.shaman[prefix] = level;
+      save();
+    }
+
+    if (positionOnly) {
+      position(x.shaman[prefix] || 0, false);
+      return;
+    }
+
+    if (boostMode) {
+      const medallion = document.getElementById(prefix + 'MedallionCircle');
+      if (medallion)
+        medallion.addEventListener('click', () => {
+          const nextLevel = Math.min(4, (x.shaman[prefix] || 0) + 1);
+          x.shaman[prefix] = nextLevel;
+          x.shaman.elementBoostDone = true;
+          log(`${ x.name } aumenta ${ MD2.shamanElements[prefix] } en 1 (obligatorio de inicio de turno).`);
+          save();
+          renderHero();
+          say(`Aumentas ${ MD2.shamanElements[prefix] }.`);
+        });
+      position(x.shaman[prefix] || 0, false);
+      return;
+    }
+
+    function setupDrag() {
+      const medallion = document.getElementById(prefix + 'MedallionCircle');
+      const stack = document.getElementById(prefix + 'Stack');
+      if (!medallion || !stack)
+        return;
+      let dragging = false, offsetY = 0;
+
+      medallion.addEventListener('pointerdown', e => {
+        dragging = true;
+        const r = medallion.getBoundingClientRect();
+        offsetY = e.clientY - r.top;
+        medallion.style.transition = 'none';
+        medallion.setPointerCapture(e.pointerId);
+      });
+      medallion.addEventListener('pointermove', e => {
+        if (!dragging)
+          return;
+        const stackRect = stack.getBoundingClientRect();
+        medallion.style.top = (e.clientY - stackRect.top - offsetY) + 'px';
+      });
+      medallion.addEventListener('pointerup', e => {
+        if (!dragging)
+          return;
+        dragging = false;
+        medallion.style.transition = '';
+        let best = 0, bestDist = Infinity;
+        for (let i = 0; i <= 4; i++) {
+          const c = document.getElementById(prefix + '-circle-' + i);
+          if (!c)
+            continue;
+          const r = c.getBoundingClientRect();
+          const cy = r.top + r.height / 2;
+          const dist = Math.abs(e.clientY - cy);
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = i;
+          }
+        }
+        position(best, true);
+        commitLevel(best);
+      });
+    }
+
+    position(x.shaman[prefix] || 0, false);
+    setupDrag();
+    const consumeBtn = document.getElementById('consume' + capName + 'Btn');
+    if (consumeBtn)
+      consumeBtn.onclick = () => {
+        const b = MD2.shamanBlessings[prefix];
+        if (!confirm(`¿Consumir todo el ${ MD2.shamanElements[prefix] } para activar "${ b.name }" de forma permanente hasta el final de la misión?`))
+          return;
+        x.shaman.unlocked[prefix] = true;
+        x.shaman[prefix] = 0;
+        log(`${ x.name } consume ${ MD2.shamanElements[prefix] } y activa ${ b.name }.`);
+        save();
+        const blessingEl = document.getElementById('blessing' + capName);
+        if (blessingEl)
+          blessingEl.classList.add('unlocked' + capName);
+        consumeBtn.style.display = 'none';
+        position(0, true);
+        setTimeout(() => renderHero(), 500);
+        say(`${ b.name } activada de forma permanente.`, x);
+      };
+  });
+}
+
 function shamanHtml(x) {
   const inFlow = x.flow.type === 'attack' || x.flow.type === 'defense';
-  const blessings = [
-    'fire',
-    'water',
-    'air',
-    'nature'
-  ].map(k => {
-    let b = MD2.shamanBlessings[k], on = x.shaman.unlocked[k];
-    return `<div class="blessingCard ${ on ? 'active' : '' }"><b>${ on ? '\u2726 ACTIVA \xB7 ' : '' }${ b.name }</b><p>${ b.effect }</p></div>`;
-  }).join('');
-  const elementsBlock = inFlow ? `<p class="notice">Estás en tu Turno (${ x.flow.type === 'attack' ? 'Ataque' : 'Defensa' }). Los controles de Elementos y Hechizos están disponibles ahí, en la pestaña Turno.</p>` : `<div class="resource"><p class="notice">Al inicio de tu turno, aumenta cualquier Elemento en 1.</p>${ shamanElementControls(x) }</div><h3>Hechizos disponibles</h3>${ shamanAbilityControls(x) }`;
-  return `${ elementsBlock }<h3>Bendiciones permanentes</h3><div class="blessingGrid">${ blessings }</div><p class="notice">Revisa la pestaña Espíritus para ver y gestionar tus invocaciones.</p>`;
+  const elementsBlock = inFlow ? `<p class="notice">Estás en tu Turno (${ x.flow.type === 'attack' ? 'Ataque' : 'Defensa' }). Los controles de Elementos y Hechizos están disponibles ahí, en la pestaña Turno.</p>` : `${ shamanElementsBoardHtml(x) }<h3>Hechizos disponibles</h3>${ shamanAbilityControls(x) }`;
+  return `${ elementsBlock }<p class="notice">Revisa la pestaña Espíritus para ver y gestionar tus invocaciones.</p>`;
 }
 function mageSkillBaseName(name) {
   return (name || '').replace(/\s+(I{1,3}|IV|V)$/i, '').trim().toLowerCase();
+}
+function spinTalismanThenRender(x) {
+  save();
+  const rot = (x.mage.totalRotations || 0) * 90;
+  const arrowEl = document.getElementById('svgArrowGroup');
+  const clawsEl = document.getElementById('clawsGroup');
+  if (arrowEl && clawsEl) {
+    arrowEl.style.transform = `rotate(${ rot }deg)`;
+    clawsEl.style.transform = `rotate(${ rot }deg)`;
+    setTimeout(() => renderHero(), 1150);
+  } else {
+    renderHero();
+  }
 }
 function talismanFullHtml(x) {
   if (x.mage.pendingReplacement && x.mage.pendingReplacementSlot !== null && x.mage.pendingReplacementSlot !== undefined) {
@@ -1864,7 +2085,64 @@ function talismanFullHtml(x) {
     const v = x.mage.pendingReplacement;
     return `<p class="notice"><b>${ v }</b> reemplaza una cara del Talismán. Elige cuál:</p><div class="talismanGrid">${ x.mage.slots.map((q, i) => `<div class="talismanSlot"><b>Cara ${ i + 1 }</b><p class="muted">${ q.name } (${ q.manaCost } maná)</p><button data-replace-slot="${ i }" class="primary">Reemplazar esta</button></div>`).join('') }</div>`;
   }
-  return `<div class="talismanGrid">${ x.mage.slots.map((q, i) => `<div class="talismanSlot ${ i === x.mage.amulet ? 'active' : '' }"><b>Cara ${ i + 1 }${ i === x.mage.amulet ? ' · ACTIVA' : '' }</b><input data-slot="${ i }" value="${ q.name }"><small>Coste: ${ q.manaCost } maná</small>${ i === x.mage.amulet ? `<button data-use-talisman="${ i }" ${ x.mana < q.manaCost ? 'disabled' : '' }>Usar capacidad</button>` : '' }</div>`).join('') }</div><button id="rotateTalisman" class="top" ${ x.mana < 1 ? 'disabled' : '' }>Girar forzado a la siguiente cara (1 maná)</button>`;
+  const rot = (x.mage.totalRotations || 0) * 90;
+  const s0 = x.mage.slots[0], s1 = x.mage.slots[1], s2 = x.mage.slots[2], s3 = x.mage.slots[3];
+  const a = x.mage.amulet;
+  return `<div class="talismanWheel">
+    <div class="goldRing"><div class="runeSymbol" style="transform:rotate(0deg) translateY(-114px) rotate(-0deg)">ᚠ</div><div class="runeSymbol" style="transform:rotate(15deg) translateY(-114px) rotate(-15deg)">ᚢ</div><div class="runeSymbol" style="transform:rotate(30deg) translateY(-114px) rotate(-30deg)">ᚦ</div><div class="runeSymbol" style="transform:rotate(45deg) translateY(-114px) rotate(-45deg)">ᚨ</div><div class="runeSymbol" style="transform:rotate(60deg) translateY(-114px) rotate(-60deg)">ᚱ</div><div class="runeSymbol" style="transform:rotate(75deg) translateY(-114px) rotate(-75deg)">ᚲ</div><div class="runeSymbol" style="transform:rotate(90deg) translateY(-114px) rotate(-90deg)">ᚷ</div><div class="runeSymbol" style="transform:rotate(105deg) translateY(-114px) rotate(-105deg)">ᚹ</div><div class="runeSymbol" style="transform:rotate(120deg) translateY(-114px) rotate(-120deg)">ᚺ</div><div class="runeSymbol" style="transform:rotate(135deg) translateY(-114px) rotate(-135deg)">ᚾ</div><div class="runeSymbol" style="transform:rotate(150deg) translateY(-114px) rotate(-150deg)">ᛁ</div><div class="runeSymbol" style="transform:rotate(165deg) translateY(-114px) rotate(-165deg)">ᛃ</div><div class="runeSymbol" style="transform:rotate(180deg) translateY(-114px) rotate(-180deg)">ᛇ</div><div class="runeSymbol" style="transform:rotate(195deg) translateY(-114px) rotate(-195deg)">ᛈ</div><div class="runeSymbol" style="transform:rotate(210deg) translateY(-114px) rotate(-210deg)">ᛉ</div><div class="runeSymbol" style="transform:rotate(225deg) translateY(-114px) rotate(-225deg)">ᛊ</div><div class="runeSymbol" style="transform:rotate(240deg) translateY(-114px) rotate(-240deg)">ᛏ</div><div class="runeSymbol" style="transform:rotate(255deg) translateY(-114px) rotate(-255deg)">ᛒ</div><div class="runeSymbol" style="transform:rotate(270deg) translateY(-114px) rotate(-270deg)">ᛖ</div><div class="runeSymbol" style="transform:rotate(285deg) translateY(-114px) rotate(-285deg)">ᛗ</div><div class="runeSymbol" style="transform:rotate(300deg) translateY(-114px) rotate(-300deg)">ᛚ</div><div class="runeSymbol" style="transform:rotate(315deg) translateY(-114px) rotate(-315deg)">ᛜ</div><div class="runeSymbol" style="transform:rotate(330deg) translateY(-114px) rotate(-330deg)">ᛞ</div><div class="runeSymbol" style="transform:rotate(345deg) translateY(-114px) rotate(-345deg)">ᛟ</div></div>
+    <div class="goldRing2"><div class="runeSymbol2" style="transform:rotate(0deg) translateY(-85px) rotate(-0deg)">ᛞ</div><div class="runeSymbol2" style="transform:rotate(30deg) translateY(-85px) rotate(-30deg)">ᛏ</div><div class="runeSymbol2" style="transform:rotate(60deg) translateY(-85px) rotate(-60deg)">ᛒ</div><div class="runeSymbol2" style="transform:rotate(90deg) translateY(-85px) rotate(-90deg)">ᛖ</div><div class="runeSymbol2" style="transform:rotate(120deg) translateY(-85px) rotate(-120deg)">ᛗ</div><div class="runeSymbol2" style="transform:rotate(150deg) translateY(-85px) rotate(-150deg)">ᛚ</div><div class="runeSymbol2" style="transform:rotate(180deg) translateY(-85px) rotate(-180deg)">ᛜ</div><div class="runeSymbol2" style="transform:rotate(210deg) translateY(-85px) rotate(-210deg)">ᚠ</div><div class="runeSymbol2" style="transform:rotate(240deg) translateY(-85px) rotate(-240deg)">ᚢ</div><div class="runeSymbol2" style="transform:rotate(270deg) translateY(-85px) rotate(-270deg)">ᚦ</div><div class="runeSymbol2" style="transform:rotate(300deg) translateY(-85px) rotate(-300deg)">ᚨ</div><div class="runeSymbol2" style="transform:rotate(330deg) translateY(-85px) rotate(-330deg)">ᚱ</div></div>
+    <div class="runeStone n ${ a === 0 ? 'active' : '' }"><span class="num">Cara 1${ a === 0 ? ' · ACTIVA' : '' }</span><span class="name">${ s0.name }</span><span class="cost">${ s0.manaCost } maná</span>${ a === 0 ? `<button data-use-talisman="0" ${ x.mana < s0.manaCost ? 'disabled' : '' } class="top">Usar capacidad</button>` : '' }</div>
+    <div class="runeStone e ${ a === 1 ? 'active' : '' }"><span class="num">Cara 2${ a === 1 ? ' · ACTIVA' : '' }</span><span class="name">${ s1.name }</span><span class="cost">${ s1.manaCost } maná</span>${ a === 1 ? `<button data-use-talisman="1" ${ x.mana < s1.manaCost ? 'disabled' : '' } class="top">Usar capacidad</button>` : '' }</div>
+    <div class="runeStone s ${ a === 2 ? 'active' : '' }"><span class="num">Cara 3${ a === 2 ? ' · ACTIVA' : '' }</span><span class="name">${ s2.name }</span><span class="cost">${ s2.manaCost } maná</span>${ a === 2 ? `<button data-use-talisman="2" ${ x.mana < s2.manaCost ? 'disabled' : '' } class="top">Usar capacidad</button>` : '' }</div>
+    <div class="runeStone w ${ a === 3 ? 'active' : '' }"><span class="num">Cara 4${ a === 3 ? ' · ACTIVA' : '' }</span><span class="name">${ s3.name }</span><span class="cost">${ s3.manaCost } maná</span>${ a === 3 ? `<button data-use-talisman="3" ${ x.mana < s3.manaCost ? 'disabled' : '' } class="top">Usar capacidad</button>` : '' }</div>
+    <div class="talismanCore">
+      <svg class="coreArtifactSvg" viewBox="0 0 120 120">
+        <defs>
+          <radialGradient id="sharedGold" gradientUnits="userSpaceOnUse" cx="53" cy="43" r="130">
+            <stop offset="0%" stop-color="#d9bd78"/><stop offset="20%" stop-color="#b6903e"/><stop offset="45%" stop-color="#856727"/><stop offset="70%" stop-color="#5a481a"/><stop offset="100%" stop-color="#241c06"/>
+          </radialGradient>
+          <linearGradient id="sheenStreak" gradientUnits="userSpaceOnUse" x1="20" y1="10" x2="95" y2="105">
+            <stop offset="0%" stop-color="rgba(255,255,255,0)"/><stop offset="44%" stop-color="rgba(255,255,255,0)"/><stop offset="50%" stop-color="rgba(255,255,255,.32)"/><stop offset="56%" stop-color="rgba(255,255,255,0)"/><stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+          </linearGradient>
+          <radialGradient id="shadeOverlay" gradientUnits="userSpaceOnUse" cx="45" cy="35" r="105">
+            <stop offset="0%" stop-color="rgba(0,0,0,0)"/><stop offset="45%" stop-color="rgba(0,0,0,0)"/><stop offset="72%" stop-color="rgba(0,0,0,.4)"/><stop offset="100%" stop-color="rgba(0,0,0,.7)"/>
+          </radialGradient>
+          <radialGradient id="pointerShine" gradientUnits="userSpaceOnUse" cx="58" cy="10" r="42">
+            <stop offset="0%" stop-color="rgba(255,251,230,.95)"/><stop offset="35%" stop-color="rgba(255,241,190,.5)"/><stop offset="70%" stop-color="rgba(255,241,190,0)"/><stop offset="100%" stop-color="rgba(255,241,190,0)"/>
+          </radialGradient>
+          <filter id="innerShadowBevel" x="-30%" y="-30%" width="160%" height="160%">
+            <feOffset dx="2.2" dy="2.6"/><feGaussianBlur stdDeviation="2.4" result="offset-blur"/><feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/><feFlood flood-color="#1a1204" flood-opacity="0.75" result="color"/><feComposite operator="in" in="color" in2="inverse" result="shadow"/><feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+          </filter>
+          <filter id="innerHighlightBevel" x="-30%" y="-30%" width="160%" height="160%">
+            <feOffset dx="-2.2" dy="-2.6"/><feGaussianBlur stdDeviation="2.2" result="offset-blur"/><feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/><feFlood flood-color="#fff6da" flood-opacity="0.55" result="color"/><feComposite operator="in" in="color" in2="inverse" result="shine"/><feComposite operator="over" in="shine" in2="SourceGraphic"/>
+          </filter>
+        </defs>
+        <g id="svgArrowGroup" class="svgArrowGroup" style="transform:rotate(${ rot }deg)">
+          <path d="M47.2,19.4 L51.9,16.3 L43.8,13.4 L55.4,3.6 L49.6,1.6 L60.0,-16.0 L70.4,1.6 L64.6,3.6 L76.2,13.4 L68.1,16.3 L72.8,19.4 L100.6,11.3 L97.1,40.3 L118.0,60.0 L97.1,79.7 L100.6,108.7 L72.8,100.6 L60.0,118.0 L47.2,100.6 L19.4,108.7 L22.9,79.7 L2.0,60.0 L22.9,40.3 L19.4,11.3 Z" fill="url(#sharedGold)" stroke="#000" stroke-width="1" stroke-linejoin="round"/>
+          <path d="M47.2,19.4 L51.9,16.3 L43.8,13.4 L55.4,3.6 L49.6,1.6 L60.0,-16.0 L70.4,1.6 L64.6,3.6 L76.2,13.4 L68.1,16.3 L72.8,19.4 L100.6,11.3 L97.1,40.3 L118.0,60.0 L97.1,79.7 L100.6,108.7 L72.8,100.6 L60.0,118.0 L47.2,100.6 L19.4,108.7 L22.9,79.7 L2.0,60.0 L22.9,40.3 L19.4,11.3 Z" fill="url(#sharedGold)" filter="url(#innerShadowBevel)" opacity="0.8"/>
+          <path d="M47.2,19.4 L51.9,16.3 L43.8,13.4 L55.4,3.6 L49.6,1.6 L60.0,-16.0 L70.4,1.6 L64.6,3.6 L76.2,13.4 L68.1,16.3 L72.8,19.4 L100.6,11.3 L97.1,40.3 L118.0,60.0 L97.1,79.7 L100.6,108.7 L72.8,100.6 L60.0,118.0 L47.2,100.6 L19.4,108.7 L22.9,79.7 L2.0,60.0 L22.9,40.3 L19.4,11.3 Z" fill="url(#sharedGold)" filter="url(#innerHighlightBevel)" opacity="0.7"/>
+          <g clip-path="url(#artifactClip)">
+          <line x1="72.8" y1="19.4" x2="100.6" y2="11.3" stroke="rgba(255,251,230,.5)" stroke-width="1.1"/><line x1="100.6" y1="11.3" x2="97.1" y2="40.3" stroke="rgba(30,20,5,.55)" stroke-width="1.1"/><line x1="97.1" y1="40.3" x2="118.0" y2="60.0" stroke="rgba(255,251,230,.5)" stroke-width="1.1"/><line x1="118.0" y1="60.0" x2="97.1" y2="79.7" stroke="rgba(30,20,5,.55)" stroke-width="1.1"/><line x1="97.1" y1="79.7" x2="100.6" y2="108.7" stroke="rgba(255,251,230,.5)" stroke-width="1.1"/><line x1="100.6" y1="108.7" x2="72.8" y2="100.6" stroke="rgba(30,20,5,.55)" stroke-width="1.1"/><line x1="72.8" y1="100.6" x2="60.0" y2="118.0" stroke="rgba(255,251,230,.5)" stroke-width="1.1"/><line x1="60.0" y1="118.0" x2="47.2" y2="100.6" stroke="rgba(30,20,5,.55)" stroke-width="1.1"/><line x1="47.2" y1="100.6" x2="19.4" y2="108.7" stroke="rgba(255,251,230,.5)" stroke-width="1.1"/><line x1="19.4" y1="108.7" x2="22.9" y2="79.7" stroke="rgba(30,20,5,.55)" stroke-width="1.1"/><line x1="22.9" y1="79.7" x2="2.0" y2="60.0" stroke="rgba(255,251,230,.5)" stroke-width="1.1"/><line x1="2.0" y1="60.0" x2="22.9" y2="40.3" stroke="rgba(30,20,5,.55)" stroke-width="1.1"/><line x1="22.9" y1="40.3" x2="19.4" y2="11.3" stroke="rgba(255,251,230,.5)" stroke-width="1.1"/><line x1="19.4" y1="11.3" x2="47.2" y2="19.4" stroke="rgba(30,20,5,.55)" stroke-width="1.1"/>
+          </g>
+          <path d="M47.2,19.4 L51.9,16.3 L43.8,13.4 L55.4,3.6 L49.6,1.6 L60.0,-16.0 L70.4,1.6 L64.6,3.6 L76.2,13.4 L68.1,16.3 L72.8,19.4 L100.6,11.3 L97.1,40.3 L118.0,60.0 L97.1,79.7 L100.6,108.7 L72.8,100.6 L60.0,118.0 L47.2,100.6 L19.4,108.7 L22.9,79.7 L2.0,60.0 L22.9,40.3 L19.4,11.3 Z" fill="url(#shadeOverlay)"/>
+          <path d="M47.2,19.4 L51.9,16.3 L43.8,13.4 L55.4,3.6 L49.6,1.6 L60.0,-16.0 L70.4,1.6 L64.6,3.6 L76.2,13.4 L68.1,16.3 L72.8,19.4 L100.6,11.3 L97.1,40.3 L118.0,60.0 L97.1,79.7 L100.6,108.7 L72.8,100.6 L60.0,118.0 L47.2,100.6 L19.4,108.7 L22.9,79.7 L2.0,60.0 L22.9,40.3 L19.4,11.3 Z" fill="url(#pointerShine)"/>
+          <path d="M47.2,19.4 L51.9,16.3 L43.8,13.4 L55.4,3.6 L49.6,1.6 L60.0,-16.0 L70.4,1.6 L64.6,3.6 L76.2,13.4 L68.1,16.3 L72.8,19.4 L100.6,11.3 L97.1,40.3 L118.0,60.0 L97.1,79.7 L100.6,108.7 L72.8,100.6 L60.0,118.0 L47.2,100.6 L19.4,108.7 L22.9,79.7 L2.0,60.0 L22.9,40.3 L19.4,11.3 Z" fill="url(#sheenStreak)"/>
+        </g>
+        <clipPath id="artifactClip"><path d="M47.2,19.4 L51.9,16.3 L43.8,13.4 L55.4,3.6 L49.6,1.6 L60.0,-16.0 L70.4,1.6 L64.6,3.6 L76.2,13.4 L68.1,16.3 L72.8,19.4 L100.6,11.3 L97.1,40.3 L118.0,60.0 L97.1,79.7 L100.6,108.7 L72.8,100.6 L60.0,118.0 L47.2,100.6 L19.4,108.7 L22.9,79.7 L2.0,60.0 L22.9,40.3 L19.4,11.3 Z"/></clipPath>
+        <g id="clawsGroup" style="transform-origin:60px 60px;transform-box:view-box;transition:transform 1.1s cubic-bezier(.4,1.4,.4,1);transform:rotate(${ rot }deg)">
+          <path d="M52,32 L68,32 L60,39 Z" fill="url(#sharedGold)" stroke="#000" stroke-width="0.6"/>
+          <path d="M52,88 L68,88 L60,81 Z" fill="url(#sharedGold)" stroke="#000" stroke-width="0.6"/>
+          <path d="M32,52 L32,68 L39,60 Z" fill="url(#sharedGold)" stroke="#000" stroke-width="0.6"/>
+          <path d="M88,52 L88,68 L81,60 Z" fill="url(#sharedGold)" stroke="#000" stroke-width="0.6"/>
+        </g>
+      </svg>
+      <div class="coreMount">
+        <div class="mountSocket"></div>
+        <div class="coreGem"></div>
+      </div>
+    </div>
+    <div class="goldRing3"><div class="runeSymbol3" style="transform:rotate(0deg) translateY(-50px) rotate(-0deg)">ᛊ</div><div class="runeSymbol3" style="transform:rotate(30deg) translateY(-50px) rotate(-30deg)">ᛋ</div><div class="runeSymbol3" style="transform:rotate(60deg) translateY(-50px) rotate(-60deg)">ᛇ</div><div class="runeSymbol3" style="transform:rotate(90deg) translateY(-50px) rotate(-90deg)">ᛈ</div><div class="runeSymbol3" style="transform:rotate(120deg) translateY(-50px) rotate(-120deg)">ᛉ</div><div class="runeSymbol3" style="transform:rotate(150deg) translateY(-50px) rotate(-150deg)">ᚺ</div><div class="runeSymbol3" style="transform:rotate(180deg) translateY(-50px) rotate(-180deg)">ᚾ</div><div class="runeSymbol3" style="transform:rotate(210deg) translateY(-50px) rotate(-210deg)">ᛁ</div><div class="runeSymbol3" style="transform:rotate(240deg) translateY(-50px) rotate(-240deg)">ᛃ</div><div class="runeSymbol3" style="transform:rotate(270deg) translateY(-50px) rotate(-270deg)">ᚹ</div><div class="runeSymbol3" style="transform:rotate(300deg) translateY(-50px) rotate(-300deg)">ᚲ</div><div class="runeSymbol3" style="transform:rotate(330deg) translateY(-50px) rotate(-330deg)">ᚷ</div></div>
+  </div><button id="rotateTalisman" class="top" ${ x.mana < 1 ? 'disabled' : '' }>Girar forzado a la siguiente cara (1 maná)</button>`;
 }
 function classHtml(x) {
   if (x.cls === 'rogue')
@@ -2086,7 +2364,7 @@ function attackReminders(x) {
   let html = '<ol>' + arr.map(q => `<li>${ q }</li>`).join('') + '</ol>';
   if (x.cls === 'shaman') {
     const attackAbilities = shamanAbilityControls(x, 'attack');
-    html += `<div class="resource top">${ shamanElementControls(x) }</div>${ attackAbilities ? `<h3>Hechizos de ataque disponibles</h3>${ attackAbilities }` : '' }`;
+    html += `${ shamanElementsBoardHtml(x) }${ attackAbilities ? `<h3>Hechizos de ataque disponibles</h3>${ attackAbilities }` : '' }`;
   }
   return html;
 }
@@ -2226,6 +2504,8 @@ function bindHero() {
     finishFlow(true);
   };
   bindFlow(x);
+  if (x.cls === 'shaman' && document.getElementById('fireMedallionCircle'))
+    bindShamanElementBoard(x);
 }
 function bindClass(x) {
   if (x.cls === 'rogue') {
@@ -2376,9 +2656,9 @@ function bindClass(x) {
       x.mana -= face.manaCost;
       log(`${ x.name } usa ${ face.name } (Cara ${ i + 1 }), gasta ${ face.manaCost } maná.`);
       x.mage.amulet = (x.mage.amulet + 1) % 4;
+      x.mage.totalRotations = (x.mage.totalRotations || 0) + 1;
       const nextFace = x.mage.slots[x.mage.amulet];
-      save();
-      renderHero();
+      spinTalismanThenRender(x);
       say(`${ face.name }. ${ face.type === 'ataque' ? 'Recuerda que necesitas un arma con alcance mágico equipada para usar hechizos de ataque. ' : '' }El Talismán gira. Cara activa ahora: ${ nextFace.name }.`);
     });
     if ($('rotateTalisman'))
@@ -2389,15 +2669,10 @@ function bindClass(x) {
           return;
         x.mana--;
         x.mage.amulet = (x.mage.amulet + 1) % 4;
+        x.mage.totalRotations = (x.mage.totalRotations || 0) + 1;
         let a = x.mage.slots[x.mage.amulet];
         log(`${ x.name } gasta 1 maná para girar el Talismán.`);
-        save();
-        renderHero();
-        const activeSlotEl = document.querySelector('.talismanSlot.active');
-        if (activeSlotEl) {
-          activeSlotEl.classList.add('talismanSpin');
-          setTimeout(() => activeSlotEl.classList.remove('talismanSpin'), 700);
-        }
+        spinTalismanThenRender(x);
         say(`Talismán girado. Activa: ${ a.name }.`);
       };
     document.querySelectorAll('[data-replace-slot]').forEach(b => b.onclick = () => {

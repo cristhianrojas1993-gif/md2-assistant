@@ -825,14 +825,12 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 
 /* ============ CONSAGRACIÓN DEL PALADÍN ============ */
 
-/* CONTENEDOR PRINCIPAL DEL ESCUDO (Escalado a 340px sin perder proporciones) */
 .shield-container {
   position: relative;
   width: 340px;
   height: 340px;
-  margin: 12px auto;
+  margin: 10px auto 20px;
   border-radius: 50%;
-  /* TEXTURA DE MADERA REALISTA ORIGINAL */
   background: 
     radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0.85) 100%),
     repeating-radial-gradient(circle at 20% 30%, #543318 0px, #3d230e 10px, #261406 20px, #442710 30px),
@@ -842,9 +840,9 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   justify-content: center;
   align-items: center;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
-/* BARRAS METÁLICAS EN X */
 .metal-strap {
   position: absolute;
   width: 340px;
@@ -864,7 +862,6 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 .strap-1 { transform: rotate(45deg); }
 .strap-2 { transform: rotate(-45deg); }
 
-/* REMACHES EN LAS BARRAS EN X (4 POR BARRA) */
 .strap-rivet {
   width: 7px;
   height: 7px;
@@ -874,7 +871,6 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   border: 1px solid #d97706;
 }
 
-/* ANILLO EXTERIOR DE ACERO TEMPLADO */
 .border-silver-ring {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -887,7 +883,6 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   z-index: 3;
 }
 
-/* CONTENEDOR DE REMACHES CIRCULARES EN EL ANILLO PERIMETRAL */
 .ring-rivets-container {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -896,7 +891,6 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   z-index: 4;
 }
 
-/* Remaches circulares distribuidos exactamente alrededor del anillo */
 .ring-rivet {
   position: absolute;
   top: 50%; left: 50%;
@@ -904,12 +898,11 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   height: 7px;
   margin: -3.5px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ffffff, #9ca3af 40%, #1f2937 80%, #000 100%);
+  background: radial-gradient(circle at 35% 35%, #ffffff, #9ca3af 40%, #374151 75%, #000 100%);
   box-shadow: 0 1px 3px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.8);
   border: 1px solid #4b5563;
 }
 
-/* Posicionamiento radial de los 12 remaches del borde (Escalados a 161.5px) */
 .r-1  { transform: rotate(0deg) translateX(161.5px); }
 .r-2  { transform: rotate(30deg) translateX(161.5px); }
 .r-3  { transform: rotate(60deg) translateX(161.5px); }
@@ -923,7 +916,6 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 .r-11 { transform: rotate(300deg) translateX(161.5px); }
 .r-12 { transform: rotate(330deg) translateX(161.5px); }
 
-/* Filo dorado interno */
 .inner-gold-line {
   position: absolute;
   top: 17px; left: 17px; right: 17px; bottom: 17px;
@@ -934,7 +926,6 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   z-index: 4;
 }
 
-/* ANIMACIÓN DE BRILLO RELUCIENTE SOBRE METAL */
 .sheen-layer {
   position: absolute;
   top: -100%; left: -100%; width: 300%; height: 300%;
@@ -955,11 +946,10 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   100% { transform: translate(30%, 30%); }
 }
 
-/* CÍRCULOS DE CONSAGRACIÓN */
 .energy-circle {
   position: absolute;
-  width: 56px;
-  height: 56px;
+  width: 65px;
+  height: 65px;
   border-radius: 50%;
   background: radial-gradient(circle, #1a1c23 60%, #0d0e12 100%);
   border: 2px solid #d97706;
@@ -970,24 +960,32 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   cursor: pointer;
   z-index: 6;
   transition: all 0.3s ease;
+  user-select: none;
 }
 
 .energy-core {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
   opacity: 0.1;
   transition: opacity 0.3s ease;
 }
 
-.circle-green { top: 25px; left: 50%; transform: translateX(-50%); }
-.circle-blue { top: 50%; left: 25px; transform: translateY(-50%); }
-.circle-red { top: 50%; right: 25px; transform: translateY(-50%); }
+.sphere-initial {
+  position: relative;
+  z-index: 2;
+  font-weight: 900;
+  font-size: 22px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.8);
+}
 
-/* ORBE DE MANÁ INFERIOR */
+.circle-green { top: 20px; left: 50%; transform: translateX(-50%); color: #4ade80; }
+.circle-blue { top: 50%; left: 20px; transform: translateY(-50%); color: #38bdf8; }
+.circle-red { top: 50%; right: 20px; transform: translateY(-50%); color: #f87171; }
+
 .mana-display {
   position: absolute;
-  bottom: 31px;
+  bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
   width: 44px;
@@ -1007,7 +1005,6 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   z-index: 6;
 }
 
-/* UMBO CENTRAL METÁLICO */
 .center-boss {
   position: absolute;
   width: 137px;
@@ -1022,11 +1019,10 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   z-index: 5;
 }
 
-/* ACERO PAVONADO DIFERENCIADO EN BENDICIÓN */
 .center-boss-ornament {
   position: absolute;
-  width: 111px;
-  height: 111px;
+  width: 115px;
+  height: 115px;
   border-radius: 50%;
   border: 1.5px solid #fef08a;
   background: 
@@ -1040,19 +1036,20 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 }
 
 .blessing-bar-container {
-  width: 98px;
+  width: 104px;
   z-index: 6;
 }
 
 .blessing-select {
   width: 100%;
-  padding: 4px 2px;
+  padding: 6px 2px;
   background: #090d16;
   color: #fef08a;
-  border: 1px solid #d97706;
+  border: 1.5px solid #d97706;
   border-radius: 4px;
   font-family: inherit;
-  font-size: 7.5px;
+  font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0.3px;
   text-align: center;
   outline: none;
@@ -1065,38 +1062,25 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   color: #fef08a;
   border-color: #f59e0b;
   box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
-  font-weight: bold;
 }
 
 .blessing-select option {
   background: #1e293b;
   color: #f8fafc;
+  font-size: 11px;
 }
 
-/* EFECTOS DE BRILLO AL ACTIVAR CONSAGRACIÓN */
-.circle-green .energy-core {
-  background: radial-gradient(circle, #ffffff 0%, #4ade80 35%, #16a34a 65%, transparent 100%);
-}
-.circle-green.active {
-  border-color: #ffffff;
-  box-shadow: 0 0 15px #fff, 0 0 30px #22c55e, 0 0 50px #15803d, inset 0 0 18px #fff;
-}
+.circle-green .energy-core { background: radial-gradient(circle, #ffffff 0%, #4ade80 35%, #16a34a 65%, transparent 100%); }
+.circle-green.active { border-color: #ffffff; box-shadow: 0 0 15px #fff, 0 0 30px #22c55e, 0 0 50px #15803d, inset 0 0 18px #fff; }
+.circle-green.active .sphere-initial { color: #ffffff; text-shadow: 0 0 8px #22c55e; }
 
-.circle-blue .energy-core {
-  background: radial-gradient(circle, #ffffff 0%, #38bdf8 35%, #0284c7 65%, transparent 100%);
-}
-.circle-blue.active {
-  border-color: #ffffff;
-  box-shadow: 0 0 15px #fff, 0 0 30px #3b82f6, 0 0 50px #1d4ed8, inset 0 0 18px #fff;
-}
+.circle-blue .energy-core { background: radial-gradient(circle, #ffffff 0%, #38bdf8 35%, #0284c7 65%, transparent 100%); }
+.circle-blue.active { border-color: #ffffff; box-shadow: 0 0 15px #fff, 0 0 30px #3b82f6, 0 0 50px #1d4ed8, inset 0 0 18px #fff; }
+.circle-blue.active .sphere-initial { color: #ffffff; text-shadow: 0 0 8px #3b82f6; }
 
-.circle-red .energy-core {
-  background: radial-gradient(circle, #ffffff 0%, #f87171 35%, #dc2626 65%, transparent 100%);
-}
-.circle-red.active {
-  border-color: #ffffff;
-  box-shadow: 0 0 15px #fff, 0 0 30px #ef4444, 0 0 50px #b91c1c, inset 0 0 18px #fff;
-}
+.circle-red .energy-core { background: radial-gradient(circle, #ffffff 0%, #f87171 35%, #dc2626 65%, transparent 100%); }
+.circle-red.active { border-color: #ffffff; box-shadow: 0 0 15px #fff, 0 0 30px #ef4444, 0 0 50px #b91c1c, inset 0 0 18px #fff; }
+.circle-red.active .sphere-initial { color: #ffffff; text-shadow: 0 0 8px #ef4444; }
 
 .energy-circle.active .energy-core {
   opacity: 1;
@@ -1114,3 +1098,75 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   25% { transform: translateX(-4px); }
   75% { transform: translateX(4px); }
 }
+
+.consecration-info-panel {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 5px auto 0;
+}
+
+.info-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: rgba(15, 18, 26, 0.85);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  transition: all 0.3s ease;
+  opacity: 0.6;
+}
+
+.info-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 16px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.8);
+  transition: all 0.3s ease;
+}
+
+.info-text {
+  font-size: 13px;
+  line-height: 1.35;
+  color: #e2e8f0;
+}
+
+.info-card-green { border-color: rgba(74, 222, 128, 0.3); }
+.info-card-green .info-badge { background: radial-gradient(circle, #16a34a, #052e16); color: #4ade80; border: 1.5px solid #22c55e; }
+.info-card-green.active {
+  opacity: 1;
+  border-color: #4ade80;
+  background: rgba(22, 101, 52, 0.35);
+  box-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
+}
+.info-card-green.active .info-badge { box-shadow: 0 0 10px #22c55e; color: #fff; }
+
+.info-card-blue { border-color: rgba(56, 189, 248, 0.3); }
+.info-card-blue .info-badge { background: radial-gradient(circle, #0284c7, #082f49); color: #38bdf8; border: 1.5px solid #38bdf8; }
+.info-card-blue.active {
+  opacity: 1;
+  border-color: #38bdf8;
+  background: rgba(7, 89, 133, 0.35);
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+}
+.info-card-blue.active .info-badge { box-shadow: 0 0 10px #38bdf8; color: #fff; }
+
+.info-card-red { border-color: rgba(248, 113, 113, 0.3); }
+.info-card-red .info-badge { background: radial-gradient(circle, #dc2626, #450a0a); color: #f87171; border: 1.5px solid #ef4444; }
+.info-card-red.active {
+  opacity: 1;
+  border-color: #f87171;
+  background: rgba(153, 27, 27, 0.35);
+  box-shadow: 0 0 15px rgba(248, 113, 113, 0.4);
+}
+.info-card-red.active .info-badge { box-shadow: 0 0 10px #ef4444; color: #fff; }

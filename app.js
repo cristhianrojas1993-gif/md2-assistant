@@ -2464,7 +2464,6 @@ function bindBerserkerFuryBoard(x) {
 function paladinConsagracionHtml(x) {
   return `
   <div class="shield-container">
-
     <div class="sheen-layer"></div>
     <div class="border-silver-ring"></div>
 
@@ -2500,14 +2499,17 @@ function paladinConsagracionHtml(x) {
 
     <div class="energy-circle circle-green ${ x.paladin.consecrations.green ? 'active' : '' }" id="paladinCircleGreen" data-color="green">
       <div class="energy-core"></div>
+      <span class="sphere-initial">V</span>
     </div>
 
     <div class="energy-circle circle-blue ${ x.paladin.consecrations.blue ? 'active' : '' }" id="paladinCircleBlue" data-color="blue">
       <div class="energy-core"></div>
+      <span class="sphere-initial">A</span>
     </div>
 
     <div class="energy-circle circle-red ${ x.paladin.consecrations.red ? 'active' : '' }" id="paladinCircleRed" data-color="red">
       <div class="energy-core"></div>
+      <span class="sphere-initial">R</span>
     </div>
 
     <div class="mana-display" id="paladinManaDisplay" title="Maná Actual">${ x.mana }</div>
@@ -2522,7 +2524,23 @@ function paladinConsagracionHtml(x) {
         </div>
       </div>
     </div>
+  </div>
 
+  <div class="consecration-info-panel">
+    <div class="info-card info-card-green ${ x.paladin.consecrations.green ? 'active' : '' }">
+      <div class="info-badge">V</div>
+      <div class="info-text"><b>combate:</b> relanzar un dado</div>
+    </div>
+
+    <div class="info-card info-card-blue ${ x.paladin.consecrations.blue ? 'active' : '' }">
+      <div class="info-badge">A</div>
+      <div class="info-text">los héroes que empiezan una acción de movimiento en esta zona ganan 1 PM</div>
+    </div>
+
+    <div class="info-card info-card-red ${ x.paladin.consecrations.red ? 'active' : '' }">
+      <div class="info-badge">R</div>
+      <div class="info-text">los héroes que empiezan su activación en esta zona pueden curar 1</div>
+    </div>
   </div>
   `;
 }

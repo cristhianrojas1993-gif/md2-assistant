@@ -1,4 +1,4 @@
-const APP_VERSION = '20260730e';
+const APP_VERSION = '20260730f';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -468,10 +468,8 @@ function mpDeepFixArrays(obj, seen) {
   return obj;
 }
 function normalizeState() {
-if (s.missionState && s.missionState.corruptionStone3 === undefined)
-  s.missionState.corruptionStone3 = 0;
-if (s.missionState && s.missionState.corruptionStone4 === undefined)
-  s.missionState.corruptionStone4 = 0;
+if (s.missionState && s.missionState.corruptionChamber === undefined)
+  s.missionState.corruptionChamber = (s.missionState.corruptionStone1 || 0) + (s.missionState.corruptionStone2 || 0) + (s.missionState.corruptionStone3 || 0) + (s.missionState.corruptionStone4 || 0);
 s.heroes.forEach(x => x.statuses = x.statuses || []);
 s.heroes.forEach(x => {
   if (x.maxLevelAnnounced === undefined)
@@ -2830,7 +2828,7 @@ function attackFlow(x) {
     const st = s.missionState;
     if (st.michaelInvulnerable)
       return `<div class="card actionFlow active"><h2>Ataque al Arcángel Miguel</h2><p class="notice">⚠️ Miguel es invulnerable mientras existan fichas de Corrupción en la Cámara (actualmente ${ michaelTotalCorruption() }). Este ataque no puede herirlo.</p><button id="finishFlow" class="primary top">Finalizar acción</button></div>`;
-    return `<div class="card actionFlow active"><h2>Ataque al Arcángel Miguel</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><ol class="notice top"><li>Arma tu reserva de dados según tu tipo de ataque.</li><li>Lanza físicamente los dados.</li><li>Revisa habilidades y efectos disponibles.</li><li>Marca el daño causado y confirma.</li></ol><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<p class="notice top">Vida actual de Miguel: <b>${ st.michaelHp }/${ st.michaelMaxHp }</b></p><label>Daño causado a Miguel<select id="michaelDamageDealt">${ Array.from({ length: 21 }, (_, i) => i).map(n => `<option value="${ n }">${ n }</option>`).join('') }</select></label><button id="confirmMichaelDamage" class="primary top">Confirmar daño a Miguel</button></div>`;
+    return `<div class="card actionFlow active"><h2>Ataque al Arcángel Miguel</h2><button id="repeatAttackSteps" class="top">🔊 Repetir pasos</button><ol class="notice top"><li>Arma tu reserva de dados según tu tipo de ataque.</li><li>Lanza físicamente los dados.</li><li>Revisa habilidades y efectos disponibles.</li><li>Marca el daño causado y confirma.</li></ol><div class="resultBox">${ attackReminders(x) }</div>${ suggestion ? `<button id="berserkerStanceSuggest" class="top">${ suggestion.label }</button>` : '' }${ x.cls === 'berserker' && x.berserker.stance === 'Furia Sangrienta' ? `<button id="furyReroll" class="top" ${ x.berserker.fury < 1 ? 'disabled' : '' }>Gastar 1 Furia: relanzar un dado (${ x.berserker.fury }/7)</button>` : '' }<p class="notice top">Vida actual de Miguel: <b>${ st.michaelHp }/${ st.michaelMaxHp }</b></p>${ !x.flow.michaelClawsResolved ? `<p class="notice">Miguel lanza dados negros para defenderse. ¿Salió al menos 1 garra? Si es así, te inflige 1 Herida por cada ficha de Corrupción propia que tengas (${ x.personalCorruption || 0 }).</p><div class="actions"><button id="michaelClawsYes" class="primary">Sí, salió al menos 1 garra</button><button id="michaelClawsNo">No, ninguna garra</button></div>` : '' }<label>Daño causado a Miguel<select id="michaelDamageDealt">${ Array.from({ length: 21 }, (_, i) => i).map(n => `<option value="${ n }">${ n }</option>`).join('') }</select></label><button id="confirmMichaelDamage" class="primary top">Confirmar daño a Miguel</button></div>`;
   }
   if (getActiveMission()?.id === 'soul_keys' && s.missionState.finalCombatActive && !s.missionResult) {
     const st = s.missionState;
@@ -3252,6 +3250,10 @@ function bindFlow(x) {
     x.flow.attackType = type;
     const label = type === 'distancia' ? 'a distancia' : type === 'cuerpo' ? 'cuerpo a cuerpo' : 'mágico';
     log(`${ x.name } declara un ataque ${ label }.`);
+    const m = getActiveMission();
+    if (m && m.id === 'free_michael' && s.missionState.finalCombatActive && !s.missionResult) {
+      x.flow.awaitingMichaelClawsCheck = true;
+    }
     save();
     renderHero();
     if (x.cls === 'ranger' && type === 'distancia')
@@ -3446,6 +3448,28 @@ function bindFlow(x) {
       renderMissions();
       say(`Infliges ${ dmg } de daño a la Bestia. Le quedan ${ st.beastHp } de vida.`);
     };
+  if ($('michaelClawsYes'))
+    $('michaelClawsYes').onclick = () => {
+      const dmg = x.personalCorruption || 0;
+      x.flow.michaelClawsResolved = true;
+      if (dmg > 0) {
+        x.hp = Math.max(0, x.hp - dmg);
+        x.personalCorruption = 0;
+        log(`Miguel inflige ${ dmg } Heridas a ${ x.name } por Garras (1 por cada ficha de Corrupción propia). Fichas descartadas.`);
+        if (x.hp === 0 && !x.unconscious)
+          knockOut(x);
+      } else {
+        log(`Miguel saca Garras contra ${ x.name }, pero no tenía Corrupción propia: sin efecto.`);
+      }
+      save();
+      renderHero();
+    };
+  if ($('michaelClawsNo'))
+    $('michaelClawsNo').onclick = () => {
+      x.flow.michaelClawsResolved = true;
+      save();
+      renderHero();
+    };
   if ($('confirmMichaelDamage'))
     $('confirmMichaelDamage').onclick = () => {
       const dmg = +$('michaelDamageDealt').value;
@@ -3617,6 +3641,8 @@ function startAction(type, targetBeast = false) {
     };
   if (type === 'attack')
     x.flow.attackType = null;
+  if (type === 'attack')
+    x.flow.michaelClawsResolved = false;
   if (type === 'attack' && x.cls === 'ranger')
     x.flow.arrowResult = null;
   if (type === 'attack' && targetBeast)
@@ -3951,30 +3977,17 @@ function bindMissionButtons(x) {
   });
 }
 function michaelTotalCorruption() {
-  const st = s.missionState;
-  return (st.corruptionStone1 || 0) + (st.corruptionStone2 || 0) + (st.corruptionStone3 || 0) + (st.corruptionStone4 || 0);
+  return s.missionState.corruptionChamber || 0;
 }
 function addMichaelCorruption(n) {
   const st = s.missionState;
   const wasZero = michaelTotalCorruption() === 0;
-  const keys = ['corruptionStone1', 'corruptionStone2', 'corruptionStone3', 'corruptionStone4'];
-  for (let i = 0; i < n; i++) {
-    let minKey = keys[0];
-    keys.forEach(k => { if ((st[k] || 0) < (st[minKey] || 0)) minKey = k; });
-    st[minKey] = (st[minKey] || 0) + 1;
-  }
-  if (wasZero && !st.michaelInvulnerable) {
+  st.corruptionChamber = (st.corruptionChamber || 0) + n;
+  if (wasZero && n > 0 && !st.michaelInvulnerable) {
     st.michaelInvulnerable = true;
     return true;
   }
   return false;
-}
-function michaelLowestStoneKey() {
-  const st = s.missionState;
-  const keys = ['corruptionStone1', 'corruptionStone2', 'corruptionStone3', 'corruptionStone4'];
-  let minKey = keys[0];
-  keys.forEach(k => { if ((st[k] || 0) < (st[minKey] || 0)) minKey = k; });
-  return minKey;
 }
 function michaelBlessingMultiplier(level) {
   if (level >= 5)
@@ -4096,27 +4109,26 @@ function resolveMichaelAbility(claws) {
   const st = s.missionState;
   if (claws === 0) {
     st.michaelAbilityName = 'Justicia Celestial';
-    st.michaelAbilityText = 'Miren las Zonas donde hay héroes: identifiquen cuál tiene más fichas de Corrupción (sumando piedras y zona). Coloca a Miguel en esa Zona y ataca a ese héroe.';
+    st.michaelAbilityText = 'Miren las Zonas donde hay héroes: identifiquen cuál Zona tiene MÁS fichas de Corrupción. Miguel se mueve a esa Zona. Elige a qué héroe ataca.';
     st.michaelClawStep = 'single-damage';
     log('Miguel se activa con 0 garras: Justicia Celestial.');
     save();
     render();
-    duckAndSay('Justicia Celestial. Ataca al héroe en la Zona con más Corrupción.');
+    duckAndSay('Justicia Celestial. Miguel ataca al héroe en la Zona con más Corrupción.');
     return;
   }
   if (claws === 1) {
-    const stoneNum = michaelLowestStoneKey().replace('corruptionStone', '');
     const restored1 = addMichaelCorruption(1);
     if (restored1)
       log('Nueva ficha de Corrupción: Miguel vuelve a ser invulnerable.');
     st.michaelAbilityName = 'Embestida de Lanza';
-    st.michaelAbilityText = `Coloca 1 ficha de Corrupción en la Piedra ${ stoneNum } (la de menor cantidad). Luego miren las Zonas donde hay héroes: identifiquen cuál tiene MENOS fichas de Corrupción y coloquen ahí 1 ficha de Corrupción también. Coloca a Miguel en esa Zona y ataca a ese héroe. Piedras: ${ [1,2,3,4].map(n => st['corruptionStone'+n]||0).join('/') }.`;
+    st.michaelAbilityText = `Coloca 1 ficha de Corrupción en la Zona con héroe que tenga MENOS fichas de Corrupción (entre las Zonas donde hay héroes). Miguel se mueve a esa Zona. Elige a qué héroe ataca. Corrupción total en la Cámara: ${ st.corruptionChamber }.`;
     st.michaelClawStep = 'single-damage';
-    log(`Miguel se activa con 1 garra: Embestida de Lanza. Piedra ${ stoneNum } +1.`);
+    log(`Miguel se activa con 1 garra: Embestida de Lanza. Corrupción total: ${ st.corruptionChamber }.`);
     save();
     render();
     renderMissions();
-    duckAndSay(`Embestida de Lanza. Una ficha más en la Piedra ${ stoneNum }, y otra en la Zona con menos Corrupción. Miguel ataca ahí.`);
+    duckAndSay(`Embestida de Lanza. Coloca 1 ficha en la Zona con menos Corrupción entre las Zonas con héroes, y ataca ahí.`);
     return;
   }
   const restored2 = addMichaelCorruption(1);
@@ -4129,7 +4141,7 @@ function resolveMichaelAbility(claws) {
   st.michaelBlessingDist = {};
   st.michaelClawStep = 'blessing-damage';
   st.michaelAbilityName = 'Bendición Oscura';
-  st.michaelAbilityText = `Coloca a Miguel en la Zona central de la Cámara de la Corrupción. ${ mult } de daño por cada una de las ${ totalCorruption } fichas de Corrupción en la Loseta (piedras + zonas) = ${ total } Heridas en total.`;
+  st.michaelAbilityText = `Coloca a Miguel en la Zona central de la Cámara de la Corrupción. Agrega 1 ficha de Corrupción a la Piedra con menos fichas. ${ mult } de daño por cada una de las ${ totalCorruption } fichas de Corrupción en la Loseta = ${ total } Heridas en total.`;
   log(`Miguel se activa con 2 garras: Bendición Oscura. Va al centro de la Cámara. ${ mult } de daño por cada una de las ${ totalCorruption } fichas de Corrupción totales = ${ total } Heridas en total.`);
   save();
   render();
@@ -4186,23 +4198,13 @@ function renderCorruptionRemoval() {
   const panel = $('heroPage');
   if (!panel)
     return;
-  if (!st.corruptionRollStone) {
-    panel.innerHTML = `<div class="card"><h2>Retirar Ficha de Corrupción</h2><p class="notice">${ x.name }, ¿de cuál Piedra de Corrupción estás retirando la ficha?</p><div class="actions">${ [1,2,3,4].map(n => `<button data-corrstone="${ n }" class="primary" ${ (st['corruptionStone'+n] || 0) <= 0 ? 'disabled' : '' }>Piedra ${ n } (${ st['corruptionStone'+n] || 0 })</button>`).join('') }</div></div>`;
-    document.querySelectorAll('[data-corrstone]').forEach(b => b.onclick = () => {
-      st.corruptionRollStone = b.dataset.corrstone;
-      save();
-      renderCorruptionRemoval();
-    });
-    return;
-  }
   panel.innerHTML = `<div class="card"><h2>Retirar Ficha de Corrupción</h2><p class="notice">${ x.name } lanza 1 dado negro. ¿Qué símbolo salió?</p><div class="actions"><button data-corruptionroll="none" class="primary">Ninguno (limpio)</button><button data-corruptionroll="claw">Garra</button><button data-corruptionroll="hand">Mano</button><button data-corruptionroll="both">Ambos símbolos</button></div></div>`;
   document.querySelectorAll('[data-corruptionroll]').forEach(b => b.onclick = () => resolveCorruptionRemoval(x, b.dataset.corruptionroll));
 }
 function resolveCorruptionRemoval(x, result) {
   const st = s.missionState;
-  const stoneKey = 'corruptionStone' + st.corruptionRollStone;
-  st[stoneKey] = Math.max(0, (st[stoneKey] || 0) - 1);
-  let msg = `${ x.name } retira 1 ficha de la Piedra ${ st.corruptionRollStone }. Piedras: ${ [1,2,3,4].map(n => st['corruptionStone'+n]||0).join('/') }.`;
+  st.corruptionChamber = Math.max(0, (st.corruptionChamber || 0) - 1);
+  let msg = `${ x.name } retira 1 ficha de la Cámara de la Corrupción. Quedan ${ st.corruptionChamber } en total.`;
   if (result === 'claw' || result === 'both') {
     x.hp = Math.max(0, x.hp - 1);
     msg += ` Sale garra: ${ x.name } recibe 1 Herida.`;
@@ -4215,7 +4217,6 @@ function resolveCorruptionRemoval(x, result) {
   }
   log(msg);
   st.awaitingCorruptionRoll = null;
-  st.corruptionRollStone = null;
   save();
   renderHero();
   renderMissions();
@@ -4654,38 +4655,24 @@ function activateMichaelChamber() {
   st.finalCombatActive = true;
   st.darkLevel = 1;
   const total = 2 * heroCountForHp;
-  const base = Math.floor(total / 4);
-  let rem = total - base * 4;
-  st.corruptionSetupTotal = total;
-  [1,2,3,4].forEach(n => {
-    st['corruptionStone'+n] = base + (rem > 0 ? 1 : 0);
-    if (rem > 0) rem--;
-  });
+  st.corruptionChamber = total;
   st.awaitingCorruptionSetup = true;
   s.heroes.forEach(q => {
     q.hp = q.hpMax;
     q.mana = q.manaMax;
   });
-  log(`Comienza el Combate Final contra el Arcángel Miguel corrupto. Vida de Miguel: ${ st.michaelHp }. Se deben colocar ${ total } fichas de Corrupción entre las 4 Piedras.`);
+  log(`Comienza el Combate Final contra el Arcángel Miguel corrupto. Vida de Miguel: ${ st.michaelHp }. Se colocan ${ total } fichas de Corrupción en las Piedras (2 por héroe), repartidas equitativamente.`);
   save();
   renderHero();
   renderMissions();
-  say(`Deben colocar ${ total } fichas de Corrupción entre las cuatro Piedras.`);
+  say(`Coloquen ${ total } fichas de Corrupción en las Piedras, repartidas de forma equitativa.`);
 }
 function renderCorruptionSetup() {
   const st = s.missionState;
   const panel = $('heroPage');
   if (!panel)
     return;
-  const assigned = [1,2,3,4].reduce((a,n) => a + (st['corruptionStone'+n] || 0), 0);
-  const remaining = st.corruptionSetupTotal - assigned;
-  panel.innerHTML = `<div class="card"><h2>Repartir Fichas de Corrupción</h2><p class="notice">Se colocan ${ st.corruptionSetupTotal } fichas de Corrupción entre las 4 Piedras, de la forma más equitativa posible.</p><div class="grid top">${ [1,2,3,4].map(n => `<div class="elementRow"><span class="badge">Piedra ${ n }: ${ st['corruptionStone'+n] || 0 }</span><button data-corrsetup="${ n }" data-d="-1" ${ (st['corruptionStone'+n] || 0) <= 0 ? 'disabled' : '' }>−</button><button data-corrsetup="${ n }" data-d="1" ${ remaining <= 0 ? 'disabled' : '' }>+</button></div>`).join('') }</div><p class="muted top">Por repartir: ${ remaining }</p><button id="confirmCorruptionSetup" class="primary top" ${ remaining !== 0 ? 'disabled' : '' }>Confirmar reparto</button></div>`;
-  document.querySelectorAll('[data-corrsetup]').forEach(b => b.onclick = () => {
-    const key = 'corruptionStone' + b.dataset.corrsetup, d = +b.dataset.d;
-    st[key] = Math.max(0, (st[key] || 0) + d);
-    save();
-    renderCorruptionSetup();
-  });
+  panel.innerHTML = `<div class="card"><h2>Colocar Fichas de Corrupción</h2><p class="notice">Coloquen <b>${ st.corruptionChamber }</b> fichas de Corrupción en las Piedras de la Cámara de la Corrupción (2 por héroe), repartidas de la forma más equitativa posible entre las Piedras disponibles.</p><button id="confirmCorruptionSetup" class="primary top">Ya las coloqué, continuar</button></div>`;
   if ($('confirmCorruptionSetup'))
     $('confirmCorruptionSetup').onclick = () => finishMichaelCorruptionSetup();
 }
@@ -4693,7 +4680,7 @@ function finishMichaelCorruptionSetup() {
   const st = s.missionState;
   st.awaitingCorruptionSetup = false;
   startNewHeroPhaseForFinalCombat();
-  log(`Fichas de Corrupción repartidas: ${ [1,2,3,4].map(n => 'Piedra '+n+': '+(st['corruptionStone'+n]||0)).join(', ') }.`);
+  log(`Fichas de Corrupción colocadas en la Cámara: ${ st.corruptionChamber } en total.`);
   save();
   showPhaseCurtain('Fase de Héroes');
   renderHero();
@@ -4939,19 +4926,17 @@ function advanceMichaelDarkness() {
   st.darkLevel = (st.darkLevel || 0) + 1;
   let effectText = '';
   if (st.darkLevel === 1) {
-    effectText = 'Sin efecto adicional (las fichas iniciales ya están repartidas entre las Piedras).';
+    effectText = 'Bendición Oscura inflige 1 Herida por cada ficha de Corrupción en la Cámara.';
   } else if (st.darkLevel === 2) {
     st.extraBlackDice = 1;
-    effectText = 'Miguel lanza 1 dado negro adicional en ataque y defensa.';
+    effectText = 'Miguel lanza 1 dado negro adicional en combate (ataque y defensa, de Miguel y de los héroes).';
   } else if (st.darkLevel === 3) {
-    const restored = addMichaelCorruption(2);
-    effectText = restored ? 'Se añaden 2 fichas de Corrupción más entre las Piedras: Miguel vuelve a ser invulnerable.' : 'Se añaden 2 fichas de Corrupción más entre las Piedras.';
+    effectText = 'Bendición Oscura ahora inflige 2 Heridas por cada ficha de Corrupción en la Cámara.';
   } else if (st.darkLevel === 4) {
     st.extraBlackDice = 2;
-    effectText = 'Miguel lanza 2 dados negros adicionales en ataque y defensa.';
+    effectText = 'Miguel lanza 2 dados negros adicionales en combate (ataque y defensa, de Miguel y de los héroes).';
   } else if (st.darkLevel === 5) {
-    const restored = addMichaelCorruption(3);
-    effectText = (restored ? 'Se añaden 3 fichas de Corrupción más entre las Piedras: Miguel vuelve a ser invulnerable. ' : 'Se añaden 3 fichas de Corrupción más entre las Piedras. ') + 'El medidor de Miguel llega a su nivel máximo.';
+    effectText = 'Bendición Oscura ahora inflige 3 Heridas por cada ficha de Corrupción en la Cámara. El medidor de Miguel llega a su nivel máximo.';
   }
   const t = `Fase de Oscuridad del Arcángel. El medidor avanza al nivel ${ st.darkLevel }. ${ effectText }`;
   s.darknessPending = true;
@@ -5300,10 +5285,7 @@ function initMissions() {
           michaelMaxHp: null,
           michaelHp: null,
           michaelInvulnerable: true,
-          corruptionStone1: 0,
-          corruptionStone2: 0,
-          corruptionStone3: 0,
-          corruptionStone4: 0,
+          corruptionChamber: 0,
           darkLevel: 0,
           awaitingMichaelActivation: false
         };
@@ -5439,7 +5421,7 @@ function renderMissionMechanics(m) {
     if (!st.finalCombatActive)
       return `<div class="card"><h3>Sellos de Corrupción</h3><p class="notice">Rotos: <b>${ st.sealsBreached || 0 } / 4</b></p><p class="muted">Cada héroe puede gastar 1 acción en la zona de un Sello para romperlo ("Romper Sello de Corrupción" en su turno). Todo el grupo gana 5 XP por sello. Al romper los 4, se habilita "Entrar a la Cámara de la Corrupción" en Movimiento.</p></div>`;
     const pct = Math.max(0, Math.min(100, Math.round(st.michaelHp / st.michaelMaxHp * 100)));
-    return `<div class="card bossPanel"><div class="bossTitle">✦ EL ARCÁNGEL MIGUEL ✦<span class="bossSubtitle">El Arcángel Corrupto</span></div><div class="bossHealthTrack"><div class="bossHealthFill" style="width:${ pct }%"></div><span class="bossHealthNum">${ st.michaelHp } / ${ st.michaelMaxHp }</span></div><div class="grid top"><div><small>Nivel del medidor</small><b>${ st.darkLevel || 0 } / 5</b></div>${ [1,2,3,4].map(n => `<div><small>Piedra ${ n }</small><b>${ st['corruptionStone'+n] || 0 }</b></div>`).join('') }<div><small>Dados negros extra</small><b>+${ st.extraBlackDice || 0 }</b></div><div><small>Estado</small><b>${ st.michaelInvulnerable ? 'Invulnerable' : 'Vulnerable' }</b></div></div>${ st.michaelInvulnerable ? `<button id="removeInvulnBtn" class="primary top">Quitar invulnerabilidad</button>` : `<button id="restoreInvulnBtn" class="top">Restaurar invulnerabilidad</button>` }<p class="muted top">Al tirar sus dados negros, Miguel lanza +${ st.extraBlackDice || 0 } dado(s) extra (según el medidor).</p><button id="michaelClawsEffectBtn" class="top">Salieron Garras en dados negros de Miguel</button></div>`;
+    return `<div class="card bossPanel"><div class="bossTitle">✦ EL ARCÁNGEL MIGUEL ✦<span class="bossSubtitle">El Arcángel Corrupto</span></div><div class="bossHealthTrack"><div class="bossHealthFill" style="width:${ pct }%"></div><span class="bossHealthNum">${ st.michaelHp } / ${ st.michaelMaxHp }</span></div><div class="grid top"><div><small>Nivel del medidor</small><b>${ st.darkLevel || 0 } / 5</b></div><div><small>Corrupción en la Cámara</small><b>${ st.corruptionChamber || 0 }</b></div><div><small>Dados negros extra</small><b>+${ st.extraBlackDice || 0 }</b></div><div><small>Estado</small><b>${ st.michaelInvulnerable ? 'Invulnerable' : 'Vulnerable' }</b></div></div>${ st.michaelInvulnerable ? `<button id="removeInvulnBtn" class="primary top">Quitar invulnerabilidad</button>` : `<button id="restoreInvulnBtn" class="top">Restaurar invulnerabilidad</button>` }<p class="muted top">Al tirar sus dados negros, Miguel lanza +${ st.extraBlackDice || 0 } dado(s) extra (según el medidor).</p><button id="michaelClawsEffectBtn" class="top">Miguel ataca: salieron Garras en sus dados negros</button></div>`;
   }
   if (m.id === 'soul_collector') {
     const st = s.missionState;
@@ -5530,7 +5512,7 @@ function bindMissionMechanics(m) {
   if (m.id === 'free_michael' && $('removeInvulnBtn'))
     $('removeInvulnBtn').onclick = () => {
       if (michaelTotalCorruption() > 0)
-        return alert(`Todavía quedan fichas de Corrupción (${ [1,2,3,4].map(n => 'Piedra '+n+': '+(s.missionState['corruptionStone'+n]||0)).join(', ') }). Miguel sigue invulnerable.`);
+        return alert(`Todavía quedan ${ s.missionState.corruptionChamber || 0 } fichas de Corrupción en la Cámara. Miguel sigue invulnerable.`);
       if (!confirm('Confirma que las 4 Piedras de Corrupción están vacías. ¿Quitar la invulnerabilidad de Miguel?'))
         return;
       s.missionState.michaelInvulnerable = false;

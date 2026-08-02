@@ -1,4 +1,4 @@
-const APP_VERSION = '20260730f';
+const APP_VERSION = '20260731a';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -369,7 +369,7 @@ function makeHero(cls = 'rogue') {
       elementBoostDone: false
     },
     paladin: {
-      consecrations: 0,
+      consecrations: { green: false, blue: false, red: false },
       blessed: ''
     },
     mage: {
@@ -574,6 +574,12 @@ s.heroes.forEach(x => {
     x.mage.pendingReplacementSlot = null;
   if (x.mage && x.mage.totalRotations === undefined)
     x.mage.totalRotations = x.mage.amulet || 0;
+  if (x.paladin && typeof x.paladin.consecrations === 'number') {
+    const n = x.paladin.consecrations;
+    x.paladin.consecrations = { green: n > 0, blue: n > 1, red: n > 2 };
+  }
+  if (x.paladin && !x.paladin.consecrations)
+    x.paladin.consecrations = { green: false, blue: false, red: false };
   if (x.berserker && !x.berserker.stanceAbilities)
     x.berserker.stanceAbilities = { 'Furia Sangrienta': [], 'Provocador': [], 'Temerario': [] };
   if (x.berserker && x.berserker.pendingStanceAssign === undefined)
@@ -1752,7 +1758,7 @@ function renderHero() {
     activeSec = 'talisman';
   if (x.cls === 'berserker' && x.berserker.pendingStanceAssign)
     activeSec = 'furia';
-  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }${ getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive ? `<div><small>Corrupción propia</small><b>${ x.personalCorruption || 0 } 😈</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }${ x.cls === 'shaman' ? `<button data-sec="elements" class="${ activeSec === 'elements' ? 'active' : '' }">Elementos</button>` : '' }${ x.cls === 'mage' ? `<button data-sec="talisman" class="${ activeSec === 'talisman' ? 'active' : '' }">Talismán</button>` : '' }${ x.cls === 'berserker' ? `<button data-sec="furia" class="${ activeSec === 'furia' ? 'active' : '' }">Furia</button>` : '' }</div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }${ x.cls === 'shaman' ? `<div id="sec-elements" class="heroSection ${ activeSec === 'elements' ? 'active' : '' }"><div class="card"><h2>Tablero de Elementos</h2>${ shamanElementsBoardHtml(x) }</div></div>` : '' }${ x.cls === 'mage' ? `<div id="sec-talisman" class="heroSection ${ activeSec === 'talisman' ? 'active' : '' }"><div class="card"><h2>Talismán Arcano</h2>${ talismanFullHtml(x) }</div></div>` : '' }${ x.cls === 'berserker' ? `<div id="sec-furia" class="heroSection ${ activeSec === 'furia' ? 'active' : '' }"><div class="card"><h2>Corazón de Furia</h2>${ berserkerFuryBoardHtml(x) }</div></div>` : '' }`;
+  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }${ getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive ? `<div><small>Corrupción propia</small><b>${ x.personalCorruption || 0 } 😈</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }${ x.cls === 'shaman' ? `<button data-sec="elements" class="${ activeSec === 'elements' ? 'active' : '' }">Elementos</button>` : '' }${ x.cls === 'mage' ? `<button data-sec="talisman" class="${ activeSec === 'talisman' ? 'active' : '' }">Talismán</button>` : '' }${ x.cls === 'berserker' ? `<button data-sec="furia" class="${ activeSec === 'furia' ? 'active' : '' }">Furia</button>` : '' }${ x.cls === 'paladin' ? `<button data-sec="consagracion" class="${ activeSec === 'consagracion' ? 'active' : '' }">Consagración</button>` : '' }</div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }${ x.cls === 'shaman' ? `<div id="sec-elements" class="heroSection ${ activeSec === 'elements' ? 'active' : '' }"><div class="card"><h2>Tablero de Elementos</h2>${ shamanElementsBoardHtml(x) }</div></div>` : '' }${ x.cls === 'mage' ? `<div id="sec-talisman" class="heroSection ${ activeSec === 'talisman' ? 'active' : '' }"><div class="card"><h2>Talismán Arcano</h2>${ talismanFullHtml(x) }</div></div>` : '' }${ x.cls === 'berserker' ? `<div id="sec-furia" class="heroSection ${ activeSec === 'furia' ? 'active' : '' }"><div class="card"><h2>Corazón de Furia</h2>${ berserkerFuryBoardHtml(x) }</div></div>` : '' }${ x.cls === 'paladin' ? `<div id="sec-consagracion" class="heroSection ${ activeSec === 'consagracion' ? 'active' : '' }"><div class="card"><h2>Escudo de Consagración</h2><p class="notice">Toca una esfera para Consagrar esa zona (cuesta 1 maná). Elige una habilidad para Bendecirla hasta el final de la ronda.</p>${ paladinConsagracionHtml(x) }</div></div>` : '' }`;
   if (x.unconscious)
     $('heroHeaderCard')?.classList.add('ko-fx');
   document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
@@ -2455,6 +2461,71 @@ function bindBerserkerFuryBoard(x) {
   setActiveCard();
 }
 
+function paladinConsagracionHtml(x) {
+  return `
+  <div class="shield-container">
+
+    <div class="sheen-layer"></div>
+    <div class="border-silver-ring"></div>
+
+    <div class="ring-rivets-container">
+      <div class="ring-rivet r-1"></div>
+      <div class="ring-rivet r-2"></div>
+      <div class="ring-rivet r-3"></div>
+      <div class="ring-rivet r-4"></div>
+      <div class="ring-rivet r-5"></div>
+      <div class="ring-rivet r-6"></div>
+      <div class="ring-rivet r-7"></div>
+      <div class="ring-rivet r-8"></div>
+      <div class="ring-rivet r-9"></div>
+      <div class="ring-rivet r-10"></div>
+      <div class="ring-rivet r-11"></div>
+      <div class="ring-rivet r-12"></div>
+    </div>
+
+    <div class="inner-gold-line"></div>
+
+    <div class="metal-strap strap-1">
+      <div class="strap-rivet"></div>
+      <div class="strap-rivet"></div>
+      <div class="strap-rivet"></div>
+      <div class="strap-rivet"></div>
+    </div>
+    <div class="metal-strap strap-2">
+      <div class="strap-rivet"></div>
+      <div class="strap-rivet"></div>
+      <div class="strap-rivet"></div>
+      <div class="strap-rivet"></div>
+    </div>
+
+    <div class="energy-circle circle-green ${ x.paladin.consecrations.green ? 'active' : '' }" id="paladinCircleGreen" data-color="green">
+      <div class="energy-core"></div>
+    </div>
+
+    <div class="energy-circle circle-blue ${ x.paladin.consecrations.blue ? 'active' : '' }" id="paladinCircleBlue" data-color="blue">
+      <div class="energy-core"></div>
+    </div>
+
+    <div class="energy-circle circle-red ${ x.paladin.consecrations.red ? 'active' : '' }" id="paladinCircleRed" data-color="red">
+      <div class="energy-core"></div>
+    </div>
+
+    <div class="mana-display" id="paladinManaDisplay" title="Maná Actual">${ x.mana }</div>
+
+    <div class="center-boss">
+      <div class="center-boss-ornament">
+        <div class="blessing-bar-container">
+          <select class="blessing-select ${ x.paladin.blessed ? 'blessed' : '' }" id="paladinBlessingSelect">
+            <option value="">-- BENDICIÓN --</option>
+            ${ activeSkills(x).map(q => `<option value="${ q.name }" ${ x.paladin.blessed === q.name ? 'selected' : '' }>${ q.name }</option>`).join('') }
+          </select>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  `;
+}
 function berserkerFuryBoardHtml(x) {
   if (x.berserker.pendingStanceAssign) {
     const v = x.berserker.pendingStanceAssign;
@@ -2669,7 +2740,7 @@ function classHtml(x) {
   if (x.cls === 'shaman')
     return shamanHtml(x);
   if (x.cls === 'paladin')
-    return `<div class="resource">Consagraciones registradas: <b>${ x.paladin.consecrations }</b><div class="row"><button id="conAdd">Consagrar (−1 maná)</button><button id="conRem">Retirar</button></div><small>Comprueba LdV y que la zona no tenga otra Consagración.</small></div><label class="top">Habilidad bendecida<select id="blessed"><option value="">Ninguna</option>${ activeSkills(x).map(q => `<option ${ x.paladin.blessed === q.name ? 'selected' : '' }>${ q.name }</option>`).join('') }</select></label>`;
+    return `<p class="notice">Revisa la pestaña "Consagración" para ver y usar el Escudo de Consagración.</p>`;
   if (x.cls === 'mage') {
     const active = x.mage.slots[x.mage.amulet];
     return `<div class="resource"><b>Cara activa del Talismán:</b> ${ active.name } <small>(${ active.manaCost } maná)</small><p class="muted top">Revisa la pestaña "Talismán" para ver las 4 caras, usar la activa o forzar el giro.</p></div>`;
@@ -3145,26 +3216,36 @@ function bindClass(x) {
     });
   }
   if (x.cls === 'paladin') {
-    $('conAdd').onclick = () => {
-      if (x.mana < 1)
-        return alert('Necesitas 1 maná');
+    document.querySelectorAll('.energy-circle[data-color]').forEach(circle => circle.onclick = () => {
+      const color = circle.dataset.color;
+      const isActive = x.paladin.consecrations[color];
+      if (isActive) {
+        x.paladin.consecrations[color] = false;
+        save();
+        renderHero();
+        say('Retiras la Consagración de esa zona.');
+        return;
+      }
+      if (x.mana < 1) {
+        circle.classList.add('shake');
+        setTimeout(() => circle.classList.remove('shake'), 300);
+        say('Maná insuficiente.');
+        return;
+      }
       x.mana--;
-      x.paladin.consecrations++;
+      x.paladin.consecrations[color] = true;
       save();
       renderHero();
       say('Gastas 1 maná para consagrar. Comprueba la línea de visión y que la zona no tenga otra Consagración.');
-    };
-    $('conRem').onclick = () => {
-      x.paladin.consecrations = Math.max(0, x.paladin.consecrations - 1);
-      save();
-      renderHero();
-    };
-    $('blessed').onchange = e => {
-      x.paladin.blessed = e.target.value;
-      save();
-      if (e.target.value)
-        say(`Has bendecido ${ e.target.value } hasta el final de la ronda.`);
-    };
+    });
+    if ($('paladinBlessingSelect'))
+      $('paladinBlessingSelect').onchange = e => {
+        x.paladin.blessed = e.target.value;
+        save();
+        renderHero();
+        if (e.target.value)
+          say(`Has bendecido ${ e.target.value } hasta el final de la ronda.`);
+      };
   }
   if (x.cls === 'mage') {
     document.querySelectorAll('[data-slot]').forEach(inp => inp.onchange = () => {
@@ -4035,10 +4116,8 @@ function renderMichaelActivation() {
   if (!panel)
     return;
   if (st.michaelClawStep === 'ask' || !st.michaelClawStep) {
-    panel.innerHTML = `<div class="card"><h2>⚔️ Activación del Arcángel Miguel</h2><p class="notice">Lanza 2 dados negros. ¿Cuántas <b>garras</b> salieron? (las Marcas de Garra no activan ninguna habilidad, solo cuentan las garras)</p><div class="actions"><button data-claws="0" class="primary">0 garras</button><button data-claws="1" class="primary">1 garra</button><button data-claws="2" class="primary">2 garras</button><button id="michaelNoAbilityBtn">Solo salieron Marcas de Garra (ninguna habilidad)</button></div></div>`;
+    panel.innerHTML = `<div class="card"><h2>⚔️ Activación del Arcángel Miguel</h2><p class="notice">Lanza 2 dados negros. ¿Cuántas <b>garras</b> salieron?</p><div class="actions"><button data-claws="0" class="primary">0 garras</button><button data-claws="1" class="primary">1 garra</button><button data-claws="2" class="primary">2 garras</button></div></div>`;
     document.querySelectorAll('[data-claws]').forEach(b => b.onclick = () => resolveMichaelAbility(+b.dataset.claws));
-    if ($('michaelNoAbilityBtn'))
-      $('michaelNoAbilityBtn').onclick = () => resolveMichaelNoAbility();
     return;
   }
   if (st.michaelClawStep === 'single-damage') {
@@ -4097,13 +4176,6 @@ function renderMichaelActivation() {
       };
     return;
   }
-}
-function resolveMichaelNoAbility() {
-  const st = s.missionState;
-  log('Miguel se activa: solo salieron Marcas de Garra, ninguna garra. No se activa ninguna habilidad.');
-  save();
-  duckAndSay('Solo Marcas de Garra. Ninguna habilidad se activa.');
-  resolveMichaelAfterActivation();
 }
 function resolveMichaelAbility(claws) {
   const st = s.missionState;

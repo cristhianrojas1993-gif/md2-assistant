@@ -828,290 +828,291 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 
     /* CONTENEDOR PRINCIPAL DEL ESCUDO */
     .shield-container {
-      position: relative;
-      width: 520px;
-      height: 520px;
-      border-radius: 50%;
-      /* TEXTURA DE MADERA REALISTA */
-      background: 
-        radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0.85) 100%),
-        repeating-radial-gradient(circle at 20% 30%, #543318 0px, #3d230e 15px, #261406 30px, #442710 45px),
-        repeating-linear-gradient(15deg, transparent 0px, rgba(0,0,0,0.15) 4px, transparent 8px);
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
-    }
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  aspect-ratio: 1 / 1;
+  margin: 10px auto;
+  border-radius: 50%;
+  /* TEXTURA DE MADERA REALISTA */
+  background: 
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0.85) 100%),
+    repeating-radial-gradient(circle at 20% 30%, #543318 0px, #3d230e 15px, #261406 30px, #442710 45px),
+    repeating-linear-gradient(15deg, transparent 0px, rgba(0,0,0,0.15) 4px, transparent 8px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
 
-    /* BARRAS METÁLICAS EN X */
-    .metal-strap {
-      position: absolute;
-      width: 520px;
-      height: 52px;
-      background: linear-gradient(180deg, #d1d5db 0%, #9ca3af 20%, #4b5563 50%, #1f2937 80%, #6b7280 100%);
-      border-top: 2px solid #d97706;
-      border-bottom: 2px solid #d97706;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.8), 0 0 6px rgba(217, 119, 6, 0.3);
-      z-index: 1;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 50px;
-      box-sizing: border-box;
-    }
+/* BARRAS METÁLICAS EN X */
+.metal-strap {
+  position: absolute;
+  width: 100%;
+  height: 10%;
+  background: linear-gradient(180deg, #d1d5db 0%, #9ca3af 20%, #4b5563 50%, #1f2937 80%, #6b7280 100%);
+  border-top: 2px solid #d97706;
+  border-bottom: 2px solid #d97706;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8), 0 0 6px rgba(217, 119, 6, 0.3);
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10%;
+  box-sizing: border-box;
+}
 
-    .strap-1 { transform: rotate(45deg); }
-    .strap-2 { transform: rotate(-45deg); }
+.strap-1 { transform: rotate(45deg); }
+.strap-2 { transform: rotate(-45deg); }
 
-    /* REMACHES EN LAS BARRAS EN X (AHORA 4 POR BARRA) */
-    .strap-rivet {
-      width: 11px;
-      height: 11px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #ffffff, #9ca3af 40%, #374151 75%, #000 100%);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.9), inset 0 1px 2px rgba(255,255,255,0.8);
-      border: 1px solid #d97706;
-    }
+/* REMACHES EN LAS BARRAS EN X */
+.strap-rivet {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff, #9ca3af 40%, #374151 75%, #000 100%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.9), inset 0 1px 2px rgba(255,255,255,0.8);
+  border: 1px solid #d97706;
+}
 
-    /* ANILLO EXTERIOR DE ACERO TEMPLADO */
-    .border-silver-ring {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      border-radius: 50%;
-      background: linear-gradient(180deg, #d1d5db 0%, #9ca3af 20%, #4b5563 50%, #1f2937 80%, #6b7280 100%);
-      -webkit-mask: radial-gradient(circle, transparent 232px, #000 233px);
-      mask: radial-gradient(circle, transparent 232px, #000 233px);
-      box-shadow: inset 0 0 18px rgba(0,0,0,0.9);
-      pointer-events: none;
-      z-index: 3;
-    }
+/* ANILLO EXTERIOR DE ACERO TEMPLADO */
+.border-silver-ring {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #d1d5db 0%, #9ca3af 20%, #4b5563 50%, #1f2937 80%, #6b7280 100%);
+  -webkit-mask: radial-gradient(circle, transparent 44%, #000 45%);
+  mask: radial-gradient(circle, transparent 44%, #000 45%);
+  box-shadow: inset 0 0 18px rgba(0,0,0,0.9);
+  pointer-events: none;
+  z-index: 3;
+}
 
-    /* CONTENEDOR DE REMACHES CIRCULARES EN EL ANILLO PERIMETRAL */
-    .ring-rivets-container {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 4;
-    }
+/* CONTENEDOR DE REMACHES CIRCULARES */
+.ring-rivets-container {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 4;
+}
 
-    /* Remaches circulares distribuidos exactamente alrededor del anillo */
-    .ring-rivet {
-      position: absolute;
-      top: 50%; left: 50%;
-      width: 10px;
-      height: 10px;
-      margin: -5px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #ffffff, #9ca3af 40%, #1f2937 80%, #000 100%);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.9), inset 0 1px 2px rgba(255,255,255,0.8);
-      border: 1px solid #4b5563;
-    }
+/* Remaches circulares distribuidos alrededor del anillo */
+.ring-rivet {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff, #9ca3af 40%, #1f2937 80%, #000 100%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.9), inset 0 1px 2px rgba(255,255,255,0.8);
+  border: 1px solid #4b5563;
+}
 
-    /* Posicionamiento radial de los 12 remaches del borde */
-    .r-1  { transform: rotate(0deg) translateX(247px); }
-    .r-2  { transform: rotate(30deg) translateX(247px); }
-    .r-3  { transform: rotate(60deg) translateX(247px); }
-    .r-4  { transform: rotate(90deg) translateX(247px); }
-    .r-5  { transform: rotate(120deg) translateX(247px); }
-    .r-6  { transform: rotate(150deg) translateX(247px); }
-    .r-7  { transform: rotate(180deg) translateX(247px); }
-    .r-8  { transform: rotate(210deg) translateX(247px); }
-    .r-9  { transform: rotate(240deg) translateX(247px); }
-    .r-10 { transform: rotate(270deg) translateX(247px); }
-    .r-11 { transform: rotate(300deg) translateX(247px); }
-    .r-12 { transform: rotate(330deg) translateX(247px); }
+/* Posicionamiento radial de los 12 remaches del borde */
+.r-1  { transform: rotate(0deg) translateX(158px); }
+.r-2  { transform: rotate(30deg) translateX(158px); }
+.r-3  { transform: rotate(60deg) translateX(158px); }
+.r-4  { transform: rotate(90deg) translateX(158px); }
+.r-5  { transform: rotate(120deg) translateX(158px); }
+.r-6  { transform: rotate(150deg) translateX(158px); }
+.r-7  { transform: rotate(180deg) translateX(158px); }
+.r-8  { transform: rotate(210deg) translateX(158px); }
+.r-9  { transform: rotate(240deg) translateX(158px); }
+.r-10 { transform: rotate(270deg) translateX(158px); }
+.r-11 { transform: rotate(300deg) translateX(158px); }
+.r-12 { transform: rotate(330deg) translateX(158px); }
 
-    /* Filo dorado interno */
-    .inner-gold-line {
-      position: absolute;
-      top: 26px; left: 26px; right: 26px; bottom: 26px;
-      border-radius: 50%;
-      border: 2px solid #f59e0b;
-      box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
-      pointer-events: none;
-      z-index: 4;
-    }
+/* Filo dorado interno */
+.inner-gold-line {
+  position: absolute;
+  top: 5%; left: 5%; right: 5%; bottom: 5%;
+  border-radius: 50%;
+  border: 2px solid #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+  pointer-events: none;
+  z-index: 4;
+}
 
-    /* ANIMACIÓN DE BRILLO RELUCIENTE SOBRE METAL */
-    .sheen-layer {
-      position: absolute;
-      top: -100%; left: -100%; width: 300%; height: 300%;
-      background: linear-gradient(
-        115deg,
-        transparent 44%,
-        rgba(255, 255, 255, 0.35) 50%,
-        transparent 56%
-      );
-      pointer-events: none;
-      z-index: 8;
-      animation: sweepGleam 4s infinite ease-in-out;
-    }
+/* ANIMACIÓN DE BRILLO RELUCIENTE SOBRE METAL */
+.sheen-layer {
+  position: absolute;
+  top: -100%; left: -100%; width: 300%; height: 300%;
+  background: linear-gradient(
+    115deg,
+    transparent 44%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 56%
+  );
+  pointer-events: none;
+  z-index: 8;
+  animation: sweepGleam 4s infinite ease-in-out;
+}
 
-    @keyframes sweepGleam {
-      0% { transform: translate(-30%, -30%); }
-      40% { transform: translate(30%, 30%); }
-      100% { transform: translate(30%, 30%); }
-    }
+@keyframes sweepGleam {
+  0% { transform: translate(-30%, -30%); }
+  40% { transform: translate(30%, 30%); }
+  100% { transform: translate(30%, 30%); }
+}
 
-    /* CÍRCULOS DE CONSAGRACIÓN */
-    .energy-circle {
-      position: absolute;
-      width: 86px;
-      height: 86px;
-      border-radius: 50%;
-      background: radial-gradient(circle, #1a1c23 60%, #0d0e12 100%);
-      border: 3px solid #d97706;
-      box-shadow: inset 0 0 12px #000, 0 8px 18px rgba(0,0,0,0.85);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      z-index: 6;
-      transition: all 0.3s ease;
-    }
+/* CÍRCULOS DE CONSAGRACIÓN */
+.energy-circle {
+  position: absolute;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #1a1c23 60%, #0d0e12 100%);
+  border: 2px solid #d97706;
+  box-shadow: inset 0 0 12px #000, 0 6px 14px rgba(0,0,0,0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 6;
+  transition: all 0.3s ease;
+}
 
-    .energy-core {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      opacity: 0.1;
-      transition: opacity 0.3s ease;
-    }
+.energy-core {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  opacity: 0.1;
+  transition: opacity 0.3s ease;
+}
 
-    .circle-green { top: 38px; left: 50%; transform: translateX(-50%); }
-    .circle-blue { top: 50%; left: 38px; transform: translateY(-50%); }
-    .circle-red { top: 50%; right: 38px; transform: translateY(-50%); }
+.circle-green { top: 22px; left: 50%; transform: translateX(-50%); }
+.circle-blue { top: 50%; left: 22px; transform: translateY(-50%); }
+.circle-red { top: 50%; right: 22px; transform: translateY(-50%); }
 
-    /* ORBE DE MANÁ INFERIOR */
-    .mana-display {
-      position: absolute;
-      bottom: 48px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 68px;
-      height: 68px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, #93c5fd, #1d4ed8 70%, #0f172a);
-      border: 3px solid #fef08a;
-      box-shadow: 0 0 18px rgba(59, 130, 246, 0.95);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-weight: bold;
-      font-size: 26px;
-      color: #fff;
-      user-select: none;
-      pointer-events: none;
-      z-index: 6;
-    }
+/* ORBE DE MANÁ INFERIOR */
+.mana-display {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #93c5fd, #1d4ed8 70%, #0f172a);
+  border: 2px solid #fef08a;
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 18px;
+  color: #fff;
+  user-select: none;
+  pointer-events: none;
+  z-index: 6;
+}
 
-    /* UMBO CENTRAL METÁLICO */
-    .center-boss {
-      position: absolute;
-      width: 210px;
-      height: 210px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #e5e7eb 0%, #9ca3af 25%, #374151 65%, #111827 100%);
-      border: 4px solid #d97706;
-      box-shadow: 0 0 12px rgba(217, 119, 6, 0.4), 0 15px 35px rgba(0,0,0,0.9), inset 0 2px 8px rgba(255,255,255,0.7);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 5;
-    }
+/* UMBO CENTRAL METÁLICO */
+.center-boss {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #e5e7eb 0%, #9ca3af 25%, #374151 65%, #111827 100%);
+  border: 3px solid #d97706;
+  box-shadow: 0 0 12px rgba(217, 119, 6, 0.4), 0 10px 25px rgba(0,0,0,0.9), inset 0 2px 6px rgba(255,255,255,0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5;
+}
 
-    /* ACERO PAVONADO DIFERENCIADO EN BENDICIÓN */
-    .center-boss-ornament {
-      position: absolute;
-      width: 170px;
-      height: 170px;
-      border-radius: 50%;
-      border: 2px solid #fef08a;
-      background: 
-        radial-gradient(circle at 40% 30%, rgba(255,255,255,0.18) 0%, transparent 50%),
-        radial-gradient(circle, #2d3748 0%, #1a202c 60%, #0f172a 100%);
-      box-shadow: inset 0 0 18px rgba(0,0,0,0.95), inset 0 2px 4px rgba(255,255,255,0.2);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      box-sizing: border-box;
-    }
+/* ACERO PAVONADO DIFERENCIADO EN BENDICIÓN */
+.center-boss-ornament {
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  border: 1.5px solid #fef08a;
+  background: 
+    radial-gradient(circle at 40% 30%, rgba(255,255,255,0.18) 0%, transparent 50%),
+    radial-gradient(circle, #2d3748 0%, #1a202c 60%, #0f172a 100%);
+  box-shadow: inset 0 0 14px rgba(0,0,0,0.95), inset 0 1px 3px rgba(255,255,255,0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
 
-    .blessing-bar-container {
-      width: 150px;
-      z-index: 6;
-    }
+.blessing-bar-container {
+  width: 100px;
+  z-index: 6;
+}
 
-    .blessing-select {
-      width: 100%;
-      padding: 6px 8px;
-      background: #090d16;
-      color: #fef08a;
-      border: 1px solid #d97706;
-      border-radius: 4px;
-      font-family: inherit;
-      font-size: 10px;
-      letter-spacing: 0.5px;
-      text-align: center;
-      outline: none;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
+.blessing-select {
+  width: 100%;
+  padding: 4px 6px;
+  background: #090d16;
+  color: #fef08a;
+  border: 1px solid #d97706;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 8.5px;
+  letter-spacing: 0.3px;
+  text-align: center;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
 
-    .blessing-select.blessed {
-      background: linear-gradient(180deg, #312e81 0%, #1e1b4b 100%);
-      color: #fef08a;
-      border-color: #f59e0b;
-      box-shadow: 0 0 14px rgba(245, 158, 11, 0.8);
-      font-weight: bold;
-    }
+.blessing-select.blessed {
+  background: linear-gradient(180deg, #312e81 0%, #1e1b4b 100%);
+  color: #fef08a;
+  border-color: #f59e0b;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.8);
+  font-weight: bold;
+}
 
-    .blessing-select option {
-      background: #1e293b;
-      color: #f8fafc;
-    }
+.blessing-select option {
+  background: #1e293b;
+  color: #f8fafc;
+}
 
-    /* EFECTOS DE BRILLO AL ACTIVAR CONSAGRACIÓN */
-    .circle-green .energy-core {
-      background: radial-gradient(circle, #ffffff 0%, #4ade80 35%, #16a34a 65%, transparent 100%);
-    }
-    .circle-green.active {
-      border-color: #ffffff;
-      box-shadow: 0 0 20px #fff, 0 0 40px #22c55e, 0 0 70px #15803d, inset 0 0 25px #fff;
-    }
+/* EFECTOS DE BRILLO AL ACTIVAR CONSAGRACIÓN */
+.circle-green .energy-core {
+  background: radial-gradient(circle, #ffffff 0%, #4ade80 35%, #16a34a 65%, transparent 100%);
+}
+.circle-green.active {
+  border-color: #ffffff;
+  box-shadow: 0 0 20px #fff, 0 0 40px #22c55e, 0 0 70px #15803d, inset 0 0 25px #fff;
+}
 
-    .circle-blue .energy-core {
-      background: radial-gradient(circle, #ffffff 0%, #38bdf8 35%, #0284c7 65%, transparent 100%);
-    }
-    .circle-blue.active {
-      border-color: #ffffff;
-      box-shadow: 0 0 20px #fff, 0 0 40px #3b82f6, 0 0 70px #1d4ed8, inset 0 0 25px #fff;
-    }
+.circle-blue .energy-core {
+  background: radial-gradient(circle, #ffffff 0%, #38bdf8 35%, #0284c7 65%, transparent 100%);
+}
+.circle-blue.active {
+  border-color: #ffffff;
+  box-shadow: 0 0 20px #fff, 0 0 40px #3b82f6, 0 0 70px #1d4ed8, inset 0 0 25px #fff;
+}
 
-    .circle-red .energy-core {
-      background: radial-gradient(circle, #ffffff 0%, #f87171 35%, #dc2626 65%, transparent 100%);
-    }
-    .circle-red.active {
-      border-color: #ffffff;
-      box-shadow: 0 0 20px #fff, 0 0 40px #ef4444, 0 0 70px #b91c1c, inset 0 0 25px #fff;
-    }
+.circle-red .energy-core {
+  background: radial-gradient(circle, #ffffff 0%, #f87171 35%, #dc2626 65%, transparent 100%);
+}
+.circle-red.active {
+  border-color: #ffffff;
+  box-shadow: 0 0 20px #fff, 0 0 40px #ef4444, 0 0 70px #b91c1c, inset 0 0 25px #fff;
+}
 
-    .energy-circle.active .energy-core {
-      opacity: 1;
-      animation: burstFlash 1.8s infinite alternate ease-in-out;
-    }
+.energy-circle.active .energy-core {
+  opacity: 1;
+  animation: burstFlash 1.8s infinite alternate ease-in-out;
+}
 
-    @keyframes burstFlash {
-      0% { transform: scale(0.92); filter: brightness(1.2) contrast(1.2); }
-      100% { transform: scale(1.12); filter: brightness(1.8) contrast(1.5); }
-    }
+@keyframes burstFlash {
+  0% { transform: scale(0.92); filter: brightness(1.2) contrast(1.2); }
+  100% { transform: scale(1.12); filter: brightness(1.8) contrast(1.5); }
+}
 
-    .shake { animation: shake 0.3s ease-in-out; }
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-6px); }
-      75% { transform: translateX(6px); }
-    }
-  
+.shake { animation: shake 0.3s ease-in-out; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}

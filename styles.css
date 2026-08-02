@@ -659,3 +659,166 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
     border-color:#ff8a3d;box-shadow:0 0 10px #ff6a1e}
   .blessingRow.unlockedFire .txt{color:#ffd9b3}
   .blessingRow.unlockedFire .txt b{color:#ff9f5a}
+
+/* ============ TABLERO DE FURIA DEL BERSERKER ============ */
+
+
+.board{
+  position:relative;width:100%;max-width:380px;height:745px;margin:0 auto;
+  border:8px solid transparent;border-radius:12px;background-clip:padding-box, padding-box, padding-box, padding-box, border-box;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.025) 0 2px, transparent 2px 14px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,.025) 0 2px, transparent 2px 14px),
+    radial-gradient(ellipse at 50% 25%, rgba(255,255,255,.05), transparent 60%),
+    linear-gradient(160deg,#4a7d94,#2e5568 50%,#173547),
+    linear-gradient(115deg,#3a2a08 0%,#fff9e6 12%,#c9971f 22%,#3a2a08 35%,#3a2a08 60%,#fff3c4 72%,#8a6212 82%,#3a2a08 95%,#3a2a08 100%);
+  background-origin:padding-box, padding-box, padding-box, padding-box, border-box;
+  box-shadow:
+    inset 0 0 24px rgba(0,0,0,.55),
+    inset 8px 8px 0 -6px rgba(255,244,190,.55),
+    inset -8px -8px 0 -6px rgba(0,0,0,.5),
+    0 6px 18px rgba(0,0,0,.5),
+    0 0 0 1px #1a1004;
+  padding:16px 14px 20px;overflow:hidden;
+}
+/* ===== HACHAS DECORATIVAS (tema Berserker: brutalidad, rabia) ===== */
+.berserkerAxeDouble{position:absolute;width:180px;height:380px;z-index:0;pointer-events:none;
+  opacity:.9;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
+.berserkerAxeDouble svg{width:100%;height:100%;display:block}
+.axeDoubleLeft{left:-125px;bottom:16px;transform-origin:50% 100%;transform:rotate(20deg)}
+.axeDoubleRight{right:-125px;bottom:16px;transform-origin:50% 100%;transform:scaleX(-1) rotate(20deg)}
+
+.ruleBox{font-family:'Cinzel',serif;font-size:.66rem;text-align:center;color:#f0c85a;line-height:1.4;
+  font-weight:600;text-shadow:0 0 6px rgba(240,200,90,.5), 0 1px 2px rgba(0,0,0,.8);
+  border:6px solid transparent;border-radius:4px;background-clip:padding-box, border-box;
+  background-image:linear-gradient(#0a0703,#0a0703), linear-gradient(115deg,#3a2a08 0%,#fff9e6 12%,#c9971f 22%,#3a2a08 35%,#3a2a08 60%,#fff3c4 72%,#8a6212 82%,#3a2a08 95%,#3a2a08 100%);
+  background-origin:padding-box, border-box;padding:10px 12px;margin:14px 0 18px;position:relative;z-index:6;
+  box-shadow:inset 0 2px 3px rgba(255,255,255,.08), inset 0 -3px 4px rgba(0,0,0,.5), 0 4px 8px rgba(0,0,0,.6), 0 0 0 1px #2a1c05}
+
+/* ===== TUBERÍAS (rectangulares, gruesas, tipo lava - posicionadas dinámicamente por JS) ===== */
+.tubeWrap{position:absolute;left:0;top:0;height:26px;transform-origin:0 50%;z-index:2;pointer-events:none;
+  border-radius:4px;
+  background:linear-gradient(135deg,#fff3c4 0%,#c9971f 22%,#5a3f0a 50%,#c9971f 78%,#fff3c4 100%);
+  box-shadow:0 1px 2px rgba(0,0,0,.4)}
+.tubeBody{position:absolute;inset:4px;border-radius:2px;
+  background:#241209;
+  opacity:.7}
+.tubeWrap.active .tubeBody, .tubeGroup.active .tubeBody{
+  background:#c8330f;
+  opacity:1;
+  filter:brightness(var(--fb,.75)) saturate(var(--fs,.7))}
+.tubeShine{position:absolute;inset:4px;border-radius:2px;overflow:hidden;opacity:0}
+.tubeWrap.active .tubeShine, .tubeGroup.active .tubeShine{opacity:1}
+.tubeShine::after{content:'';position:absolute;top:0;bottom:0;width:40%;left:-40%;
+  background:linear-gradient(90deg, transparent, rgba(255,240,190,.75) 45%, rgba(255,240,190,.9) 50%, rgba(255,240,190,.75) 55%, transparent);
+  filter:blur(1px);
+  animation:tubeShineSweep 1.4s linear infinite}
+@keyframes tubeShineSweep{from{left:-40%}to{left:100%}}
+.tubeLavaBurst{position:absolute;top:4px;bottom:4px;left:0;width:36px;border-radius:2px;
+  background:linear-gradient(90deg, rgba(255,90,20,0), #fff3c4 40%, #ff5a1f 65%, rgba(255,90,20,0));
+  opacity:0;filter:drop-shadow(0 0 8px rgba(255,140,40,.8))}
+.tubeWrap.burst .tubeLavaBurst, .tubeGroup.burst .tubeLavaBurst{animation:lavaBurstTravel .9s ease-out}
+@keyframes lavaBurstTravel{0%{left:-10%;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:110%;opacity:0}}
+
+/* ===== GRUPO DE TUBERIA EN L (continua, sin pieza en el codo) ===== */
+.tubeGroup{position:absolute;left:0;top:0;z-index:2;pointer-events:none}
+.tubeWrap.active, .tubeGroup.active{filter:drop-shadow(0 0 var(--fg,8px) rgba(255,90,20,var(--fga,.65)))}
+.tubeJoint{position:absolute;width:38px;height:38px;transform:translate(-50%,-50%);z-index:3;
+  border-radius:4px;
+  background:linear-gradient(135deg,#fff3c4 0%,#c9971f 30%,#5a3f0a 55%,#8a6212 75%,#fff3c4 100%);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.7), inset 0 -2px 3px rgba(0,0,0,.5), 0 2px 5px rgba(0,0,0,.5);
+  border:1px solid #2a1c05}
+.tubeJoint::before{content:'';position:absolute;inset:4px;border-radius:2px;
+  background:linear-gradient(135deg,#3a2a08,#1c1204);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+.tubeJoint::after{content:'';position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(circle at 35% 30%,#ffe9b8,#8a6212 70%);
+  box-shadow:0 1px 1px rgba(0,0,0,.5)}
+.tubeGroup.active .tubeJoint::after{
+  background:radial-gradient(circle at 35% 30%,#fff3c4,#ff5a1f 60%,#c8330f 90%);
+  animation:tubeJointGlow 1.6s ease-in-out infinite}
+@keyframes tubeJointGlow{0%,100%{box-shadow:0 0 3px rgba(255,120,30,.6)}50%{box-shadow:0 0 8px rgba(255,150,50,.95)}}
+
+/* ===== TARJETAS DE POSTURA ===== */
+.stanceCard:active{transform:scale(.96)}
+.stanceCard.shakeNoFury{animation:shakeNoFury .4s ease}
+@keyframes shakeNoFury{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.stanceCard{position:absolute;width:150px;border-radius:6px;padding:9px 10px;text-align:center;z-index:6;
+  border:3px solid transparent;background-clip:padding-box, border-box;cursor:pointer;transition:transform .15s ease;box-shadow:0 4px 10px rgba(0,0,0,.4)}
+.stanceCard .stName{font-family:'Cinzel',serif;font-weight:700;font-size:.76rem;line-height:1.2;letter-spacing:.03em;text-transform:uppercase;text-align:center;display:block;width:100%}
+.stCardHeader{position:relative;cursor:pointer;padding:0 30px 0 14px}
+#cardPR .stCardHeader{padding:0 34px 0 6px}
+.stExpandBtn{position:absolute;right:-4px;top:50%;transform:translateY(-50%);
+  min-height:0;min-width:0;
+  width:22px;height:22px;box-sizing:border-box;border-radius:50%;padding:0;
+  background:radial-gradient(circle at 35% 30%,#5a3a1a,#1c1008 75%);
+  border:1.5px solid var(--accent);color:var(--accent-bright);
+  font-size:.55rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:transform .3s ease, box-shadow .3s ease;box-shadow:0 0 0 rgba(255,140,40,0)}
+.stExpandBtn::before{content:'🔥';font-size:.55rem;filter:saturate(1.3)}
+.stanceCard.expanded .stExpandBtn{transform:translateY(-50%) rotate(180deg);box-shadow:0 0 8px rgba(255,140,40,.6)}
+.stAbilitiesPanel{max-height:0;overflow:hidden;transition:max-height .3s ease, margin-top .3s ease;text-align:left}
+.stanceCard.expanded .stAbilitiesPanel{max-height:260px;margin-top:8px}
+.stAbilityItem{font-size:.64rem;line-height:1.3;padding:5px 0;border-top:1px solid rgba(120,90,40,.25)}
+.stAbilityItem:first-child{border-top:none}
+.stAbilityItem.muted{color:#8a7d6a;font-style:italic}
+.stanceCard .stDesc{font-size:.68rem;line-height:1.3}
+
+/* ===== MODAL SELECTOR DE POSTURA PARA HABILIDADES ===== */
+.stancePickerOverlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;
+  display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s ease}
+.stancePickerOverlay.open{opacity:1;pointer-events:auto}
+.stancePickerBox{background:linear-gradient(160deg,#241a10,#140d07);border:2px solid var(--accent);border-radius:8px;
+  padding:20px;width:min(320px,88vw);box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.stancePickerTitle{font-family:'Cinzel',serif;font-size:.9rem;text-align:center;margin-bottom:16px;color:var(--text)}
+.stancePickerBtns{display:flex;flex-direction:column;gap:8px}
+.pickerStanceBtn{width:100%}
+.pickerCancel{width:100%;margin-top:12px;opacity:.7}
+.stanceCard.dark{background-image:linear-gradient(160deg,#2a1410,#160a08), linear-gradient(115deg,#fff3c4,#c9971f 40%,#5a3f0a 70%,#fff3c4);background-origin:padding-box, border-box;color:#f0d9c4}
+.stanceCard.dark .stName{color:#ffb347}
+.stanceCard.cream{background-image:linear-gradient(160deg,#2a1410,#160a08), linear-gradient(115deg,#fff3c4,#c9971f 40%,#5a3f0a 70%,#fff3c4);background-origin:padding-box, border-box;color:#f0d9c4}
+.stanceCard.cream .stName{color:#ffb347}
+.stanceCard.active{box-shadow:0 0 32px rgba(255,20,20,1), 0 0 55px rgba(255,20,20,.55), 0 4px 10px rgba(0,0,0,.4);animation:cardPulse 1.8s ease-in-out infinite;border-color:rgba(255,40,40,.9)!important}
+@keyframes cardPulse{0%,100%{box-shadow:0 0 20px rgba(230,10,10,.85),0 0 40px rgba(255,20,20,.4),0 4px 10px rgba(0,0,0,.4)}50%{box-shadow:0 0 42px rgba(255,30,30,1),0 0 70px rgba(255,20,20,.7),0 4px 10px rgba(0,0,0,.4)}}
+.cardFS{left:14px;top:140px}
+.cardPR{right:14px;top:140px}
+.cardTM{left:50%;top:618px;transform:translateX(-50%)}
+
+/* ===== FUEGO (silueta real extraida del emoji, ESTATICO, sin animacion) ===== */
+.flameStageReal{position:absolute;left:calc(50% + 8px);top:280px;transform:translateX(-50%);
+  width:155px;height:196px;z-index:4;
+  filter:brightness(var(--fb,.75)) saturate(var(--fs,.7)) drop-shadow(0 0 var(--fg,10px) rgba(255,120,30,var(--fga,.4)));
+  transition:filter .6s ease}
+.flameGlowBehind{position:absolute;left:calc(50% + 8px);top:280px;transform:translateX(-50%);
+  width:155px;height:196px;z-index:3;opacity:.4;
+  animation:respirar 2.6s ease-in-out infinite;
+  transition:filter .6s ease}
+@keyframes respirar{
+  0%,100%{opacity:.32;filter:brightness(var(--fb,.75)) saturate(var(--fs,.7)) blur(5px) drop-shadow(0 0 var(--fg,10px) rgba(255,140,0,var(--fga,.4)))}
+  50%{opacity:.58;filter:brightness(var(--fb,.75)) saturate(var(--fs,.7)) blur(7px) drop-shadow(0 0 calc(var(--fg,10px) + 8px) rgba(255,160,40,calc(var(--fga,.4) + .15)))}
+}
+.flameStageReal svg{width:100%;height:100%;display:block}
+
+.heartWrap{position:absolute;left:calc(50% + 8px);top:352px;transform:translateX(-50%);width:150px;height:139px;z-index:5;
+  filter:drop-shadow(0 3px 10px rgba(0,0,0,.7))}
+.heartGlowBehind{position:absolute;left:calc(50% + 8px);top:352px;transform:translateX(-50%);
+  width:150px;height:139px;z-index:4;opacity:.4;filter:blur(6px) drop-shadow(0 0 20px rgba(255,140,0,.6));
+  animation:respirar 2.6s ease-in-out infinite;pointer-events:none}
+.heartWrap svg{width:100%;height:100%;overflow:visible}
+.heartEnergyEdge{animation:heartEdgeGlow 2.6s ease-in-out infinite;vector-effect:non-scaling-stroke}
+@keyframes heartEdgeGlow{
+  0%,100%{stroke-opacity:.3;stroke-width:.35;filter:drop-shadow(0 0 1px rgba(255,120,40,.6))}
+  50%{stroke-opacity:.95;stroke-width:.85;filter:drop-shadow(0 0 3px rgba(255,150,60,.95))}
+}
+.heartBase{fill:#1a0806}
+.heartFireLick{opacity:.65;animation:heartFireLickPulse 2.6s ease-in-out infinite}
+@keyframes heartFireLickPulse{0%,100%{opacity:.45}50%{opacity:.85}}
+.liquidRect{transition:y .9s cubic-bezier(.4,1.3,.4,1), height .9s cubic-bezier(.4,1.3,.4,1)}
+#liquidShine{transition:y .9s cubic-bezier(.4,1.3,.4,1), opacity .3s ease}
+.heartHighlight{fill:rgba(255,255,255,.14)}
+.furyNum{font-family:'Cinzel',serif;font-weight:700;font-size:9.5px;fill:#fbe6b8;paint-order:stroke;
+  stroke:#150a04;stroke-width:.9px;stroke-linejoin:round;text-anchor:middle;dominant-baseline:middle}
+
+.furyReadout{text-align:center;font-size:.82rem;color:var(--muted);margin-top:14px}
+.furyReadout b{color:#ff9a1f}

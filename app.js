@@ -1,4 +1,4 @@
-const APP_VERSION = '20260729f';
+const APP_VERSION = '20260730e';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -381,7 +381,9 @@ function makeHero(cls = 'rogue') {
     },
     berserker: {
       fury: 0,
-      stance: 'Furia Sangrienta'
+      stance: 'Furia Sangrienta',
+      stanceAbilities: { 'Furia Sangrienta': [], 'Provocador': [], 'Temerario': [] },
+      pendingStanceAssign: null
     },
     statuses: [],
     unconscious: false,
@@ -466,6 +468,10 @@ function mpDeepFixArrays(obj, seen) {
   return obj;
 }
 function normalizeState() {
+if (s.missionState && s.missionState.corruptionStone3 === undefined)
+  s.missionState.corruptionStone3 = 0;
+if (s.missionState && s.missionState.corruptionStone4 === undefined)
+  s.missionState.corruptionStone4 = 0;
 s.heroes.forEach(x => x.statuses = x.statuses || []);
 s.heroes.forEach(x => {
   if (x.maxLevelAnnounced === undefined)
@@ -570,6 +576,10 @@ s.heroes.forEach(x => {
     x.mage.pendingReplacementSlot = null;
   if (x.mage && x.mage.totalRotations === undefined)
     x.mage.totalRotations = x.mage.amulet || 0;
+  if (x.berserker && !x.berserker.stanceAbilities)
+    x.berserker.stanceAbilities = { 'Furia Sangrienta': [], 'Provocador': [], 'Temerario': [] };
+  if (x.berserker && x.berserker.pendingStanceAssign === undefined)
+    x.berserker.pendingStanceAssign = null;
   if (!x.choices || typeof x.choices !== 'object')
     x.choices = { 1: null };
   if (!x.lockedChoices || typeof x.lockedChoices !== 'object')
@@ -736,7 +746,7 @@ function stopBossSong() {
     }
   }, fadeStepMs);
 }
-const MICHAEL_SONG_RESTART_AT = 185;
+const MICHAEL_SONG_FADE_LEAD = 3.2;
 function primeAudioElement(el) {
   try {
     el.muted = true;
@@ -763,7 +773,7 @@ function michaelSongEl() {
     el.src = 'corazon-de-hierro.mp3';
     el.preload = 'auto';
     el.addEventListener('timeupdate', () => {
-      if (!el.__restarting && el.currentTime >= MICHAEL_SONG_RESTART_AT)
+      if (!el.__restarting && el.duration && !isNaN(el.duration) && el.currentTime >= el.duration - MICHAEL_SONG_FADE_LEAD)
         restartMichaelSongSmoothly(el);
     });
     document.body.appendChild(el);
@@ -943,6 +953,7 @@ function stopMichaelSong() {
 }
 const AMBIENT_LOOP_START = 25;
 const GAME_TRACKS = ['ambiental_1.mp3', 'ambiental_2.mp3', 'ambiental_3.mp3'];
+const AMBIENT_3_FADE_AT = 343; // 5:43
 let currentGameTrack = null;
 function ambientEl() {
   let el = document.getElementById('ambientSong');
@@ -951,6 +962,12 @@ function ambientEl() {
     el.id = 'ambientSong';
     el.preload = 'auto';
     el.addEventListener('ended', onAmbientTrackEnded);
+    el.addEventListener('timeupdate', () => {
+      if (!el.__ambientSwitching && currentGameTrack === 'ambiental_3.mp3' && el.currentTime >= AMBIENT_3_FADE_AT) {
+        el.__ambientSwitching = true;
+        playRandomGameTrack(true);
+      }
+    });
     document.body.appendChild(el);
   }
   return el;
@@ -1035,6 +1052,7 @@ function playSpecificGameTrack(next, withFadeOutFirst = false) {
   const el = ambientEl();
   const doSwitch = () => {
     el.loop = false;
+    el.__ambientSwitching = false;
     currentGameTrack = next;
     try {
       el.src = next;
@@ -1096,21 +1114,11 @@ function reactivateAmbient() {
   }
   const activeMissionId = getActiveMission()?.id;
   if (activeMissionId === 'free_michael' && s.missionState.finalCombatActive && !s.missionResult) {
-    const el = document.getElementById('michaelSong');
-    if (el && !el.paused) {
-      say('La música ya se está reproduciendo.');
-      return;
-    }
     startMichaelSong();
     say('Música del Combate Final reactivada.');
     return;
   }
   if (activeMissionId === 'soul_keys' && s.missionState.finalCombatActive && !s.missionResult) {
-    const el = document.getElementById('parcaSong');
-    if (el && !el.paused) {
-      say('La música ya se está reproduciendo.');
-      return;
-    }
     startParcaSong();
     say('Música del Combate Final reactivada.');
     return;
@@ -1250,6 +1258,18 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && 'speechSynthesis' in window && !speechSynthesis.speaking && speechBusy) {
     speechBusy = false;
     processSpeech();
+  }
+  if (document.visibilityState === 'visible' && !s.musicMuted) {
+    const activeMissionId = getActiveMission()?.id;
+    if (activeMissionId === 'free_michael' && s.missionState?.finalCombatActive && !s.missionResult) {
+      const el = document.getElementById('michaelSong');
+      if (!el || el.paused || el.currentTime === 0)
+        startMichaelSong();
+    } else if (activeMissionId === 'soul_keys' && s.missionState?.finalCombatActive && !s.missionResult) {
+      const el = document.getElementById('parcaSong');
+      if (!el || el.paused || el.currentTime === 0)
+        startParcaSong();
+    }
   }
 });
 function say(t, profileHero = h()) {
@@ -1732,7 +1752,9 @@ function renderHero() {
   let activeSec = document.querySelector('.sectionTabs [data-sec].active')?.dataset.sec;
   if (x.cls === 'mage' && x.mage.pendingReplacement)
     activeSec = 'talisman';
-  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }${ getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive ? `<div><small>Corrupción propia</small><b>${ x.personalCorruption || 0 } 😈</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }${ x.cls === 'shaman' ? `<button data-sec="elements" class="${ activeSec === 'elements' ? 'active' : '' }">Elementos</button>` : '' }${ x.cls === 'mage' ? `<button data-sec="talisman" class="${ activeSec === 'talisman' ? 'active' : '' }">Talismán</button>` : '' }</div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }${ x.cls === 'shaman' ? `<div id="sec-elements" class="heroSection ${ activeSec === 'elements' ? 'active' : '' }"><div class="card"><h2>Tablero de Elementos</h2>${ shamanElementsBoardHtml(x) }</div></div>` : '' }${ x.cls === 'mage' ? `<div id="sec-talisman" class="heroSection ${ activeSec === 'talisman' ? 'active' : '' }"><div class="card"><h2>Talismán Arcano</h2>${ talismanFullHtml(x) }</div></div>` : '' }`;
+  if (x.cls === 'berserker' && x.berserker.pendingStanceAssign)
+    activeSec = 'furia';
+  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }${ getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive ? `<div><small>Corrupción propia</small><b>${ x.personalCorruption || 0 } 😈</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }${ x.cls === 'shaman' ? `<button data-sec="elements" class="${ activeSec === 'elements' ? 'active' : '' }">Elementos</button>` : '' }${ x.cls === 'mage' ? `<button data-sec="talisman" class="${ activeSec === 'talisman' ? 'active' : '' }">Talismán</button>` : '' }${ x.cls === 'berserker' ? `<button data-sec="furia" class="${ activeSec === 'furia' ? 'active' : '' }">Furia</button>` : '' }</div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }${ x.cls === 'shaman' ? `<div id="sec-elements" class="heroSection ${ activeSec === 'elements' ? 'active' : '' }"><div class="card"><h2>Tablero de Elementos</h2>${ shamanElementsBoardHtml(x) }</div></div>` : '' }${ x.cls === 'mage' ? `<div id="sec-talisman" class="heroSection ${ activeSec === 'talisman' ? 'active' : '' }"><div class="card"><h2>Talismán Arcano</h2>${ talismanFullHtml(x) }</div></div>` : '' }${ x.cls === 'berserker' ? `<div id="sec-furia" class="heroSection ${ activeSec === 'furia' ? 'active' : '' }"><div class="card"><h2>Corazón de Furia</h2>${ berserkerFuryBoardHtml(x) }</div></div>` : '' }`;
   if (x.unconscious)
     $('heroHeaderCard')?.classList.add('ko-fx');
   document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
@@ -1742,6 +1764,8 @@ function renderHero() {
     $('sec-' + b.dataset.sec).classList.add('active');
     if (x.cls === 'shaman' && document.getElementById('fireMedallionCircle'))
       requestAnimationFrame(() => requestAnimationFrame(() => bindShamanElementBoard(x, true)));
+    if (x.cls === 'berserker' && document.getElementById('board'))
+      requestAnimationFrame(() => requestAnimationFrame(() => window.layoutBerserkerTubes && window.layoutBerserkerTubes()));
   });
   bindHero();
 }
@@ -2258,6 +2282,387 @@ function talismanFullHtml(x) {
     <div class="goldRing3"><div class="runeSymbol3" style="transform:rotate(0deg) translateY(-50px) rotate(-0deg)">ᛊ</div><div class="runeSymbol3" style="transform:rotate(30deg) translateY(-50px) rotate(-30deg)">ᛋ</div><div class="runeSymbol3" style="transform:rotate(60deg) translateY(-50px) rotate(-60deg)">ᛇ</div><div class="runeSymbol3" style="transform:rotate(90deg) translateY(-50px) rotate(-90deg)">ᛈ</div><div class="runeSymbol3" style="transform:rotate(120deg) translateY(-50px) rotate(-120deg)">ᛉ</div><div class="runeSymbol3" style="transform:rotate(150deg) translateY(-50px) rotate(-150deg)">ᚺ</div><div class="runeSymbol3" style="transform:rotate(180deg) translateY(-50px) rotate(-180deg)">ᚾ</div><div class="runeSymbol3" style="transform:rotate(210deg) translateY(-50px) rotate(-210deg)">ᛁ</div><div class="runeSymbol3" style="transform:rotate(240deg) translateY(-50px) rotate(-240deg)">ᛃ</div><div class="runeSymbol3" style="transform:rotate(270deg) translateY(-50px) rotate(-270deg)">ᚹ</div><div class="runeSymbol3" style="transform:rotate(300deg) translateY(-50px) rotate(-300deg)">ᚲ</div><div class="runeSymbol3" style="transform:rotate(330deg) translateY(-50px) rotate(-330deg)">ᚷ</div></div>
   </div><p class="notice top">Toca y arrastra el artefacto central para forzar el giro (1 maná, sin importar cuánto gires — siempre encaja en la cara más cercana).</p>`;
 }
+function bindBerserkerFuryBoard(x) {
+  const board = document.getElementById('board');
+  if (!board)
+    return;
+  if (!window.__berserkerResizeBound) {
+    window.__berserkerResizeBound = true;
+    window.addEventListener('resize', () => {
+      const cur = h();
+      if (cur && cur.cls === 'berserker' && document.getElementById('board'))
+        layoutBerserkerTubes();
+    });
+  }
+  const tubeMap = { 'Furia Sangrienta': 'tubeFS', 'Provocador': 'tubePR', 'Temerario': 'tubeTM' };
+
+  function renderFury() {
+    const fury = x.berserker.fury, MAX = 7;
+    const pct = fury / MAX;
+    const hgt = 24 * pct, y = 24 - hgt;
+    document.getElementById('liquidRect').setAttribute('y', y);
+    document.getElementById('liquidRect').setAttribute('height', hgt);
+    document.getElementById('liquidClipRect').setAttribute('y', y);
+    document.getElementById('liquidClipRect').setAttribute('height', hgt);
+    document.getElementById('liquidShine').setAttribute('y', y - 0.15);
+    document.getElementById('liquidShine').style.opacity = hgt > 0 ? .8 : 0;
+    document.getElementById('furyNumText').textContent = fury;
+    const fb = (0.65 + pct * 0.65).toFixed(2);
+    const fs = (0.55 + pct * 1.05).toFixed(2);
+    const fg = (8 + pct * 20).toFixed(0) + 'px';
+    const fga = (0.3 + pct * 0.55).toFixed(2);
+    board.style.setProperty('--fb', fb);
+    board.style.setProperty('--fs', fs);
+    board.style.setProperty('--fg', fg);
+    board.style.setProperty('--fga', fga);
+  }
+
+  function setActiveCard() {
+    document.querySelectorAll('.stanceCard').forEach(c => c.classList.toggle('active', c.dataset.stance === x.berserker.stance));
+    document.querySelectorAll('.tubeWrap#tubeTM, .tubeGroup').forEach(t => t.classList.toggle('active', t.id === tubeMap[x.berserker.stance]));
+  }
+
+  function playFlow(tubeId) {
+    const tube = document.getElementById(tubeId);
+    if (!tube)
+      return;
+    tube.classList.remove('burst');
+    void tube.offsetWidth;
+    tube.classList.add('burst');
+    const bursts = tube.querySelectorAll('.tubeLavaBurst');
+    const last = bursts[bursts.length - 1];
+    if (last)
+      last.addEventListener('animationend', () => tube.classList.remove('burst'), { once: true });
+  }
+
+  window.layoutBerserkerTubes = function () {
+
+  const board = document.getElementById('board').getBoundingClientRect();
+  const heart = document.getElementById('heartWrap').getBoundingClientRect();
+  const flame = document.querySelector('.flameStageReal').getBoundingClientRect();
+  const heartX = heart.left + heart.width/2 - board.left;
+  const heartY = heart.top + heart.height*0.5 - board.top;
+  const OVERSHOOT_CARD = 2;    // cuanto se mete la tuberia detras del cuadro (sin sobrepasarlo)
+  const JOINT_OVERLAP = 18;    // cuanto se superponen los 2 tramos en el codo, para que no se note el corte
+  const EXTRA_H = 0;           // el punto de union con el fuego NO se mueve (se queda igual que v35)
+  const EXTRA_OUT = 28;        // el punto de union con el cuadro se alarga hacia afuera, lejos del fuego
+
+  // --- tuberias en L (Furia Sangrienta / Provocador) ---
+  // el codo va arriba del centro del fuego; el tramo horizontal sale desde ahi
+  // y el tramo vertical sube hasta el cuadro
+  ['cardFS', 'cardPR'].forEach(cardId => {
+    const groupId = cardId === 'cardFS' ? 'tubeFS' : 'tubePR';
+    const card = document.getElementById(cardId).querySelector('.stCardHeader').getBoundingClientRect();
+    const cardCX = card.left + card.width/2 - board.left;
+    const cardCY = card.top + card.height/2 - board.top;
+    const dirSign = cardCX >= heartX ? 1 : -1; // hacia donde queda el cuadro respecto al corazon
+    const bendX = cardCX + dirSign * EXTRA_OUT, bendY = flame.top - board.top + flame.height*0.40; // codo alargado hacia afuera, altura de v35
+
+    const group = document.getElementById(groupId);
+    const segH = group.querySelector('.tubeSegH');
+    const segV = group.querySelector('.tubeSegV');
+    const joint = group.querySelector('.tubeJoint');
+
+    // tramo horizontal: sale desde el centro del fuego (igual que v35, sin extension
+    // hacia el fuego) hasta el codo, que ahora esta un poco mas alla del cuadro
+    // (alejado del fuego), extendido tambien hacia el codo para superponerse con el
+    // tramo vertical
+    const attachX = heartX - dirSign * EXTRA_H; // se queda igual que en v35 (EXTRA_H=0)
+    const lenH = Math.abs(bendX - attachX) + JOINT_OVERLAP;
+    const angleH = bendX >= attachX ? 0 : 180;
+    segH.style.left = attachX + 'px';
+    segH.style.top = bendY + 'px';
+    segH.style.width = lenH + 'px';
+    segH.style.transform = `rotate(${angleH}deg)`;
+
+    // tramo vertical: desde el codo (superpuesto con el horizontal) hasta el cuadro.
+    // Como el codo quedo un poco mas afuera que el cuadro, este tramo entra al cuadro
+    // con un pequeno angulo lateral (unos pocos px), disimulado dentro del marco del cuadro.
+    const originY = bendY + JOINT_OVERLAP;
+    const lenV = (originY - cardCY) + OVERSHOOT_CARD;
+    segV.style.left = bendX + 'px';
+    segV.style.top = originY + 'px';
+    segV.style.width = lenV + 'px';
+    segV.style.transform = `rotate(-90deg)`;
+
+    // placa metalica dorada: tamaño FIJO (32x32), centrada exactamente en el punto de
+    // quiebre (bendX,bendY). La superposicion real entre segH y segV siempre satura en
+    // 26x26 (el grosor de la tuberia) sin importar JOINT_OVERLAP, asi que una placa fija
+    // de 32x32 centrada ahi la cubre por completo siempre, y ningun tramo se sale de ella
+    // (igual que los tramos no se salen del marco de los cuadros de postura).
+    joint.style.left = bendX + 'px';
+    joint.style.top = (bendY + 13) + 'px'; // +13 = medio grosor de tuberia (segH usa bendY como borde superior, no centro)
+  });
+
+  // --- tuberia recta (Temerario), forzada a vertical pura para que no quede desviada ---
+  const cardFull = document.getElementById('cardTM').getBoundingClientRect(); // tarjeta completa (no solo el encabezado)
+  const card = document.getElementById('cardTM').querySelector('.stCardHeader').getBoundingClientRect();
+  const cardCY = card.top + card.height/2 - board.top;
+  const cardBottomSafe = cardFull.bottom - board.top - 3; // margen minimo, casi tocando el borde real de la tarjeta
+  const OVERSHOOT_HEART = 45; // mas largo todavia, se esconde detras del fuego
+  const tmX = heartX - 8; // desplazada levemente a la izquierda para verse mas centrada respecto a Temerario
+  const originY = heartY - OVERSHOOT_HEART;
+  const OVERSHOOT_CARD_TM = 30; // alcance hacia la tarjeta, bastante mayor; cardBottomSafe actua de tope real de seguridad
+  const totalLen = Math.min(cardCY + OVERSHOOT_CARD_TM, cardBottomSafe) - originY - 5; // -5 corrige el borde del tablero en esta cadena de calculo
+  const tubeTM = document.getElementById('tubeTM');
+  tubeTM.style.left = tmX + 'px';
+  tubeTM.style.top = (originY - 13) + 'px'; // -13 compensa el desfase que introduce rotate(90deg) sobre el punto de pivote
+  tubeTM.style.width = totalLen + 'px';
+  tubeTM.style.transform = `rotate(90deg)`;
+
+  // placa metalica dorada, mas abajo (no en el punto medio, para que no quede pegada al fuego)
+  const jointTM = document.getElementById('jointTM');
+  jointTM.style.left = tmX + 'px';
+  jointTM.style.top = (heartY + 110.5) + 'px'; // anclada al centro del corazon (fijo), no al origen de la tuberia (que se mueve al alargarla)
+
+  };
+
+  document.querySelectorAll('.stCardHeader').forEach(header => header.onclick = () => {
+    const card = header.closest('.stanceCard');
+    const newStance = card.dataset.stance;
+    if (newStance === x.berserker.stance)
+      return;
+    if (x.berserker.fury < 1) {
+      alert('No tienes Furia suficiente para cambiar de postura.');
+      card.classList.add('shakeNoFury');
+      setTimeout(() => card.classList.remove('shakeNoFury'), 400);
+      say('Furia insuficiente.');
+      return;
+    }
+    if (!confirm(`¿Gastar 1 Furia para cambiar a la postura ${ newStance }?`))
+      return;
+    x.berserker.fury--;
+    x.berserker.stance = newStance;
+    log(`${ x.name } gasta 1 Furia para cambiar a la postura ${ newStance }.`);
+    setTimeout(save, 60);
+    renderFury();
+    setActiveCard();
+    playFlow(tubeMap[newStance]);
+    say(`Cambia a la postura ${ newStance }.`);
+  });
+  document.querySelectorAll('.stExpandBtn').forEach(btn => btn.onclick = e => {
+    e.stopPropagation();
+    const card = btn.closest('.stanceCard');
+    const willExpand = !card.classList.contains('expanded');
+    card.classList.toggle('expanded', willExpand);
+    const onDone = () => {
+      layoutBerserkerTubes();
+      card.querySelector('.stAbilitiesPanel').removeEventListener('transitionend', onDone);
+    };
+    card.querySelector('.stAbilitiesPanel').addEventListener('transitionend', onDone);
+  });
+
+  layoutBerserkerTubes();
+  renderFury();
+  setActiveCard();
+}
+
+function berserkerFuryBoardHtml(x) {
+  if (x.berserker.pendingStanceAssign) {
+    const v = x.berserker.pendingStanceAssign;
+    return `<p class="notice"><b>${ v }</b> se aprendió. ¿En qué postura la dejas? Quedará disponible mientras estés en esa postura.</p><div class="stancePickerBtns"><button data-assign-stance="Furia Sangrienta" class="primary">Furia Sangrienta</button><button data-assign-stance="Provocador" class="primary">Provocador</button><button data-assign-stance="Temerario" class="primary">Temerario</button></div>`;
+  }
+  return `
+<div class="board" id="board">
+    <div class="berserkerAxeDouble axeDoubleLeft">
+      <svg viewBox="0 0 200 290" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="woodGradDL" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#2a1608"/>
+            <stop offset="40%" stop-color="#5a3a1e"/>
+            <stop offset="60%" stop-color="#4a2e16"/>
+            <stop offset="100%" stop-color="#1c0e05"/>
+          </linearGradient>
+          <linearGradient id="steelGradDL" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="16%" stop-color="#d8dee4"/>
+            <stop offset="38%" stop-color="#9aa0a8"/>
+            <stop offset="55%" stop-color="#5c6168"/>
+            <stop offset="70%" stop-color="#c4cad0"/>
+            <stop offset="85%" stop-color="#8e939a"/>
+            <stop offset="100%" stop-color="#3a3d42"/>
+          </linearGradient>
+          <linearGradient id="steelGradDLFlip" x1="1" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#d4dae0"/>
+            <stop offset="18%" stop-color="#9298a0"/>
+            <stop offset="40%" stop-color="#4a4d52"/>
+            <stop offset="62%" stop-color="#22242a"/>
+            <stop offset="82%" stop-color="#5a5e64"/>
+            <stop offset="100%" stop-color="#16171a"/>
+          </linearGradient>
+          <linearGradient id="wedgeGradDL" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8a6a3a"/>
+            <stop offset="100%" stop-color="#4a3418"/>
+          </linearGradient>
+          <linearGradient id="pommelGoldDL" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#fff3c4"/>
+            <stop offset="25%" stop-color="#e0b84a"/>
+            <stop offset="50%" stop-color="#8a6212"/>
+            <stop offset="75%" stop-color="#e0b84a"/>
+            <stop offset="100%" stop-color="#fff3c4"/>
+          </linearGradient>
+        </defs>
+        <rect x="91" y="90" width="18" height="192" rx="5" fill="url(#woodGradDL)" stroke="#000" stroke-width="1.6"/>
+        <rect x="90" y="212" width="20" height="4.5" rx="1" fill="#1c0e05" stroke="#000" stroke-width=".6"/>
+        <rect x="90" y="231" width="20" height="4.5" rx="1" fill="#1c0e05" stroke="#000" stroke-width=".6"/>
+        <rect x="90" y="250" width="20" height="4.5" rx="1" fill="#1c0e05" stroke="#000" stroke-width=".6"/>
+        <ellipse cx="100" cy="278" rx="13" ry="4" fill="url(#pommelGoldDL)" stroke="#000" stroke-width="1.2"/><ellipse cx="100" cy="284" rx="11" ry="5" fill="#3a2210" stroke="#000" stroke-width="1.4"/><circle cx="100" cy="284" r="3" fill="url(#pommelGoldDL)" stroke="#000" stroke-width=".8"/>
+        <path d="M94,86 L106,86 L100,70 Z" fill="url(#wedgeGradDL)" stroke="#000" stroke-width="1.4"/>
+        <path d="M89,64 L111,64 C114,72 114,84 111,92 L89,92 C86,84 86,72 89,64 Z"
+              fill="url(#steelGradDL)" stroke="#000" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M112,64 L117,60 L141,34 A95,95 0 0,1 141,122 L117,96 L112,92 Z"
+              fill="url(#steelGradDL)" stroke="#000" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M117,60 L141,34" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round" fill="none"/>
+        <path d="M141,122 L117,96" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round" fill="none"/>
+        <path d="M141,34 A95,95 0 0,1 141,122" fill="none" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round"/>
+        <path d="M88,64 L83,60 L59,34 A95,95 0 0,0 59,122 L83,96 L88,92 Z"
+              fill="url(#steelGradDLFlip)" stroke="#000" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M83,60 L59,34" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round" fill="none"/>
+        <path d="M59,122 L83,96" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round" fill="none"/>
+        <path d="M59,34 A95,95 0 0,0 59,122" fill="none" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round"/>
+        <circle cx="91" cy="70" r="1.6" fill="#000"/>
+        <circle cx="109" cy="70" r="1.6" fill="#000"/>
+        <circle cx="91" cy="86" r="1.6" fill="#000"/>
+        <circle cx="109" cy="86" r="1.6" fill="#000"/>
+      </svg>
+    </div>
+    <div class="berserkerAxeDouble axeDoubleRight">
+      <svg viewBox="0 0 200 290" xmlns="http://www.w3.org/2000/svg">
+        <rect x="91" y="90" width="18" height="192" rx="5" fill="url(#woodGradDL)" stroke="#000" stroke-width="1.6"/>
+        <rect x="90" y="212" width="20" height="4.5" rx="1" fill="#1c0e05" stroke="#000" stroke-width=".6"/>
+        <rect x="90" y="231" width="20" height="4.5" rx="1" fill="#1c0e05" stroke="#000" stroke-width=".6"/>
+        <rect x="90" y="250" width="20" height="4.5" rx="1" fill="#1c0e05" stroke="#000" stroke-width=".6"/>
+        <ellipse cx="100" cy="278" rx="13" ry="4" fill="url(#pommelGoldDL)" stroke="#000" stroke-width="1.2"/><ellipse cx="100" cy="284" rx="11" ry="5" fill="#3a2210" stroke="#000" stroke-width="1.4"/><circle cx="100" cy="284" r="3" fill="url(#pommelGoldDL)" stroke="#000" stroke-width=".8"/>
+        <path d="M94,86 L106,86 L100,70 Z" fill="url(#wedgeGradDL)" stroke="#000" stroke-width="1.4"/>
+        <path d="M89,64 L111,64 C114,72 114,84 111,92 L89,92 C86,84 86,72 89,64 Z"
+              fill="url(#steelGradDL)" stroke="#000" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M112,64 L117,60 L141,34 A95,95 0 0,1 141,122 L117,96 L112,92 Z"
+              fill="url(#steelGradDL)" stroke="#000" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M117,60 L141,34" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round" fill="none"/>
+        <path d="M141,122 L117,96" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round" fill="none"/>
+        <path d="M141,34 A95,95 0 0,1 141,122" fill="none" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round"/>
+        <path d="M88,64 L83,60 L59,34 A95,95 0 0,0 59,122 L83,96 L88,92 Z"
+              fill="url(#steelGradDLFlip)" stroke="#000" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M83,60 L59,34" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round" fill="none"/>
+        <path d="M59,122 L83,96" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round" fill="none"/>
+        <path d="M59,34 A95,95 0 0,0 59,122" fill="none" stroke="#ffffff" stroke-width="2" opacity=".8" stroke-linecap="round"/>
+        <circle cx="91" cy="70" r="1.6" fill="#000"/>
+        <circle cx="109" cy="70" r="1.6" fill="#000"/>
+        <circle cx="91" cy="86" r="1.6" fill="#000"/>
+        <circle cx="109" cy="86" r="1.6" fill="#000"/>
+      </svg>
+    </div>
+    <div class="ruleBox">Toca una postura para cambiarte a ella (cuesta 1 Furia fija). El Corazón se llena al recibir Heridas.</div>
+
+    <div class="stanceCard dark cardFS" id="cardFS" data-stance="Furia Sangrienta">
+      <div class="stCardHeader">
+        <span class="stName">Furia Sangrienta</span>
+        <button class="stExpandBtn" data-expand-for="Furia Sangrienta" aria-label="Expandir"></button>
+      </div>
+      <div class="stDesc">Ataque: gasta 1 Furia para relanzar cualquier dado.</div>
+      <div class="stAbilitiesPanel" id="panelFS">${ x.berserker.stanceAbilities['Furia Sangrienta'].map(a => `<div class="stAbilityItem">${ a }</div>`).join('') || '<div class="stAbilityItem muted">Sin habilidades asignadas</div>' }</div>
+    </div>
+    <div class="stanceCard cream cardPR" id="cardPR" data-stance="Provocador">
+      <div class="stCardHeader">
+        <span class="stName">Provocador</span>
+        <button class="stExpandBtn" data-expand-for="Provocador" aria-label="Expandir"></button>
+      </div>
+      <div class="stDesc">Defensa: gasta 1 Furia para infligir 1 Herida al atacante.</div>
+      <div class="stAbilitiesPanel" id="panelPR">${ x.berserker.stanceAbilities['Provocador'].map(a => `<div class="stAbilityItem">${ a }</div>`).join('') || '<div class="stAbilityItem muted">Sin habilidades asignadas</div>' }</div>
+    </div>
+    <div class="stanceCard cream cardTM" id="cardTM" data-stance="Temerario">
+      <div class="stCardHeader">
+        <span class="stName">Temerario</span>
+        <button class="stExpandBtn" data-expand-for="Temerario" aria-label="Expandir"></button>
+      </div>
+      <div class="stDesc">Movimiento: gasta 1 Furia para obtener +1 PM.</div>
+      <div class="stAbilitiesPanel" id="panelTM">${ x.berserker.stanceAbilities['Temerario'].map(a => `<div class="stAbilityItem">${ a }</div>`).join('') || '<div class="stAbilityItem muted">Sin habilidades asignadas</div>' }</div>
+    </div>
+
+    <div class="tubeGroup" id="tubeFS">
+      <div class="tubeWrap tubeSegH"><div class="tubeBody"></div><div class="tubeShine"></div><div class="tubeLavaBurst"></div></div>
+      <div class="tubeWrap tubeSegV"><div class="tubeBody"></div><div class="tubeShine"></div><div class="tubeLavaBurst"></div></div>
+      <div class="tubeJoint"></div>
+    </div>
+    <div class="tubeGroup" id="tubePR">
+      <div class="tubeWrap tubeSegH"><div class="tubeBody"></div><div class="tubeShine"></div><div class="tubeLavaBurst"></div></div>
+      <div class="tubeWrap tubeSegV"><div class="tubeBody"></div><div class="tubeShine"></div><div class="tubeLavaBurst"></div></div>
+      <div class="tubeJoint"></div>
+    </div>
+    <div class="tubeWrap" id="tubeTM"><div class="tubeBody"></div><div class="tubeShine"></div><div class="tubeLavaBurst"></div></div>
+    <div class="tubeJoint" id="jointTM"></div>
+
+    <div class="flameGlowBehind">
+      <svg viewBox="0 0 200 252.5" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#6f0900" d="M55.31,0.00 C50.69,1.05 62.60,13.11 64.27,19.49 C65.94,25.87 68.36,26.51 65.32,38.28 C62.28,50.04 50.28,76.21 46.01,90.08 C41.73,103.95 42.52,119.43 39.68,121.51 C36.85,123.59 32.54,106.94 28.97,102.55 C25.40,98.16 20.19,93.56 18.26,95.17 C16.33,96.78 20.43,103.10 17.38,112.20 C14.34,121.31 2.46,139.83 0.00,149.78 C-2.46,159.73 -1.26,163.21 2.63,171.91 C6.53,180.60 23.79,199.39 23.35,201.93 C22.91,204.48 1.11,185.31 0.00,187.18 C-1.11,189.05 8.90,204.98 16.68,213.17 C24.47,221.36 35.65,229.79 46.71,236.35 C57.77,242.90 72.52,249.93 83.06,252.50 C93.59,255.08 98.24,254.81 109.92,251.80 C121.60,248.79 142.52,239.48 153.12,234.42 C163.71,229.35 167.11,227.19 173.49,221.42 C179.87,215.66 186.98,207.87 191.40,199.82 C195.82,191.78 201.38,176.29 200.00,173.13 C198.62,169.97 185.37,185.13 183.14,180.86 C180.92,176.59 187.45,158.56 186.65,147.50 C185.86,136.44 183.32,125.75 178.40,114.49 C173.49,103.22 161.37,82.65 157.16,79.89 C152.94,77.14 154.32,94.73 153.12,97.98 C151.92,101.23 153.76,107.26 149.96,99.39 C146.15,91.51 135.35,61.57 130.29,50.75 C125.23,39.92 125.96,40.68 119.58,34.42 C113.20,28.15 102.72,18.91 92.01,13.17 C81.30,7.43 59.94,-1.05 55.31,0.00 Z"><animate attributeName="d" dur="1.9s" begin="0s" repeatCount="indefinite" calcMode="linear" values="M55.31,0.00 C50.69,1.05 62.60,13.11 64.27,19.49 C65.94,25.87 68.36,26.51 65.32,38.28 C62.28,50.04 50.28,76.21 46.01,90.08 C41.73,103.95 42.52,119.43 39.68,121.51 C36.85,123.59 32.54,106.94 28.97,102.55 C25.40,98.16 20.19,93.56 18.26,95.17 C16.33,96.78 20.43,103.10 17.38,112.20 C14.34,121.31 2.46,139.83 0.00,149.78 C-2.46,159.73 -1.26,163.21 2.63,171.91 C6.53,180.60 23.79,199.39 23.35,201.93 C22.91,204.48 1.11,185.31 0.00,187.18 C-1.11,189.05 8.90,204.98 16.68,213.17 C24.47,221.36 35.65,229.79 46.71,236.35 C57.77,242.90 72.52,249.93 83.06,252.50 C93.59,255.08 98.24,254.81 109.92,251.80 C121.60,248.79 142.52,239.48 153.12,234.42 C163.71,229.35 167.11,227.19 173.49,221.42 C179.87,215.66 186.98,207.87 191.40,199.82 C195.82,191.78 201.38,176.29 200.00,173.13 C198.62,169.97 185.37,185.13 183.14,180.86 C180.92,176.59 187.45,158.56 186.65,147.50 C185.86,136.44 183.32,125.75 178.40,114.49 C173.49,103.22 161.37,82.65 157.16,79.89 C152.94,77.14 154.32,94.73 153.12,97.98 C151.92,101.23 153.76,107.26 149.96,99.39 C146.15,91.51 135.35,61.57 130.29,50.75 C125.23,39.92 125.96,40.68 119.58,34.42 C113.20,28.15 102.72,18.91 92.01,13.17 C81.30,7.43 59.94,-1.05 55.31,0.00 Z;M57.43,-8.50 C51.87,-6.92 56.59,13.94 58.07,20.85 C59.56,27.76 67.98,22.04 66.36,32.94 C64.73,43.85 52.87,71.82 48.32,86.28 C43.78,100.73 41.65,116.73 39.08,119.66 C36.50,122.59 36.67,108.53 32.87,103.85 C29.07,99.18 18.97,91.08 16.28,91.60 C13.60,92.12 19.66,97.09 16.76,107.00 C13.85,116.90 0.85,140.39 -1.16,151.04 C-3.18,161.69 0.59,162.21 4.66,170.89 C8.73,179.58 23.95,200.22 23.27,203.14 C22.58,206.05 1.16,187.32 0.56,188.37 C-0.04,189.43 12.36,201.42 19.67,209.45 C26.98,217.48 34.23,229.73 44.42,236.56 C54.61,243.39 70.10,248.06 80.81,250.45 C91.53,252.83 97.12,253.79 108.72,250.88 C120.32,247.96 139.57,238.40 150.42,232.95 C161.27,227.50 167.15,223.88 173.82,218.17 C180.49,212.45 186.28,206.43 190.44,198.65 C194.61,190.87 200.13,175.02 198.82,171.49 C197.52,167.96 184.57,182.07 182.63,177.46 C180.69,172.86 187.80,155.13 187.20,143.88 C186.60,132.62 183.99,120.40 179.04,109.92 C174.10,99.44 162.17,83.86 157.54,81.02 C152.91,78.19 152.78,90.25 151.26,92.92 C149.73,95.59 151.67,105.04 148.39,97.05 C145.11,89.05 137.36,55.18 131.55,44.96 C125.75,34.74 120.26,41.33 113.57,35.73 C106.88,30.14 100.77,18.77 91.42,11.40 C82.06,4.03 62.99,-10.07 57.43,-8.50 Z;M50.06,-5.81 C44.46,-3.39 61.18,14.77 63.05,22.36 C64.92,29.95 64.65,28.97 61.30,39.73 C57.94,50.48 46.28,73.38 42.90,86.89 C39.52,100.40 42.70,118.58 41.03,120.79 C39.36,123.00 36.01,104.15 32.87,100.15 C29.73,96.16 24.49,95.66 22.19,96.82 C19.90,97.98 22.52,98.12 19.12,107.11 C15.72,116.10 4.53,140.43 1.81,150.76 C-0.91,161.09 -0.49,160.43 2.78,169.07 C6.05,177.71 22.31,199.74 21.44,202.60 C20.56,205.46 -1.39,184.85 -2.48,186.23 C-3.57,187.61 6.23,202.94 14.90,210.90 C23.58,218.85 38.03,226.97 49.57,233.94 C61.11,240.92 74.31,250.29 84.16,252.75 C94.00,255.20 96.88,251.99 108.65,248.69 C120.42,245.39 144.16,237.97 154.75,232.97 C165.34,227.96 165.62,224.26 172.21,218.67 C178.80,213.07 189.64,207.55 194.30,199.41 C198.95,191.28 201.59,173.29 200.14,169.85 C198.69,166.41 187.56,182.31 185.62,178.76 C183.67,175.20 190.05,158.93 188.46,148.52 C186.87,138.11 180.65,127.98 176.07,116.31 C171.49,104.65 164.49,82.17 161.00,78.53 C157.50,74.88 156.60,91.36 155.09,94.46 C153.58,97.55 156.37,104.43 151.91,97.10 C147.45,89.77 133.95,60.97 128.32,50.49 C122.70,40.01 123.44,41.34 118.16,34.22 C112.89,27.11 108.01,14.47 96.66,7.79 C85.31,1.12 55.66,-8.24 50.06,-5.81 Z;M56.33,-2.43 C51.72,-0.98 66.15,13.64 67.67,20.53 C69.19,27.42 68.60,27.48 65.44,38.89 C62.29,50.31 53.14,75.31 48.73,89.02 C44.32,102.73 42.10,118.76 38.99,121.16 C35.88,123.57 33.18,108.05 30.06,103.45 C26.94,98.86 21.76,92.46 20.27,93.62 C18.78,94.77 24.18,100.87 21.12,110.37 C18.06,119.86 4.85,140.92 1.89,150.56 C-1.06,160.21 0.28,160.24 3.41,168.26 C6.54,176.28 21.05,196.14 20.68,198.68 C20.32,201.22 1.68,181.38 1.21,183.52 C0.75,185.66 10.43,203.24 17.88,211.54 C25.33,219.83 35.46,226.99 45.92,233.28 C56.39,239.57 69.75,246.69 80.69,249.28 C91.64,251.87 99.31,251.34 111.59,248.84 C123.87,246.35 144.04,238.66 154.38,234.31 C164.71,229.95 167.58,229.07 173.62,222.71 C179.67,216.34 186.24,204.85 190.64,196.12 C195.03,187.39 201.60,172.63 199.97,170.33 C198.35,168.03 183.26,186.15 180.89,182.32 C178.52,178.49 186.57,159.48 185.78,147.33 C184.98,135.18 180.10,120.66 176.10,109.43 C172.10,98.19 165.31,81.68 161.78,79.90 C158.25,78.12 157.17,95.87 154.94,98.74 C152.71,101.62 152.72,104.88 148.38,97.14 C144.04,89.40 134.05,63.44 128.88,52.29 C123.71,41.14 122.94,36.99 117.35,30.25 C111.76,23.51 105.50,17.31 95.33,11.86 C85.16,6.41 60.94,-3.87 56.33,-2.43 Z;M55.31,0.00 C50.69,1.05 62.60,13.11 64.27,19.49 C65.94,25.87 68.36,26.51 65.32,38.28 C62.28,50.04 50.28,76.21 46.01,90.08 C41.73,103.95 42.52,119.43 39.68,121.51 C36.85,123.59 32.54,106.94 28.97,102.55 C25.40,98.16 20.19,93.56 18.26,95.17 C16.33,96.78 20.43,103.10 17.38,112.20 C14.34,121.31 2.46,139.83 0.00,149.78 C-2.46,159.73 -1.26,163.21 2.63,171.91 C6.53,180.60 23.79,199.39 23.35,201.93 C22.91,204.48 1.11,185.31 0.00,187.18 C-1.11,189.05 8.90,204.98 16.68,213.17 C24.47,221.36 35.65,229.79 46.71,236.35 C57.77,242.90 72.52,249.93 83.06,252.50 C93.59,255.08 98.24,254.81 109.92,251.80 C121.60,248.79 142.52,239.48 153.12,234.42 C163.71,229.35 167.11,227.19 173.49,221.42 C179.87,215.66 186.98,207.87 191.40,199.82 C195.82,191.78 201.38,176.29 200.00,173.13 C198.62,169.97 185.37,185.13 183.14,180.86 C180.92,176.59 187.45,158.56 186.65,147.50 C185.86,136.44 183.32,125.75 178.40,114.49 C173.49,103.22 161.37,82.65 157.16,79.89 C152.94,77.14 154.32,94.73 153.12,97.98 C151.92,101.23 153.76,107.26 149.96,99.39 C146.15,91.51 135.35,61.57 130.29,50.75 C125.23,39.92 125.96,40.68 119.58,34.42 C113.20,28.15 102.72,18.91 92.01,13.17 C81.30,7.43 59.94,-1.05 55.31,0.00 Z"/></path>
+        <path fill="#d72a00" d="M82.53,30.03 C79.69,31.23 84.11,42.29 83.93,47.41 C83.76,52.53 86.13,50.25 81.47,60.76 C76.82,71.26 61.87,94.91 56.01,110.45 C50.16,125.99 49.20,146.91 46.36,153.99 C43.52,161.08 41.29,156.01 38.98,152.94 C36.67,149.87 35.15,139.68 32.48,135.56 C29.82,131.43 24.85,120.87 23.00,128.18 C21.16,135.50 20.63,167.90 21.42,179.46 C22.21,191.02 25.02,192.13 27.74,197.54 C30.47,202.96 39.04,210.13 37.75,211.94 C36.46,213.75 21.07,206.88 20.02,208.43 C18.96,209.98 27.07,217.33 31.43,221.25 C35.79,225.17 37.81,227.48 46.18,231.96 C54.55,236.44 73.28,245.07 81.65,248.11 C90.02,251.16 87.56,251.86 96.40,250.22 C105.24,248.58 124.32,243.34 134.68,238.28 C145.04,233.22 153.41,224.73 158.56,219.84 C163.71,214.95 163.36,213.84 165.58,208.96 C167.81,204.07 170.47,199.97 171.91,190.52 C173.34,181.07 174.71,162.57 174.19,152.24 C173.66,141.91 172.05,135.38 168.74,128.53 C165.44,121.69 156.63,112.03 154.35,111.15 C152.06,110.27 155.75,119.87 155.05,123.27 C154.35,126.66 151.74,130.03 150.13,131.52 C148.52,133.01 146.91,132.81 145.39,132.22 C143.87,131.64 143.02,135.85 141.00,128.01 C138.98,120.16 136.90,96.93 133.27,85.16 C129.65,73.40 124.61,64.91 119.23,57.42 C113.84,49.93 107.08,44.78 100.97,40.21 C94.85,35.65 85.37,28.83 82.53,30.03 Z"><animate attributeName="d" dur="2.2s" begin="0.3s" repeatCount="indefinite" calcMode="linear" values="M82.53,30.03 C79.69,31.23 84.11,42.29 83.93,47.41 C83.76,52.53 86.13,50.25 81.47,60.76 C76.82,71.26 61.87,94.91 56.01,110.45 C50.16,125.99 49.20,146.91 46.36,153.99 C43.52,161.08 41.29,156.01 38.98,152.94 C36.67,149.87 35.15,139.68 32.48,135.56 C29.82,131.43 24.85,120.87 23.00,128.18 C21.16,135.50 20.63,167.90 21.42,179.46 C22.21,191.02 25.02,192.13 27.74,197.54 C30.47,202.96 39.04,210.13 37.75,211.94 C36.46,213.75 21.07,206.88 20.02,208.43 C18.96,209.98 27.07,217.33 31.43,221.25 C35.79,225.17 37.81,227.48 46.18,231.96 C54.55,236.44 73.28,245.07 81.65,248.11 C90.02,251.16 87.56,251.86 96.40,250.22 C105.24,248.58 124.32,243.34 134.68,238.28 C145.04,233.22 153.41,224.73 158.56,219.84 C163.71,214.95 163.36,213.84 165.58,208.96 C167.81,204.07 170.47,199.97 171.91,190.52 C173.34,181.07 174.71,162.57 174.19,152.24 C173.66,141.91 172.05,135.38 168.74,128.53 C165.44,121.69 156.63,112.03 154.35,111.15 C152.06,110.27 155.75,119.87 155.05,123.27 C154.35,126.66 151.74,130.03 150.13,131.52 C148.52,133.01 146.91,132.81 145.39,132.22 C143.87,131.64 143.02,135.85 141.00,128.01 C138.98,120.16 136.90,96.93 133.27,85.16 C129.65,73.40 124.61,64.91 119.23,57.42 C113.84,49.93 107.08,44.78 100.97,40.21 C94.85,35.65 85.37,28.83 82.53,30.03 Z;M84.41,22.49 C80.06,23.81 78.77,43.04 78.44,48.61 C78.11,54.19 85.81,46.20 82.41,55.94 C79.02,65.69 64.15,90.99 58.07,107.09 C51.98,123.18 48.60,144.74 45.88,152.53 C43.15,160.33 44.20,157.14 41.71,153.86 C39.23,150.57 34.18,137.89 30.97,132.83 C27.76,127.77 24.22,115.54 22.44,123.52 C20.66,131.49 19.05,168.53 20.28,180.70 C21.50,192.86 26.87,191.12 29.77,196.53 C32.67,201.94 39.20,210.96 37.67,213.14 C36.13,215.33 21.12,208.89 20.58,209.62 C20.04,210.35 30.53,213.77 34.42,217.53 C38.30,221.29 36.39,227.41 43.89,232.17 C51.39,236.92 70.86,243.20 79.41,246.06 C87.96,248.91 86.44,250.84 95.20,249.30 C103.96,247.75 121.37,242.27 131.98,236.81 C142.60,231.36 153.45,221.42 158.89,216.59 C164.33,211.75 162.66,212.40 164.63,207.78 C166.61,203.16 169.22,198.70 170.73,188.87 C172.24,179.05 173.90,159.60 173.68,148.84 C173.45,138.09 172.49,131.39 169.38,124.33 C166.27,117.27 157.34,106.52 155.00,106.48 C152.66,106.45 156.40,120.63 155.34,124.13 C154.28,127.63 150.51,126.43 148.64,127.46 C146.78,128.50 145.27,130.87 144.13,130.34 C142.99,129.82 144.40,131.65 141.81,124.29 C139.22,116.94 132.42,97.58 128.58,86.19 C124.73,74.80 122.75,63.55 118.74,55.96 C114.73,48.37 110.25,46.23 104.53,40.65 C98.81,35.07 88.76,21.16 84.41,22.49 Z;M77.87,24.87 C75.43,27.20 82.86,43.75 82.86,49.95 C82.85,56.15 82.78,52.45 77.85,62.06 C72.92,71.67 58.34,92.40 53.27,107.63 C48.20,122.86 49.35,146.15 47.42,153.42 C45.50,160.70 43.70,154.03 41.71,151.26 C39.72,148.49 38.35,141.42 35.49,136.82 C32.63,132.21 26.61,116.35 24.56,123.62 C22.51,130.88 22.65,168.57 23.21,180.42 C23.76,192.27 25.78,189.34 27.89,194.71 C29.99,200.07 37.56,210.48 35.84,212.61 C34.11,214.73 18.57,206.42 17.54,207.48 C16.51,208.54 24.40,215.29 29.65,218.97 C34.90,222.65 40.19,224.65 49.04,229.55 C57.89,234.45 75.07,245.43 82.75,248.36 C90.43,251.28 86.20,249.03 95.13,247.11 C104.06,245.19 125.95,241.83 136.31,236.83 C146.67,231.82 151.93,221.80 157.29,217.08 C162.65,212.37 166.03,213.52 168.49,208.55 C170.94,203.57 170.68,196.97 172.04,187.23 C173.41,177.50 176.86,159.72 176.66,150.14 C176.46,140.55 174.96,135.91 170.84,129.72 C166.72,123.53 154.10,114.27 151.96,113.02 C149.82,111.77 158.04,119.60 158.00,122.22 C157.95,124.83 153.55,127.34 151.71,128.70 C149.87,130.06 148.95,130.53 146.96,130.39 C144.96,130.24 142.20,135.40 139.74,127.84 C137.27,120.28 134.95,97.49 132.17,85.01 C129.39,72.54 128.84,61.16 123.07,52.98 C117.29,44.80 105.03,40.62 97.50,35.94 C89.96,31.25 80.31,22.53 77.87,24.87 Z;M83.43,27.87 C81.04,30.26 87.26,42.76 86.95,48.33 C86.64,53.90 86.34,51.11 81.58,61.31 C76.83,71.50 64.39,94.11 58.43,109.51 C52.46,124.92 48.92,146.38 45.81,153.72 C42.69,161.06 41.71,156.80 39.75,153.58 C37.78,150.35 36.25,138.88 34.02,134.37 C31.78,129.86 28.14,118.89 26.35,126.54 C24.56,134.18 22.93,169.00 23.29,180.23 C23.65,191.45 26.56,189.15 28.52,193.90 C30.49,198.64 36.30,206.88 35.08,208.69 C33.87,210.50 21.64,202.95 21.23,204.77 C20.82,206.59 28.60,215.59 32.63,219.61 C36.66,223.63 37.62,224.68 45.40,228.89 C53.17,233.10 70.51,241.83 79.29,244.89 C88.07,247.95 88.63,248.38 98.07,247.26 C107.51,246.14 125.83,242.53 135.94,238.17 C146.04,233.81 153.88,226.62 158.70,221.13 C163.51,215.64 162.63,210.82 164.82,205.25 C167.02,199.68 170.69,196.30 171.88,187.71 C173.06,179.12 172.63,163.59 171.93,153.70 C171.24,143.80 171.05,136.29 167.73,128.34 C164.40,120.39 153.52,106.82 152.00,105.98 C150.48,105.13 158.67,118.91 158.60,123.27 C158.53,127.63 154.00,130.94 151.59,132.13 C149.18,133.32 146.04,130.94 144.12,130.42 C142.21,129.90 142.20,137.08 140.10,129.00 C138.00,120.91 134.55,94.02 131.53,81.91 C128.51,69.80 127.00,64.32 121.96,56.34 C116.93,48.36 107.75,38.78 101.32,34.03 C94.90,29.29 85.83,25.49 83.43,27.87 Z;M82.53,30.03 C79.69,31.23 84.11,42.29 83.93,47.41 C83.76,52.53 86.13,50.25 81.47,60.76 C76.82,71.26 61.87,94.91 56.01,110.45 C50.16,125.99 49.20,146.91 46.36,153.99 C43.52,161.08 41.29,156.01 38.98,152.94 C36.67,149.87 35.15,139.68 32.48,135.56 C29.82,131.43 24.85,120.87 23.00,128.18 C21.16,135.50 20.63,167.90 21.42,179.46 C22.21,191.02 25.02,192.13 27.74,197.54 C30.47,202.96 39.04,210.13 37.75,211.94 C36.46,213.75 21.07,206.88 20.02,208.43 C18.96,209.98 27.07,217.33 31.43,221.25 C35.79,225.17 37.81,227.48 46.18,231.96 C54.55,236.44 73.28,245.07 81.65,248.11 C90.02,251.16 87.56,251.86 96.40,250.22 C105.24,248.58 124.32,243.34 134.68,238.28 C145.04,233.22 153.41,224.73 158.56,219.84 C163.71,214.95 163.36,213.84 165.58,208.96 C167.81,204.07 170.47,199.97 171.91,190.52 C173.34,181.07 174.71,162.57 174.19,152.24 C173.66,141.91 172.05,135.38 168.74,128.53 C165.44,121.69 156.63,112.03 154.35,111.15 C152.06,110.27 155.75,119.87 155.05,123.27 C154.35,126.66 151.74,130.03 150.13,131.52 C148.52,133.01 146.91,132.81 145.39,132.22 C143.87,131.64 143.02,135.85 141.00,128.01 C138.98,120.16 136.90,96.93 133.27,85.16 C129.65,73.40 124.61,64.91 119.23,57.42 C113.84,49.93 107.08,44.78 100.97,40.21 C94.85,35.65 85.37,28.83 82.53,30.03 Z"/></path>
+      </svg>
+    </div>
+    <div class="flameStageReal">
+      <svg viewBox="0 0 200 252.5" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#6f0900" d="M55.31,0.00 C50.69,1.05 62.60,13.11 64.27,19.49 C65.94,25.87 68.36,26.51 65.32,38.28 C62.28,50.04 50.28,76.21 46.01,90.08 C41.73,103.95 42.52,119.43 39.68,121.51 C36.85,123.59 32.54,106.94 28.97,102.55 C25.40,98.16 20.19,93.56 18.26,95.17 C16.33,96.78 20.43,103.10 17.38,112.20 C14.34,121.31 2.46,139.83 0.00,149.78 C-2.46,159.73 -1.26,163.21 2.63,171.91 C6.53,180.60 23.79,199.39 23.35,201.93 C22.91,204.48 1.11,185.31 0.00,187.18 C-1.11,189.05 8.90,204.98 16.68,213.17 C24.47,221.36 35.65,229.79 46.71,236.35 C57.77,242.90 72.52,249.93 83.06,252.50 C93.59,255.08 98.24,254.81 109.92,251.80 C121.60,248.79 142.52,239.48 153.12,234.42 C163.71,229.35 167.11,227.19 173.49,221.42 C179.87,215.66 186.98,207.87 191.40,199.82 C195.82,191.78 201.38,176.29 200.00,173.13 C198.62,169.97 185.37,185.13 183.14,180.86 C180.92,176.59 187.45,158.56 186.65,147.50 C185.86,136.44 183.32,125.75 178.40,114.49 C173.49,103.22 161.37,82.65 157.16,79.89 C152.94,77.14 154.32,94.73 153.12,97.98 C151.92,101.23 153.76,107.26 149.96,99.39 C146.15,91.51 135.35,61.57 130.29,50.75 C125.23,39.92 125.96,40.68 119.58,34.42 C113.20,28.15 102.72,18.91 92.01,13.17 C81.30,7.43 59.94,-1.05 55.31,0.00 Z"><animate attributeName="d" dur="1.9s" begin="0s" repeatCount="indefinite" calcMode="linear" values="M55.31,0.00 C50.69,1.05 62.60,13.11 64.27,19.49 C65.94,25.87 68.36,26.51 65.32,38.28 C62.28,50.04 50.28,76.21 46.01,90.08 C41.73,103.95 42.52,119.43 39.68,121.51 C36.85,123.59 32.54,106.94 28.97,102.55 C25.40,98.16 20.19,93.56 18.26,95.17 C16.33,96.78 20.43,103.10 17.38,112.20 C14.34,121.31 2.46,139.83 0.00,149.78 C-2.46,159.73 -1.26,163.21 2.63,171.91 C6.53,180.60 23.79,199.39 23.35,201.93 C22.91,204.48 1.11,185.31 0.00,187.18 C-1.11,189.05 8.90,204.98 16.68,213.17 C24.47,221.36 35.65,229.79 46.71,236.35 C57.77,242.90 72.52,249.93 83.06,252.50 C93.59,255.08 98.24,254.81 109.92,251.80 C121.60,248.79 142.52,239.48 153.12,234.42 C163.71,229.35 167.11,227.19 173.49,221.42 C179.87,215.66 186.98,207.87 191.40,199.82 C195.82,191.78 201.38,176.29 200.00,173.13 C198.62,169.97 185.37,185.13 183.14,180.86 C180.92,176.59 187.45,158.56 186.65,147.50 C185.86,136.44 183.32,125.75 178.40,114.49 C173.49,103.22 161.37,82.65 157.16,79.89 C152.94,77.14 154.32,94.73 153.12,97.98 C151.92,101.23 153.76,107.26 149.96,99.39 C146.15,91.51 135.35,61.57 130.29,50.75 C125.23,39.92 125.96,40.68 119.58,34.42 C113.20,28.15 102.72,18.91 92.01,13.17 C81.30,7.43 59.94,-1.05 55.31,0.00 Z;M57.43,-8.50 C51.87,-6.92 56.59,13.94 58.07,20.85 C59.56,27.76 67.98,22.04 66.36,32.94 C64.73,43.85 52.87,71.82 48.32,86.28 C43.78,100.73 41.65,116.73 39.08,119.66 C36.50,122.59 36.67,108.53 32.87,103.85 C29.07,99.18 18.97,91.08 16.28,91.60 C13.60,92.12 19.66,97.09 16.76,107.00 C13.85,116.90 0.85,140.39 -1.16,151.04 C-3.18,161.69 0.59,162.21 4.66,170.89 C8.73,179.58 23.95,200.22 23.27,203.14 C22.58,206.05 1.16,187.32 0.56,188.37 C-0.04,189.43 12.36,201.42 19.67,209.45 C26.98,217.48 34.23,229.73 44.42,236.56 C54.61,243.39 70.10,248.06 80.81,250.45 C91.53,252.83 97.12,253.79 108.72,250.88 C120.32,247.96 139.57,238.40 150.42,232.95 C161.27,227.50 167.15,223.88 173.82,218.17 C180.49,212.45 186.28,206.43 190.44,198.65 C194.61,190.87 200.13,175.02 198.82,171.49 C197.52,167.96 184.57,182.07 182.63,177.46 C180.69,172.86 187.80,155.13 187.20,143.88 C186.60,132.62 183.99,120.40 179.04,109.92 C174.10,99.44 162.17,83.86 157.54,81.02 C152.91,78.19 152.78,90.25 151.26,92.92 C149.73,95.59 151.67,105.04 148.39,97.05 C145.11,89.05 137.36,55.18 131.55,44.96 C125.75,34.74 120.26,41.33 113.57,35.73 C106.88,30.14 100.77,18.77 91.42,11.40 C82.06,4.03 62.99,-10.07 57.43,-8.50 Z;M50.06,-5.81 C44.46,-3.39 61.18,14.77 63.05,22.36 C64.92,29.95 64.65,28.97 61.30,39.73 C57.94,50.48 46.28,73.38 42.90,86.89 C39.52,100.40 42.70,118.58 41.03,120.79 C39.36,123.00 36.01,104.15 32.87,100.15 C29.73,96.16 24.49,95.66 22.19,96.82 C19.90,97.98 22.52,98.12 19.12,107.11 C15.72,116.10 4.53,140.43 1.81,150.76 C-0.91,161.09 -0.49,160.43 2.78,169.07 C6.05,177.71 22.31,199.74 21.44,202.60 C20.56,205.46 -1.39,184.85 -2.48,186.23 C-3.57,187.61 6.23,202.94 14.90,210.90 C23.58,218.85 38.03,226.97 49.57,233.94 C61.11,240.92 74.31,250.29 84.16,252.75 C94.00,255.20 96.88,251.99 108.65,248.69 C120.42,245.39 144.16,237.97 154.75,232.97 C165.34,227.96 165.62,224.26 172.21,218.67 C178.80,213.07 189.64,207.55 194.30,199.41 C198.95,191.28 201.59,173.29 200.14,169.85 C198.69,166.41 187.56,182.31 185.62,178.76 C183.67,175.20 190.05,158.93 188.46,148.52 C186.87,138.11 180.65,127.98 176.07,116.31 C171.49,104.65 164.49,82.17 161.00,78.53 C157.50,74.88 156.60,91.36 155.09,94.46 C153.58,97.55 156.37,104.43 151.91,97.10 C147.45,89.77 133.95,60.97 128.32,50.49 C122.70,40.01 123.44,41.34 118.16,34.22 C112.89,27.11 108.01,14.47 96.66,7.79 C85.31,1.12 55.66,-8.24 50.06,-5.81 Z;M56.33,-2.43 C51.72,-0.98 66.15,13.64 67.67,20.53 C69.19,27.42 68.60,27.48 65.44,38.89 C62.29,50.31 53.14,75.31 48.73,89.02 C44.32,102.73 42.10,118.76 38.99,121.16 C35.88,123.57 33.18,108.05 30.06,103.45 C26.94,98.86 21.76,92.46 20.27,93.62 C18.78,94.77 24.18,100.87 21.12,110.37 C18.06,119.86 4.85,140.92 1.89,150.56 C-1.06,160.21 0.28,160.24 3.41,168.26 C6.54,176.28 21.05,196.14 20.68,198.68 C20.32,201.22 1.68,181.38 1.21,183.52 C0.75,185.66 10.43,203.24 17.88,211.54 C25.33,219.83 35.46,226.99 45.92,233.28 C56.39,239.57 69.75,246.69 80.69,249.28 C91.64,251.87 99.31,251.34 111.59,248.84 C123.87,246.35 144.04,238.66 154.38,234.31 C164.71,229.95 167.58,229.07 173.62,222.71 C179.67,216.34 186.24,204.85 190.64,196.12 C195.03,187.39 201.60,172.63 199.97,170.33 C198.35,168.03 183.26,186.15 180.89,182.32 C178.52,178.49 186.57,159.48 185.78,147.33 C184.98,135.18 180.10,120.66 176.10,109.43 C172.10,98.19 165.31,81.68 161.78,79.90 C158.25,78.12 157.17,95.87 154.94,98.74 C152.71,101.62 152.72,104.88 148.38,97.14 C144.04,89.40 134.05,63.44 128.88,52.29 C123.71,41.14 122.94,36.99 117.35,30.25 C111.76,23.51 105.50,17.31 95.33,11.86 C85.16,6.41 60.94,-3.87 56.33,-2.43 Z;M55.31,0.00 C50.69,1.05 62.60,13.11 64.27,19.49 C65.94,25.87 68.36,26.51 65.32,38.28 C62.28,50.04 50.28,76.21 46.01,90.08 C41.73,103.95 42.52,119.43 39.68,121.51 C36.85,123.59 32.54,106.94 28.97,102.55 C25.40,98.16 20.19,93.56 18.26,95.17 C16.33,96.78 20.43,103.10 17.38,112.20 C14.34,121.31 2.46,139.83 0.00,149.78 C-2.46,159.73 -1.26,163.21 2.63,171.91 C6.53,180.60 23.79,199.39 23.35,201.93 C22.91,204.48 1.11,185.31 0.00,187.18 C-1.11,189.05 8.90,204.98 16.68,213.17 C24.47,221.36 35.65,229.79 46.71,236.35 C57.77,242.90 72.52,249.93 83.06,252.50 C93.59,255.08 98.24,254.81 109.92,251.80 C121.60,248.79 142.52,239.48 153.12,234.42 C163.71,229.35 167.11,227.19 173.49,221.42 C179.87,215.66 186.98,207.87 191.40,199.82 C195.82,191.78 201.38,176.29 200.00,173.13 C198.62,169.97 185.37,185.13 183.14,180.86 C180.92,176.59 187.45,158.56 186.65,147.50 C185.86,136.44 183.32,125.75 178.40,114.49 C173.49,103.22 161.37,82.65 157.16,79.89 C152.94,77.14 154.32,94.73 153.12,97.98 C151.92,101.23 153.76,107.26 149.96,99.39 C146.15,91.51 135.35,61.57 130.29,50.75 C125.23,39.92 125.96,40.68 119.58,34.42 C113.20,28.15 102.72,18.91 92.01,13.17 C81.30,7.43 59.94,-1.05 55.31,0.00 Z"/></path>
+        <path fill="#d72a00" d="M82.53,30.03 C79.69,31.23 84.11,42.29 83.93,47.41 C83.76,52.53 86.13,50.25 81.47,60.76 C76.82,71.26 61.87,94.91 56.01,110.45 C50.16,125.99 49.20,146.91 46.36,153.99 C43.52,161.08 41.29,156.01 38.98,152.94 C36.67,149.87 35.15,139.68 32.48,135.56 C29.82,131.43 24.85,120.87 23.00,128.18 C21.16,135.50 20.63,167.90 21.42,179.46 C22.21,191.02 25.02,192.13 27.74,197.54 C30.47,202.96 39.04,210.13 37.75,211.94 C36.46,213.75 21.07,206.88 20.02,208.43 C18.96,209.98 27.07,217.33 31.43,221.25 C35.79,225.17 37.81,227.48 46.18,231.96 C54.55,236.44 73.28,245.07 81.65,248.11 C90.02,251.16 87.56,251.86 96.40,250.22 C105.24,248.58 124.32,243.34 134.68,238.28 C145.04,233.22 153.41,224.73 158.56,219.84 C163.71,214.95 163.36,213.84 165.58,208.96 C167.81,204.07 170.47,199.97 171.91,190.52 C173.34,181.07 174.71,162.57 174.19,152.24 C173.66,141.91 172.05,135.38 168.74,128.53 C165.44,121.69 156.63,112.03 154.35,111.15 C152.06,110.27 155.75,119.87 155.05,123.27 C154.35,126.66 151.74,130.03 150.13,131.52 C148.52,133.01 146.91,132.81 145.39,132.22 C143.87,131.64 143.02,135.85 141.00,128.01 C138.98,120.16 136.90,96.93 133.27,85.16 C129.65,73.40 124.61,64.91 119.23,57.42 C113.84,49.93 107.08,44.78 100.97,40.21 C94.85,35.65 85.37,28.83 82.53,30.03 Z"><animate attributeName="d" dur="2.2s" begin="0.3s" repeatCount="indefinite" calcMode="linear" values="M82.53,30.03 C79.69,31.23 84.11,42.29 83.93,47.41 C83.76,52.53 86.13,50.25 81.47,60.76 C76.82,71.26 61.87,94.91 56.01,110.45 C50.16,125.99 49.20,146.91 46.36,153.99 C43.52,161.08 41.29,156.01 38.98,152.94 C36.67,149.87 35.15,139.68 32.48,135.56 C29.82,131.43 24.85,120.87 23.00,128.18 C21.16,135.50 20.63,167.90 21.42,179.46 C22.21,191.02 25.02,192.13 27.74,197.54 C30.47,202.96 39.04,210.13 37.75,211.94 C36.46,213.75 21.07,206.88 20.02,208.43 C18.96,209.98 27.07,217.33 31.43,221.25 C35.79,225.17 37.81,227.48 46.18,231.96 C54.55,236.44 73.28,245.07 81.65,248.11 C90.02,251.16 87.56,251.86 96.40,250.22 C105.24,248.58 124.32,243.34 134.68,238.28 C145.04,233.22 153.41,224.73 158.56,219.84 C163.71,214.95 163.36,213.84 165.58,208.96 C167.81,204.07 170.47,199.97 171.91,190.52 C173.34,181.07 174.71,162.57 174.19,152.24 C173.66,141.91 172.05,135.38 168.74,128.53 C165.44,121.69 156.63,112.03 154.35,111.15 C152.06,110.27 155.75,119.87 155.05,123.27 C154.35,126.66 151.74,130.03 150.13,131.52 C148.52,133.01 146.91,132.81 145.39,132.22 C143.87,131.64 143.02,135.85 141.00,128.01 C138.98,120.16 136.90,96.93 133.27,85.16 C129.65,73.40 124.61,64.91 119.23,57.42 C113.84,49.93 107.08,44.78 100.97,40.21 C94.85,35.65 85.37,28.83 82.53,30.03 Z;M84.41,22.49 C80.06,23.81 78.77,43.04 78.44,48.61 C78.11,54.19 85.81,46.20 82.41,55.94 C79.02,65.69 64.15,90.99 58.07,107.09 C51.98,123.18 48.60,144.74 45.88,152.53 C43.15,160.33 44.20,157.14 41.71,153.86 C39.23,150.57 34.18,137.89 30.97,132.83 C27.76,127.77 24.22,115.54 22.44,123.52 C20.66,131.49 19.05,168.53 20.28,180.70 C21.50,192.86 26.87,191.12 29.77,196.53 C32.67,201.94 39.20,210.96 37.67,213.14 C36.13,215.33 21.12,208.89 20.58,209.62 C20.04,210.35 30.53,213.77 34.42,217.53 C38.30,221.29 36.39,227.41 43.89,232.17 C51.39,236.92 70.86,243.20 79.41,246.06 C87.96,248.91 86.44,250.84 95.20,249.30 C103.96,247.75 121.37,242.27 131.98,236.81 C142.60,231.36 153.45,221.42 158.89,216.59 C164.33,211.75 162.66,212.40 164.63,207.78 C166.61,203.16 169.22,198.70 170.73,188.87 C172.24,179.05 173.90,159.60 173.68,148.84 C173.45,138.09 172.49,131.39 169.38,124.33 C166.27,117.27 157.34,106.52 155.00,106.48 C152.66,106.45 156.40,120.63 155.34,124.13 C154.28,127.63 150.51,126.43 148.64,127.46 C146.78,128.50 145.27,130.87 144.13,130.34 C142.99,129.82 144.40,131.65 141.81,124.29 C139.22,116.94 132.42,97.58 128.58,86.19 C124.73,74.80 122.75,63.55 118.74,55.96 C114.73,48.37 110.25,46.23 104.53,40.65 C98.81,35.07 88.76,21.16 84.41,22.49 Z;M77.87,24.87 C75.43,27.20 82.86,43.75 82.86,49.95 C82.85,56.15 82.78,52.45 77.85,62.06 C72.92,71.67 58.34,92.40 53.27,107.63 C48.20,122.86 49.35,146.15 47.42,153.42 C45.50,160.70 43.70,154.03 41.71,151.26 C39.72,148.49 38.35,141.42 35.49,136.82 C32.63,132.21 26.61,116.35 24.56,123.62 C22.51,130.88 22.65,168.57 23.21,180.42 C23.76,192.27 25.78,189.34 27.89,194.71 C29.99,200.07 37.56,210.48 35.84,212.61 C34.11,214.73 18.57,206.42 17.54,207.48 C16.51,208.54 24.40,215.29 29.65,218.97 C34.90,222.65 40.19,224.65 49.04,229.55 C57.89,234.45 75.07,245.43 82.75,248.36 C90.43,251.28 86.20,249.03 95.13,247.11 C104.06,245.19 125.95,241.83 136.31,236.83 C146.67,231.82 151.93,221.80 157.29,217.08 C162.65,212.37 166.03,213.52 168.49,208.55 C170.94,203.57 170.68,196.97 172.04,187.23 C173.41,177.50 176.86,159.72 176.66,150.14 C176.46,140.55 174.96,135.91 170.84,129.72 C166.72,123.53 154.10,114.27 151.96,113.02 C149.82,111.77 158.04,119.60 158.00,122.22 C157.95,124.83 153.55,127.34 151.71,128.70 C149.87,130.06 148.95,130.53 146.96,130.39 C144.96,130.24 142.20,135.40 139.74,127.84 C137.27,120.28 134.95,97.49 132.17,85.01 C129.39,72.54 128.84,61.16 123.07,52.98 C117.29,44.80 105.03,40.62 97.50,35.94 C89.96,31.25 80.31,22.53 77.87,24.87 Z;M83.43,27.87 C81.04,30.26 87.26,42.76 86.95,48.33 C86.64,53.90 86.34,51.11 81.58,61.31 C76.83,71.50 64.39,94.11 58.43,109.51 C52.46,124.92 48.92,146.38 45.81,153.72 C42.69,161.06 41.71,156.80 39.75,153.58 C37.78,150.35 36.25,138.88 34.02,134.37 C31.78,129.86 28.14,118.89 26.35,126.54 C24.56,134.18 22.93,169.00 23.29,180.23 C23.65,191.45 26.56,189.15 28.52,193.90 C30.49,198.64 36.30,206.88 35.08,208.69 C33.87,210.50 21.64,202.95 21.23,204.77 C20.82,206.59 28.60,215.59 32.63,219.61 C36.66,223.63 37.62,224.68 45.40,228.89 C53.17,233.10 70.51,241.83 79.29,244.89 C88.07,247.95 88.63,248.38 98.07,247.26 C107.51,246.14 125.83,242.53 135.94,238.17 C146.04,233.81 153.88,226.62 158.70,221.13 C163.51,215.64 162.63,210.82 164.82,205.25 C167.02,199.68 170.69,196.30 171.88,187.71 C173.06,179.12 172.63,163.59 171.93,153.70 C171.24,143.80 171.05,136.29 167.73,128.34 C164.40,120.39 153.52,106.82 152.00,105.98 C150.48,105.13 158.67,118.91 158.60,123.27 C158.53,127.63 154.00,130.94 151.59,132.13 C149.18,133.32 146.04,130.94 144.12,130.42 C142.21,129.90 142.20,137.08 140.10,129.00 C138.00,120.91 134.55,94.02 131.53,81.91 C128.51,69.80 127.00,64.32 121.96,56.34 C116.93,48.36 107.75,38.78 101.32,34.03 C94.90,29.29 85.83,25.49 83.43,27.87 Z;M82.53,30.03 C79.69,31.23 84.11,42.29 83.93,47.41 C83.76,52.53 86.13,50.25 81.47,60.76 C76.82,71.26 61.87,94.91 56.01,110.45 C50.16,125.99 49.20,146.91 46.36,153.99 C43.52,161.08 41.29,156.01 38.98,152.94 C36.67,149.87 35.15,139.68 32.48,135.56 C29.82,131.43 24.85,120.87 23.00,128.18 C21.16,135.50 20.63,167.90 21.42,179.46 C22.21,191.02 25.02,192.13 27.74,197.54 C30.47,202.96 39.04,210.13 37.75,211.94 C36.46,213.75 21.07,206.88 20.02,208.43 C18.96,209.98 27.07,217.33 31.43,221.25 C35.79,225.17 37.81,227.48 46.18,231.96 C54.55,236.44 73.28,245.07 81.65,248.11 C90.02,251.16 87.56,251.86 96.40,250.22 C105.24,248.58 124.32,243.34 134.68,238.28 C145.04,233.22 153.41,224.73 158.56,219.84 C163.71,214.95 163.36,213.84 165.58,208.96 C167.81,204.07 170.47,199.97 171.91,190.52 C173.34,181.07 174.71,162.57 174.19,152.24 C173.66,141.91 172.05,135.38 168.74,128.53 C165.44,121.69 156.63,112.03 154.35,111.15 C152.06,110.27 155.75,119.87 155.05,123.27 C154.35,126.66 151.74,130.03 150.13,131.52 C148.52,133.01 146.91,132.81 145.39,132.22 C143.87,131.64 143.02,135.85 141.00,128.01 C138.98,120.16 136.90,96.93 133.27,85.16 C129.65,73.40 124.61,64.91 119.23,57.42 C113.84,49.93 107.08,44.78 100.97,40.21 C94.85,35.65 85.37,28.83 82.53,30.03 Z"/></path>
+        <path fill="#e19400" d="M93.42,57.59 C91.45,59.09 94.88,69.94 94.64,75.50 C94.41,81.07 93.71,85.25 92.01,90.96 C90.31,96.66 90.52,97.66 84.46,109.75 C78.40,121.83 61.28,151.68 55.66,163.48 C50.04,175.27 51.83,174.36 50.75,180.51 C49.66,186.65 48.84,193.85 49.17,200.35 C49.49,206.85 50.31,213.49 52.68,219.49 C55.05,225.49 58.79,231.67 63.39,236.35 C67.98,241.03 74.74,245.27 80.25,247.59 C85.75,249.90 91.51,250.25 96.40,250.22 C101.29,250.19 105.38,248.93 109.57,247.41 C113.75,245.89 119.08,242.03 121.51,241.09 C123.94,240.15 121.07,243.84 124.14,241.79 C127.22,239.74 136.11,232.78 139.95,228.80 C143.78,224.82 144.89,222.27 147.15,217.91 C149.40,213.55 151.89,209.57 153.47,202.63 C155.05,195.70 156.75,183.64 156.63,176.29 C156.51,168.95 154.78,163.80 152.77,158.56 C150.75,153.32 146.91,148.02 144.51,144.86 C142.11,141.70 139.42,139.36 138.37,139.60 C137.31,139.83 138.60,144.75 138.19,146.27 C137.78,147.79 136.96,148.46 135.91,148.73 C134.86,148.99 133.01,148.64 131.87,147.85 C130.73,147.06 130.03,146.94 129.06,143.99 C128.09,141.03 126.78,137.34 126.08,130.11 C125.37,122.89 126.10,108.55 124.85,100.61 C123.59,92.68 121.60,88.21 118.53,82.53 C115.45,76.85 110.59,70.71 106.41,66.55 C102.22,62.39 95.38,56.10 93.42,57.59 Z"><animate attributeName="d" dur="1.7s" begin="0.15s" repeatCount="indefinite" calcMode="linear" values="M93.42,57.59 C91.45,59.09 94.88,69.94 94.64,75.50 C94.41,81.07 93.71,85.25 92.01,90.96 C90.31,96.66 90.52,97.66 84.46,109.75 C78.40,121.83 61.28,151.68 55.66,163.48 C50.04,175.27 51.83,174.36 50.75,180.51 C49.66,186.65 48.84,193.85 49.17,200.35 C49.49,206.85 50.31,213.49 52.68,219.49 C55.05,225.49 58.79,231.67 63.39,236.35 C67.98,241.03 74.74,245.27 80.25,247.59 C85.75,249.90 91.51,250.25 96.40,250.22 C101.29,250.19 105.38,248.93 109.57,247.41 C113.75,245.89 119.08,242.03 121.51,241.09 C123.94,240.15 121.07,243.84 124.14,241.79 C127.22,239.74 136.11,232.78 139.95,228.80 C143.78,224.82 144.89,222.27 147.15,217.91 C149.40,213.55 151.89,209.57 153.47,202.63 C155.05,195.70 156.75,183.64 156.63,176.29 C156.51,168.95 154.78,163.80 152.77,158.56 C150.75,153.32 146.91,148.02 144.51,144.86 C142.11,141.70 139.42,139.36 138.37,139.60 C137.31,139.83 138.60,144.75 138.19,146.27 C137.78,147.79 136.96,148.46 135.91,148.73 C134.86,148.99 133.01,148.64 131.87,147.85 C130.73,147.06 130.03,146.94 129.06,143.99 C128.09,141.03 126.78,137.34 126.08,130.11 C125.37,122.89 126.10,108.55 124.85,100.61 C123.59,92.68 121.60,88.21 118.53,82.53 C115.45,76.85 110.59,70.71 106.41,66.55 C102.22,62.39 95.38,56.10 93.42,57.59 Z;M95.08,50.93 C92.40,52.83 90.24,70.57 89.86,76.55 C89.48,82.54 93.37,81.88 92.81,86.85 C92.25,91.82 92.79,93.84 86.52,106.37 C80.25,118.90 60.69,149.50 55.18,162.01 C49.68,174.52 54.70,175.43 53.48,181.43 C52.25,187.42 48.05,192.26 47.84,197.96 C47.63,203.65 49.81,209.01 52.21,215.61 C54.61,222.22 57.23,232.43 62.24,237.59 C67.25,242.75 76.60,244.27 82.28,246.58 C87.95,248.88 91.67,251.09 96.31,251.42 C100.96,251.76 105.43,250.94 110.13,248.60 C114.83,246.26 122.54,238.47 124.50,237.37 C126.45,236.27 119.65,243.77 121.86,242.00 C124.06,240.23 133.69,230.91 137.70,226.74 C141.72,222.57 143.77,221.25 145.95,216.99 C148.12,212.72 148.94,208.49 150.77,201.17 C152.61,193.84 156.79,180.34 156.96,173.04 C157.13,165.74 154.10,162.37 151.81,157.38 C149.53,152.40 145.60,146.71 143.27,143.13 C140.93,139.54 138.56,135.93 137.80,135.85 C137.05,135.76 138.98,141.05 138.74,142.61 C138.51,144.17 137.51,144.20 136.40,145.19 C135.30,146.18 133.56,149.38 132.11,148.57 C130.66,147.75 128.93,143.70 127.71,140.31 C126.49,136.91 125.11,135.56 124.80,128.21 C124.48,120.85 127.66,103.61 125.82,96.17 C123.98,88.73 117.07,88.74 113.76,83.57 C110.45,78.40 109.05,70.59 105.94,65.15 C102.83,59.71 97.76,49.03 95.08,50.93 Z;M89.30,53.04 C86.57,55.61 93.77,71.22 93.70,77.72 C93.64,84.23 90.92,87.21 88.92,92.07 C86.92,96.94 87.07,95.11 81.70,106.92 C76.34,118.72 61.43,150.92 56.73,162.91 C52.02,174.89 54.30,172.41 53.48,178.83 C52.65,185.26 51.72,195.31 51.80,201.46 C51.89,207.60 51.74,209.72 53.97,215.70 C56.20,221.67 60.77,232.47 65.17,237.31 C69.58,242.15 75.50,242.49 80.39,244.75 C85.27,247.01 90.03,250.60 94.49,250.88 C98.94,251.17 102.89,248.47 107.09,246.46 C111.30,244.45 116.41,239.99 119.73,238.82 C123.05,237.64 123.45,241.01 127.01,239.38 C130.56,237.76 137.90,233.14 141.05,229.04 C144.19,224.94 143.53,219.44 145.88,214.80 C148.22,210.16 153.52,208.06 155.10,201.18 C156.68,194.31 155.26,180.71 155.36,173.54 C155.45,166.37 157.45,163.51 155.67,158.15 C153.88,152.79 147.09,144.87 144.66,141.39 C142.23,137.91 141.87,136.29 141.10,137.28 C140.32,138.26 141.18,145.16 140.02,147.30 C138.85,149.45 135.05,150.20 134.10,150.14 C133.15,150.09 134.91,148.43 134.31,146.98 C133.71,145.53 131.60,144.55 130.49,141.43 C129.39,138.30 128.86,135.08 127.67,128.25 C126.47,121.41 125.05,108.06 123.34,100.42 C121.62,92.77 119.61,88.73 117.40,82.38 C115.19,76.02 114.76,67.20 110.08,62.31 C105.40,57.42 92.03,50.47 89.30,53.04 Z;M94.21,55.69 C92.25,57.49 97.63,70.35 97.27,76.31 C96.92,82.26 93.84,86.01 92.10,91.43 C90.37,96.84 93.05,96.84 86.88,108.81 C80.72,120.77 61.01,151.15 55.11,163.20 C49.22,175.26 52.28,175.13 51.51,181.15 C50.74,187.16 49.85,193.15 50.51,199.31 C51.17,205.47 53.00,211.82 55.46,218.12 C57.92,224.42 61.00,232.82 65.26,237.12 C69.52,241.42 76.28,242.30 81.02,243.94 C85.77,245.58 88.77,247.00 93.73,246.97 C98.69,246.94 105.95,245.00 110.78,243.75 C115.61,242.50 120.62,240.29 122.71,239.46 C124.81,238.62 120.88,241.04 123.36,238.72 C125.84,236.41 133.34,229.54 137.59,225.57 C141.83,221.61 145.96,218.79 148.81,214.95 C151.67,211.11 153.40,208.75 154.73,202.52 C156.05,196.30 157.22,185.53 156.77,177.58 C156.31,169.64 154.05,160.80 152.01,154.85 C149.96,148.90 147.17,144.17 144.48,141.90 C141.80,139.62 137.08,140.51 135.88,141.21 C134.68,141.91 137.60,145.50 137.30,146.10 C137.01,146.70 134.54,144.52 134.13,144.81 C133.71,145.10 135.43,147.90 134.81,147.86 C134.19,147.81 132.06,147.80 130.38,144.54 C128.71,141.28 125.89,135.41 124.79,128.28 C123.68,121.16 125.10,109.98 123.76,101.80 C122.42,93.62 119.21,85.28 116.76,79.23 C114.30,73.18 112.78,69.44 109.03,65.52 C105.27,61.59 96.17,53.89 94.21,55.69 Z;M93.42,57.59 C91.45,59.09 94.88,69.94 94.64,75.50 C94.41,81.07 93.71,85.25 92.01,90.96 C90.31,96.66 90.52,97.66 84.46,109.75 C78.40,121.83 61.28,151.68 55.66,163.48 C50.04,175.27 51.83,174.36 50.75,180.51 C49.66,186.65 48.84,193.85 49.17,200.35 C49.49,206.85 50.31,213.49 52.68,219.49 C55.05,225.49 58.79,231.67 63.39,236.35 C67.98,241.03 74.74,245.27 80.25,247.59 C85.75,249.90 91.51,250.25 96.40,250.22 C101.29,250.19 105.38,248.93 109.57,247.41 C113.75,245.89 119.08,242.03 121.51,241.09 C123.94,240.15 121.07,243.84 124.14,241.79 C127.22,239.74 136.11,232.78 139.95,228.80 C143.78,224.82 144.89,222.27 147.15,217.91 C149.40,213.55 151.89,209.57 153.47,202.63 C155.05,195.70 156.75,183.64 156.63,176.29 C156.51,168.95 154.78,163.80 152.77,158.56 C150.75,153.32 146.91,148.02 144.51,144.86 C142.11,141.70 139.42,139.36 138.37,139.60 C137.31,139.83 138.60,144.75 138.19,146.27 C137.78,147.79 136.96,148.46 135.91,148.73 C134.86,148.99 133.01,148.64 131.87,147.85 C130.73,147.06 130.03,146.94 129.06,143.99 C128.09,141.03 126.78,137.34 126.08,130.11 C125.37,122.89 126.10,108.55 124.85,100.61 C123.59,92.68 121.60,88.21 118.53,82.53 C115.45,76.85 110.59,70.71 106.41,66.55 C102.22,62.39 95.38,56.10 93.42,57.59 Z"/></path>
+        <path fill="#ffda41" d="M103.07,112.03 C101.49,111.65 102.28,120.98 101.14,125.20 C100.00,129.41 98.42,132.72 96.22,137.31 C94.03,141.91 92.92,144.95 87.97,152.77 C83.03,160.58 70.94,177.00 66.55,184.20 C62.16,191.40 62.83,192.24 61.63,195.96 C60.43,199.68 59.58,202.02 59.35,206.50 C59.12,210.97 59.06,217.79 60.23,222.83 C61.40,227.86 63.59,232.87 66.37,236.70 C69.15,240.53 72.87,243.63 76.91,245.83 C80.95,248.02 85.57,249.49 90.61,249.87 C95.64,250.25 101.79,249.75 107.11,248.11 C112.44,246.47 118.73,242.93 122.56,240.04 C126.40,237.14 128.21,234.53 130.11,230.73 C132.02,226.92 133.39,221.95 133.98,217.21 C134.56,212.47 134.68,208.05 133.63,202.28 C132.57,196.52 129.15,184.46 127.66,182.62 C126.16,180.77 125.67,189.29 124.67,191.22 C123.68,193.15 122.91,194.03 121.69,194.21 C120.46,194.38 118.47,193.62 117.30,192.27 C116.13,190.93 115.16,194.44 114.66,186.13 C114.16,177.82 114.98,152.18 114.31,142.41 C113.64,132.63 112.50,132.54 110.62,127.48 C108.75,122.42 104.65,112.41 103.07,112.03 Z"><animate attributeName="d" dur="1.5s" begin="0.5s" repeatCount="indefinite" calcMode="linear" values="M103.07,112.03 C101.49,111.65 102.28,120.98 101.14,125.20 C100.00,129.41 98.42,132.72 96.22,137.31 C94.03,141.91 92.92,144.95 87.97,152.77 C83.03,160.58 70.94,177.00 66.55,184.20 C62.16,191.40 62.83,192.24 61.63,195.96 C60.43,199.68 59.58,202.02 59.35,206.50 C59.12,210.97 59.06,217.79 60.23,222.83 C61.40,227.86 63.59,232.87 66.37,236.70 C69.15,240.53 72.87,243.63 76.91,245.83 C80.95,248.02 85.57,249.49 90.61,249.87 C95.64,250.25 101.79,249.75 107.11,248.11 C112.44,246.47 118.73,242.93 122.56,240.04 C126.40,237.14 128.21,234.53 130.11,230.73 C132.02,226.92 133.39,221.95 133.98,217.21 C134.56,212.47 134.68,208.05 133.63,202.28 C132.57,196.52 129.15,184.46 127.66,182.62 C126.16,180.77 125.67,189.29 124.67,191.22 C123.68,193.15 122.91,194.03 121.69,194.21 C120.46,194.38 118.47,193.62 117.30,192.27 C116.13,190.93 115.16,194.44 114.66,186.13 C114.16,177.82 114.98,152.18 114.31,142.41 C113.64,132.63 112.50,132.54 110.62,127.48 C108.75,122.42 104.65,112.41 103.07,112.03 Z;M104.30,107.10 C102.03,107.55 98.85,121.44 97.60,125.97 C96.35,130.51 98.17,130.24 96.81,134.29 C95.46,138.35 94.61,142.22 89.48,150.29 C84.36,158.36 70.26,174.97 66.07,182.73 C61.88,190.50 65.71,193.32 64.36,196.88 C63.02,200.44 58.79,200.42 58.02,204.10 C57.25,207.78 58.56,213.31 59.76,218.95 C60.96,224.59 62.03,233.63 65.23,237.94 C68.42,242.25 74.72,242.63 78.94,244.82 C83.15,247.01 85.73,250.32 90.52,251.07 C95.31,251.82 101.83,251.76 107.67,249.30 C113.51,246.84 122.19,239.38 125.55,236.32 C128.91,233.26 126.79,234.47 127.83,230.94 C128.86,227.41 130.97,220.08 131.73,215.15 C132.50,210.22 133.56,207.03 132.43,201.36 C131.30,195.69 126.20,183.38 124.96,181.15 C123.72,178.92 125.71,185.98 125.00,187.96 C124.30,189.94 122.21,192.59 120.73,193.03 C119.25,193.47 117.22,192.35 116.12,190.63 C115.02,188.91 114.36,191.40 114.15,182.73 C113.94,174.07 115.37,148.53 114.88,138.63 C114.39,128.72 112.97,128.56 111.21,123.31 C109.44,118.05 106.57,106.66 104.30,107.10 Z;M100.03,108.66 C98.69,108.27 101.46,121.92 100.45,126.84 C99.43,131.75 96.36,134.16 93.95,138.13 C91.53,142.11 90.34,143.11 85.95,150.69 C81.56,158.27 71.21,176.36 67.62,183.63 C64.02,190.89 65.30,190.29 64.36,194.28 C63.42,198.28 62.46,203.48 61.99,207.60 C61.51,211.73 60.49,214.02 61.52,219.03 C62.55,224.04 65.57,233.67 68.16,237.66 C70.75,241.66 73.63,240.85 77.05,242.99 C80.47,245.14 84.09,249.84 88.69,250.53 C93.29,251.23 99.29,249.29 104.63,247.16 C109.98,245.03 116.06,240.90 120.78,237.76 C125.51,234.62 130.59,231.71 132.98,228.32 C135.36,224.94 135.18,222.31 135.08,217.45 C134.97,212.59 133.32,205.22 132.36,199.17 C131.39,193.13 130.78,182.95 129.29,181.17 C127.80,179.38 124.18,186.36 123.40,188.46 C122.61,190.57 125.58,193.71 124.59,193.80 C123.59,193.88 118.68,190.62 117.43,188.99 C116.19,187.36 117.34,191.61 117.14,184.03 C116.93,176.44 117.63,152.62 116.19,143.47 C114.75,134.33 111.18,134.95 108.49,129.15 C105.80,123.35 101.37,109.05 100.03,108.66 Z;M103.66,110.62 C102.76,111.11 104.31,121.29 103.09,125.79 C101.86,130.30 98.52,133.28 96.29,137.66 C94.07,142.04 94.80,144.37 89.75,152.08 C84.70,159.79 70.56,176.50 66.00,183.92 C61.44,191.34 63.28,193.01 62.40,196.60 C61.51,200.19 60.59,201.31 60.70,205.45 C60.80,209.60 61.76,216.12 63.01,221.46 C64.27,226.79 65.79,234.02 68.24,237.47 C70.69,240.93 74.41,240.66 77.69,242.18 C80.97,243.71 82.83,246.24 87.94,246.62 C93.04,246.99 102.35,245.82 108.33,244.45 C114.30,243.08 120.26,241.20 123.76,238.40 C127.27,235.60 128.02,231.73 129.33,227.66 C130.64,223.59 130.62,218.71 131.62,213.99 C132.61,209.26 135.74,204.57 135.29,199.33 C134.84,194.08 130.66,183.64 128.91,182.51 C127.17,181.37 126.14,191.17 124.81,192.51 C123.48,193.84 122.18,191.00 120.93,190.50 C119.67,189.99 118.69,189.95 117.27,189.47 C115.85,188.98 113.05,195.46 112.41,187.59 C111.76,179.71 114.04,153.02 113.39,142.23 C112.75,131.44 110.14,128.12 108.52,122.85 C106.90,117.58 104.57,110.13 103.66,110.62 Z;M103.07,112.03 C101.49,111.65 102.28,120.98 101.14,125.20 C100.00,129.41 98.42,132.72 96.22,137.31 C94.03,141.91 92.92,144.95 87.97,152.77 C83.03,160.58 70.94,177.00 66.55,184.20 C62.16,191.40 62.83,192.24 61.63,195.96 C60.43,199.68 59.58,202.02 59.35,206.50 C59.12,210.97 59.06,217.79 60.23,222.83 C61.40,227.86 63.59,232.87 66.37,236.70 C69.15,240.53 72.87,243.63 76.91,245.83 C80.95,248.02 85.57,249.49 90.61,249.87 C95.64,250.25 101.79,249.75 107.11,248.11 C112.44,246.47 118.73,242.93 122.56,240.04 C126.40,237.14 128.21,234.53 130.11,230.73 C132.02,226.92 133.39,221.95 133.98,217.21 C134.56,212.47 134.68,208.05 133.63,202.28 C132.57,196.52 129.15,184.46 127.66,182.62 C126.16,180.77 125.67,189.29 124.67,191.22 C123.68,193.15 122.91,194.03 121.69,194.21 C120.46,194.38 118.47,193.62 117.30,192.27 C116.13,190.93 115.16,194.44 114.66,186.13 C114.16,177.82 114.98,152.18 114.31,142.41 C113.64,132.63 112.50,132.54 110.62,127.48 C108.75,122.42 104.65,112.41 103.07,112.03 Z"/></path>
+      </svg>
+    </div>
+    <div class="heartGlowBehind">
+      <svg viewBox="0 0 24 24"><path fill="#ff5a1f" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+    </div>
+    <div class="heartWrap" id="heartWrap">
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <clipPath id="heartClip">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </clipPath>
+          <linearGradient id="liquidGrad" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stop-color="#220301"/>
+            <stop offset="40%" stop-color="#5c0a06"/>
+            <stop offset="75%" stop-color="#8f120a"/>
+            <stop offset="100%" stop-color="#c41f12"/>
+          </linearGradient>
+          <radialGradient id="fireLickGrad" cx="50%" cy="100%" r="75%">
+            <stop offset="0%" stop-color="#ff9a3a" stop-opacity=".9"/>
+            <stop offset="45%" stop-color="#ff5a1f" stop-opacity=".5"/>
+            <stop offset="100%" stop-color="#ff5a1f" stop-opacity="0"/>
+          </radialGradient>
+          <clipPath id="liquidClip">
+            <rect id="liquidClipRect" x="0" y="24" width="24" height="0"/>
+          </clipPath>
+        </defs>
+        <path class="heartBase" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        <g clip-path="url(#heartClip)">
+          <rect id="liquidRect" class="liquidRect" x="0" y="24" width="24" height="0" fill="url(#liquidGrad)"/>
+          <g clip-path="url(#liquidClip)">
+            <circle class="bloodBubble" cx="7.5" cy="26" r="0.7" fill="#e63a1f" opacity="0">
+              <animateTransform attributeName="transform" type="translate" values="0 0;0 -3;0 -14" keyTimes="0;0.08;1" dur="2.4s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;.85;.85;0" keyTimes="0;0.1;0.8;1" dur="2.4s" repeatCount="indefinite"/>
+            </circle>
+            <circle class="bloodBubble" cx="13" cy="27" r="0.5" fill="#8f120a" opacity="0">
+              <animateTransform attributeName="transform" type="translate" values="0 0;0 -3;0 -16" keyTimes="0;0.08;1" dur="2.9s" begin=".6s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;.8;.8;0" keyTimes="0;0.1;0.8;1" dur="2.9s" begin=".6s" repeatCount="indefinite"/>
+            </circle>
+            <circle class="bloodBubble" cx="10" cy="28" r="0.9" fill="#a81810" opacity="0">
+              <animateTransform attributeName="transform" type="translate" values="0 0;0 -3;0 -15" keyTimes="0;0.08;1" dur="2.1s" begin="1.2s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;.75;.75;0" keyTimes="0;0.1;0.8;1" dur="2.1s" begin="1.2s" repeatCount="indefinite"/>
+            </circle>
+            <circle class="bloodBubble" cx="16" cy="25.5" r="0.55" fill="#e63a1f" opacity="0">
+              <animateTransform attributeName="transform" type="translate" values="0 0;0 -3;0 -13" keyTimes="0;0.08;1" dur="2.6s" begin="1.7s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;.8;.8;0" keyTimes="0;0.1;0.8;1" dur="2.6s" begin="1.7s" repeatCount="indefinite"/>
+            </circle>
+          </g>
+          <rect id="liquidShine" x="0" width="24" height="0.5" fill="#ff5a3a" opacity=".8"/>
+          <ellipse class="heartFireLick" cx="12" cy="21" rx="11" ry="7" fill="url(#fireLickGrad)"/>
+          <path class="heartHighlight" d="M7.8 5.2c1.6-1 3.4-.3 4 .9-1.6-.4-3 .1-3.9 1.4-.6.9-.6 1.9-.3 2.6C6.4 9 5.6 7 6.3 6c.4-.5.9-.6.9-.6z"/>
+        </g>
+        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="none" stroke="#000" stroke-width=".4"/>
+        <path class="heartEnergyEdge" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="none" stroke="#ff7a2a"/>
+        <text id="furyNumText" class="furyNum" x="12" y="11.7">0</text>
+      </svg>
+    </div>
+  </div>
+  `;
+}
 function classHtml(x) {
   if (x.cls === 'rogue')
     return `<div class="resource">Fichas en mano: <b>${ x.rogue.hand }</b> · Gastadas: ${ x.rogue.spent }<div class="row"><button id="rDraw">Robar ficha</button><button id="rSpend">Gastar ficha</button></div></div>`;
@@ -2276,7 +2681,7 @@ function classHtml(x) {
     'Temerario': 'Movimiento: gasta 1 Furia para obtener +1 PM.',
     'Provocador': 'Defensa: gasta 1 Furia para infligir 1 Herida al atacante.'
   };
-  return `<div class="resource">Furia: <b>${ x.berserker.fury }/7</b><div class="row"><button id="fDown">−</button><button id="fUp">+</button></div></div><label class="top">Postura (cambiar cuesta 1 Furia)<select id="stance"><option>Furia Sangrienta</option><option>Temerario</option><option>Provocador</option></select></label><div class="stanceGrid">${ Object.entries(stances).map(([name, desc]) => `<div class="passive ${ x.berserker.stance === name ? 'active' : '' }"><b>${ name }${ x.berserker.stance === name ? ' · ACTIVA' : '' }</b><br>${ desc }</div>`).join('') }</div>`;
+  return `<p class="notice">Furia: <b>${ x.berserker.fury }/7</b> · Postura activa: <b>${ x.berserker.stance }</b>. Revisa la pestaña "Furia" para ver el Corazón y cambiar de postura.</p>`;
 }
 function skillPrereqMet(x, q) {
   if (!q.grade || q.grade <= 1)
@@ -2590,6 +2995,13 @@ function bindHero() {
       say('Elige qué cara del Talismán reemplazar.', x);
       return;
     }
+    if (x.cls === 'berserker') {
+      x.berserker.pendingStanceAssign = v;
+      save();
+      renderHero();
+      say(`¿En qué postura dejas ${ v }?`, x);
+      return;
+    }
     save();
     renderHero();
     if (s.phase === 2)
@@ -2804,40 +3216,27 @@ function bindClass(x) {
         say('Talismán actualizado.', x);
       };
   }
-  if (x.cls === 'berserker') {
-    $('fDown').onclick = () => {
-      x.berserker.fury = Math.max(0, x.berserker.fury - 1);
+  if (x.cls === 'berserker' && document.getElementById('board'))
+    bindBerserkerFuryBoard(x);
+  if (x.cls === 'berserker' && x.berserker.pendingStanceAssign)
+    document.querySelectorAll('[data-assign-stance]').forEach(b => b.onclick = () => {
+      const v = x.berserker.pendingStanceAssign;
+      const stanceName = b.dataset.assignStance;
+      const base = v.replace(/\s+\d+$/, '').trim();
+      Object.keys(x.berserker.stanceAbilities).forEach(st => {
+        x.berserker.stanceAbilities[st] = x.berserker.stanceAbilities[st].filter(a => a.replace(/\s+\d+$/, '').trim() !== base);
+      });
+      x.berserker.stanceAbilities[stanceName].push(v);
+      x.berserker.pendingStanceAssign = null;
+      log(`"${ v }" se integró a la postura ${ stanceName }.`);
       save();
       renderHero();
-    };
-    $('fUp').onclick = () => {
-      x.berserker.fury = Math.min(7, x.berserker.fury + 1);
-      save();
-      renderHero();
-    };
-    $('stance').value = x.berserker.stance;
-    $('stance').onchange = e => {
-      const newStance = e.target.value;
-      if (newStance === x.berserker.stance) {
-        return;
-      }
-      if (x.berserker.fury < 1) {
-        alert('No tienes Furia suficiente para cambiar de postura.');
-        e.target.value = x.berserker.stance;
-        return;
-      }
-      if (!confirm(`¿Gastar 1 Furia para cambiar a la postura ${ newStance }?`)) {
-        e.target.value = x.berserker.stance;
-        return;
-      }
-      x.berserker.fury--;
-      x.berserker.stance = newStance;
-      log(`${ x.name } gasta 1 Furia para cambiar a la postura ${ newStance }.`);
-      save();
-      renderHero();
-      say(`Cambia a la postura ${ newStance }.`);
-    };
-  }
+      if (s.phase === 2)
+        continueLevelQueueAfterSkill();
+      else
+        advancePending();
+      say(`${ v } queda en la postura ${ stanceName }.`, x);
+    });
 }
 function bindFlow(x) {
   if ($('mageAttackContinue'))
@@ -3553,22 +3952,29 @@ function bindMissionButtons(x) {
 }
 function michaelTotalCorruption() {
   const st = s.missionState;
-  return (st.corruptionStone1 || 0) + (st.corruptionStone2 || 0);
+  return (st.corruptionStone1 || 0) + (st.corruptionStone2 || 0) + (st.corruptionStone3 || 0) + (st.corruptionStone4 || 0);
 }
 function addMichaelCorruption(n) {
   const st = s.missionState;
   const wasZero = michaelTotalCorruption() === 0;
+  const keys = ['corruptionStone1', 'corruptionStone2', 'corruptionStone3', 'corruptionStone4'];
   for (let i = 0; i < n; i++) {
-    if ((st.corruptionStone1 || 0) <= (st.corruptionStone2 || 0))
-      st.corruptionStone1 = (st.corruptionStone1 || 0) + 1;
-    else
-      st.corruptionStone2 = (st.corruptionStone2 || 0) + 1;
+    let minKey = keys[0];
+    keys.forEach(k => { if ((st[k] || 0) < (st[minKey] || 0)) minKey = k; });
+    st[minKey] = (st[minKey] || 0) + 1;
   }
   if (wasZero && !st.michaelInvulnerable) {
     st.michaelInvulnerable = true;
     return true;
   }
   return false;
+}
+function michaelLowestStoneKey() {
+  const st = s.missionState;
+  const keys = ['corruptionStone1', 'corruptionStone2', 'corruptionStone3', 'corruptionStone4'];
+  let minKey = keys[0];
+  keys.forEach(k => { if ((st[k] || 0) < (st[minKey] || 0)) minKey = k; });
+  return minKey;
 }
 function michaelBlessingMultiplier(level) {
   if (level >= 5)
@@ -3616,8 +4022,10 @@ function renderMichaelActivation() {
   if (!panel)
     return;
   if (st.michaelClawStep === 'ask' || !st.michaelClawStep) {
-    panel.innerHTML = `<div class="card"><h2>⚔️ Activación del Arcángel Miguel</h2><p class="notice">Lanza 2 dados negros. ¿Cuántas <b>garras</b> (no marcas de garra, esas se ignoran) salieron?</p><div class="actions"><button data-claws="0" class="primary">0 garras</button><button data-claws="1" class="primary">1 garra</button><button data-claws="2" class="primary">2 garras</button></div></div>`;
+    panel.innerHTML = `<div class="card"><h2>⚔️ Activación del Arcángel Miguel</h2><p class="notice">Lanza 2 dados negros. ¿Cuántas <b>garras</b> salieron? (las Marcas de Garra no activan ninguna habilidad, solo cuentan las garras)</p><div class="actions"><button data-claws="0" class="primary">0 garras</button><button data-claws="1" class="primary">1 garra</button><button data-claws="2" class="primary">2 garras</button><button id="michaelNoAbilityBtn">Solo salieron Marcas de Garra (ninguna habilidad)</button></div></div>`;
     document.querySelectorAll('[data-claws]').forEach(b => b.onclick = () => resolveMichaelAbility(+b.dataset.claws));
+    if ($('michaelNoAbilityBtn'))
+      $('michaelNoAbilityBtn').onclick = () => resolveMichaelNoAbility();
     return;
   }
   if (st.michaelClawStep === 'single-damage') {
@@ -3677,46 +4085,56 @@ function renderMichaelActivation() {
     return;
   }
 }
+function resolveMichaelNoAbility() {
+  const st = s.missionState;
+  log('Miguel se activa: solo salieron Marcas de Garra, ninguna garra. No se activa ninguna habilidad.');
+  save();
+  duckAndSay('Solo Marcas de Garra. Ninguna habilidad se activa.');
+  resolveMichaelAfterActivation();
+}
 function resolveMichaelAbility(claws) {
   const st = s.missionState;
   if (claws === 0) {
     st.michaelAbilityName = 'Justicia Celestial';
-    st.michaelAbilityText = 'Coloca a Miguel en la Zona del héroe con más Vida y ataca a ese héroe.';
+    st.michaelAbilityText = 'Miren las Zonas donde hay héroes: identifiquen cuál tiene más fichas de Corrupción (sumando piedras y zona). Coloca a Miguel en esa Zona y ataca a ese héroe.';
     st.michaelClawStep = 'single-damage';
     log('Miguel se activa con 0 garras: Justicia Celestial.');
     save();
     render();
-    duckAndSay('Justicia Celestial.');
+    duckAndSay('Justicia Celestial. Ataca al héroe en la Zona con más Corrupción.');
     return;
   }
   if (claws === 1) {
-    const restored = addMichaelCorruption(1);
-    if (restored)
-      log('Nueva ficha de Corrupción en la Cámara: Miguel vuelve a ser invulnerable.');
+    const stoneNum = michaelLowestStoneKey().replace('corruptionStone', '');
+    const restored1 = addMichaelCorruption(1);
+    if (restored1)
+      log('Nueva ficha de Corrupción: Miguel vuelve a ser invulnerable.');
     st.michaelAbilityName = 'Embestida de Lanza';
-    st.michaelAbilityText = `Coloca 1 ficha de Corrupción en la Piedra con menor cantidad. Coloca a Miguel en la Zona del héroe con menos Vida y ataca a ese héroe. Fichas de Corrupción: Piedra 1: ${ st.corruptionStone1 }, Piedra 2: ${ st.corruptionStone2 }.`;
+    st.michaelAbilityText = `Coloca 1 ficha de Corrupción en la Piedra ${ stoneNum } (la de menor cantidad). Luego miren las Zonas donde hay héroes: identifiquen cuál tiene MENOS fichas de Corrupción y coloquen ahí 1 ficha de Corrupción también. Coloca a Miguel en esa Zona y ataca a ese héroe. Piedras: ${ [1,2,3,4].map(n => st['corruptionStone'+n]||0).join('/') }.`;
     st.michaelClawStep = 'single-damage';
-    log(`Miguel se activa con 1 garra: Embestida de Lanza. Piedra 1: ${ st.corruptionStone1 }, Piedra 2: ${ st.corruptionStone2 }.`);
+    log(`Miguel se activa con 1 garra: Embestida de Lanza. Piedra ${ stoneNum } +1.`);
     save();
     render();
     renderMissions();
-    duckAndSay(`Embestida de Lanza. Una ficha de Corrupción más en la Piedra con menos fichas.`);
+    duckAndSay(`Embestida de Lanza. Una ficha más en la Piedra ${ stoneNum }, y otra en la Zona con menos Corrupción. Miguel ataca ahí.`);
     return;
   }
-  const restored = addMichaelCorruption(1);
-  if (restored)
-    log('Nueva ficha de Corrupción en la Cámara: Miguel vuelve a ser invulnerable.');
+  const restored2 = addMichaelCorruption(1);
+  if (restored2)
+    log('Nueva ficha de Corrupción: Miguel vuelve a ser invulnerable.');
   const mult = michaelBlessingMultiplier(st.darkLevel || 0);
   const totalCorruption = michaelTotalCorruption();
   const total = mult * totalCorruption;
   st.michaelBlessingTotal = total;
   st.michaelBlessingDist = {};
   st.michaelClawStep = 'blessing-damage';
-  log(`Miguel se activa con 2 garras: Bendición Oscura. ${ mult } de daño por cada una de las ${ totalCorruption } fichas de Corrupción totales = ${ total } Heridas en total.`);
+  st.michaelAbilityName = 'Bendición Oscura';
+  st.michaelAbilityText = `Coloca a Miguel en la Zona central de la Cámara de la Corrupción. ${ mult } de daño por cada una de las ${ totalCorruption } fichas de Corrupción en la Loseta (piedras + zonas) = ${ total } Heridas en total.`;
+  log(`Miguel se activa con 2 garras: Bendición Oscura. Va al centro de la Cámara. ${ mult } de daño por cada una de las ${ totalCorruption } fichas de Corrupción totales = ${ total } Heridas en total.`);
   save();
   render();
   renderMissions();
-  duckAndSay(`Bendición Oscura. Inflige ${ total } Heridas, distribúyanlas como deseen.`);
+  duckAndSay(`Bendición Oscura. Miguel va al centro de la Cámara. Inflige ${ total } Heridas, distribúyanlas como deseen.`);
 }
 function triggerParcaActivation(isLastHero) {
   const st = s.missionState;
@@ -3769,7 +4187,7 @@ function renderCorruptionRemoval() {
   if (!panel)
     return;
   if (!st.corruptionRollStone) {
-    panel.innerHTML = `<div class="card"><h2>Retirar Ficha de Corrupción</h2><p class="notice">${ x.name }, ¿de cuál Piedra de Corrupción estás retirando la ficha?</p><div class="actions"><button data-corrstone="1" class="primary">Piedra 1 (${ st.corruptionStone1 || 0 })</button><button data-corrstone="2" class="primary">Piedra 2 (${ st.corruptionStone2 || 0 })</button></div></div>`;
+    panel.innerHTML = `<div class="card"><h2>Retirar Ficha de Corrupción</h2><p class="notice">${ x.name }, ¿de cuál Piedra de Corrupción estás retirando la ficha?</p><div class="actions">${ [1,2,3,4].map(n => `<button data-corrstone="${ n }" class="primary" ${ (st['corruptionStone'+n] || 0) <= 0 ? 'disabled' : '' }>Piedra ${ n } (${ st['corruptionStone'+n] || 0 })</button>`).join('') }</div></div>`;
     document.querySelectorAll('[data-corrstone]').forEach(b => b.onclick = () => {
       st.corruptionRollStone = b.dataset.corrstone;
       save();
@@ -3782,9 +4200,9 @@ function renderCorruptionRemoval() {
 }
 function resolveCorruptionRemoval(x, result) {
   const st = s.missionState;
-  const stoneKey = st.corruptionRollStone === '2' ? 'corruptionStone2' : 'corruptionStone1';
+  const stoneKey = 'corruptionStone' + st.corruptionRollStone;
   st[stoneKey] = Math.max(0, (st[stoneKey] || 0) - 1);
-  let msg = `${ x.name } retira 1 ficha de la Piedra ${ st.corruptionRollStone }. Piedra 1: ${ st.corruptionStone1 }, Piedra 2: ${ st.corruptionStone2 }.`;
+  let msg = `${ x.name } retira 1 ficha de la Piedra ${ st.corruptionRollStone }. Piedras: ${ [1,2,3,4].map(n => st['corruptionStone'+n]||0).join('/') }.`;
   if (result === 'claw' || result === 'both') {
     x.hp = Math.max(0, x.hp - 1);
     msg += ` Sale garra: ${ x.name } recibe 1 Herida.`;
@@ -3809,8 +4227,10 @@ function renderParcaActivation() {
   if (!panel)
     return;
   if (st.parcaClawStep === 'ask' || !st.parcaClawStep) {
-    panel.innerHTML = `<div class="card"><h2>☠ Activación de la Parca</h2><p class="notice">Lanza 2 dados negros. ¿Cuántas <b>garras</b> (no marcas de garra, esas se ignoran) salieron?</p><div class="actions"><button data-parcaclaws="0" class="primary">0 garras</button><button data-parcaclaws="1" class="primary">1 garra</button><button data-parcaclaws="2" class="primary">2 garras</button></div></div>`;
+    panel.innerHTML = `<div class="card"><h2>☠ Activación de la Parca</h2><p class="notice">Lanza 2 dados negros. ¿Cuántas <b>garras</b> salieron? (las Marcas de Garra no activan ninguna habilidad, solo cuentan las garras)</p><div class="actions"><button data-parcaclaws="0" class="primary">0 garras</button><button data-parcaclaws="1" class="primary">1 garra</button><button data-parcaclaws="2" class="primary">2 garras</button><button id="parcaNoAbilityBtn">Solo salieron Marcas de Garra (ninguna habilidad)</button></div></div>`;
     document.querySelectorAll('[data-parcaclaws]').forEach(b => b.onclick = () => resolveParcaAbility(+b.dataset.parcaclaws));
+    if ($('parcaNoAbilityBtn'))
+      $('parcaNoAbilityBtn').onclick = () => resolveParcaNoAbility();
     return;
   }
   if (st.parcaClawStep === 'single-damage') {
@@ -3888,6 +4308,12 @@ function renderParcaActivation() {
       };
     return;
   }
+}
+function resolveParcaNoAbility() {
+  log('La Parca se activa: solo salieron Marcas de Garra, ninguna garra. No se activa ninguna habilidad.');
+  save();
+  duckAndSay('Solo Marcas de Garra. Ninguna habilidad se activa.');
+  resolveParcaAfterActivation();
 }
 function resolveParcaAbility(claws) {
   const st = s.missionState;
@@ -4228,32 +4654,34 @@ function activateMichaelChamber() {
   st.finalCombatActive = true;
   st.darkLevel = 1;
   const total = 2 * heroCountForHp;
-  const half = Math.floor(total / 2);
+  const base = Math.floor(total / 4);
+  let rem = total - base * 4;
   st.corruptionSetupTotal = total;
-  st.corruptionStone1 = half;
-  st.corruptionStone2 = total - half;
+  [1,2,3,4].forEach(n => {
+    st['corruptionStone'+n] = base + (rem > 0 ? 1 : 0);
+    if (rem > 0) rem--;
+  });
   st.awaitingCorruptionSetup = true;
   s.heroes.forEach(q => {
     q.hp = q.hpMax;
     q.mana = q.manaMax;
   });
-  log(`Comienza el Combate Final contra el Arcángel Miguel corrupto. Vida de Miguel: ${ st.michaelHp }. Se deben colocar ${ total } fichas de Corrupción entre las 2 Piedras.`);
+  log(`Comienza el Combate Final contra el Arcángel Miguel corrupto. Vida de Miguel: ${ st.michaelHp }. Se deben colocar ${ total } fichas de Corrupción entre las 4 Piedras.`);
   save();
   renderHero();
   renderMissions();
-  say(`Deben colocar ${ total } fichas de Corrupción entre las dos Piedras.`);
+  say(`Deben colocar ${ total } fichas de Corrupción entre las cuatro Piedras.`);
 }
 function renderCorruptionSetup() {
   const st = s.missionState;
   const panel = $('heroPage');
   if (!panel)
     return;
-  const assigned = (st.corruptionStone1 || 0) + (st.corruptionStone2 || 0);
+  const assigned = [1,2,3,4].reduce((a,n) => a + (st['corruptionStone'+n] || 0), 0);
   const remaining = st.corruptionSetupTotal - assigned;
-  panel.innerHTML = `<div class="card"><h2>Repartir Fichas de Corrupción</h2><p class="notice">Se colocan ${ st.corruptionSetupTotal } fichas de Corrupción entre las 2 Piedras, de la forma más equitativa posible. Propuesta: Piedra 1: ${ st.corruptionStone1 }, Piedra 2: ${ st.corruptionStone2 }.</p><div class="grid top"><div class="elementRow"><span class="badge">Piedra 1: ${ st.corruptionStone1 }</span><button data-corrsetup="1" data-d="-1" ${ (st.corruptionStone1 || 0) <= 0 ? 'disabled' : '' }>−</button><button data-corrsetup="1" data-d="1" ${ remaining <= 0 ? 'disabled' : '' }>+</button></div><div class="elementRow"><span class="badge">Piedra 2: ${ st.corruptionStone2 }</span><button data-corrsetup="2" data-d="-1" ${ (st.corruptionStone2 || 0) <= 0 ? 'disabled' : '' }>−</button><button data-corrsetup="2" data-d="1" ${ remaining <= 0 ? 'disabled' : '' }>+</button></div></div><p class="muted top">Por repartir: ${ remaining }</p><button id="confirmCorruptionSetup" class="primary top" ${ remaining !== 0 ? 'disabled' : '' }>Confirmar reparto</button></div>`;
+  panel.innerHTML = `<div class="card"><h2>Repartir Fichas de Corrupción</h2><p class="notice">Se colocan ${ st.corruptionSetupTotal } fichas de Corrupción entre las 4 Piedras, de la forma más equitativa posible.</p><div class="grid top">${ [1,2,3,4].map(n => `<div class="elementRow"><span class="badge">Piedra ${ n }: ${ st['corruptionStone'+n] || 0 }</span><button data-corrsetup="${ n }" data-d="-1" ${ (st['corruptionStone'+n] || 0) <= 0 ? 'disabled' : '' }>−</button><button data-corrsetup="${ n }" data-d="1" ${ remaining <= 0 ? 'disabled' : '' }>+</button></div>`).join('') }</div><p class="muted top">Por repartir: ${ remaining }</p><button id="confirmCorruptionSetup" class="primary top" ${ remaining !== 0 ? 'disabled' : '' }>Confirmar reparto</button></div>`;
   document.querySelectorAll('[data-corrsetup]').forEach(b => b.onclick = () => {
-    const stone = b.dataset.corrsetup, d = +b.dataset.d;
-    const key = stone === '1' ? 'corruptionStone1' : 'corruptionStone2';
+    const key = 'corruptionStone' + b.dataset.corrsetup, d = +b.dataset.d;
     st[key] = Math.max(0, (st[key] || 0) + d);
     save();
     renderCorruptionSetup();
@@ -4265,7 +4693,7 @@ function finishMichaelCorruptionSetup() {
   const st = s.missionState;
   st.awaitingCorruptionSetup = false;
   startNewHeroPhaseForFinalCombat();
-  log(`Fichas de Corrupción repartidas: Piedra 1: ${ st.corruptionStone1 }, Piedra 2: ${ st.corruptionStone2 }.`);
+  log(`Fichas de Corrupción repartidas: ${ [1,2,3,4].map(n => 'Piedra '+n+': '+(st['corruptionStone'+n]||0)).join(', ') }.`);
   save();
   showPhaseCurtain('Fase de Héroes');
   renderHero();
@@ -4874,6 +5302,8 @@ function initMissions() {
           michaelInvulnerable: true,
           corruptionStone1: 0,
           corruptionStone2: 0,
+          corruptionStone3: 0,
+          corruptionStone4: 0,
           darkLevel: 0,
           awaitingMichaelActivation: false
         };
@@ -5009,7 +5439,7 @@ function renderMissionMechanics(m) {
     if (!st.finalCombatActive)
       return `<div class="card"><h3>Sellos de Corrupción</h3><p class="notice">Rotos: <b>${ st.sealsBreached || 0 } / 4</b></p><p class="muted">Cada héroe puede gastar 1 acción en la zona de un Sello para romperlo ("Romper Sello de Corrupción" en su turno). Todo el grupo gana 5 XP por sello. Al romper los 4, se habilita "Entrar a la Cámara de la Corrupción" en Movimiento.</p></div>`;
     const pct = Math.max(0, Math.min(100, Math.round(st.michaelHp / st.michaelMaxHp * 100)));
-    return `<div class="card bossPanel"><div class="bossTitle">✦ EL ARCÁNGEL MIGUEL ✦<span class="bossSubtitle">El Arcángel Corrupto</span></div><div class="bossHealthTrack"><div class="bossHealthFill" style="width:${ pct }%"></div><span class="bossHealthNum">${ st.michaelHp } / ${ st.michaelMaxHp }</span></div><div class="grid top"><div><small>Nivel del medidor</small><b>${ st.darkLevel || 0 } / 5</b></div><div><small>Piedra 1</small><b>${ st.corruptionStone1 || 0 }</b></div><div><small>Piedra 2</small><b>${ st.corruptionStone2 || 0 }</b></div><div><small>Dados negros extra</small><b>+${ st.extraBlackDice || 0 }</b></div><div><small>Estado</small><b>${ st.michaelInvulnerable ? 'Invulnerable' : 'Vulnerable' }</b></div></div>${ st.michaelInvulnerable ? `<button id="removeInvulnBtn" class="primary top">Quitar invulnerabilidad</button>` : `<button id="restoreInvulnBtn" class="top">Restaurar invulnerabilidad</button>` }</div>`;
+    return `<div class="card bossPanel"><div class="bossTitle">✦ EL ARCÁNGEL MIGUEL ✦<span class="bossSubtitle">El Arcángel Corrupto</span></div><div class="bossHealthTrack"><div class="bossHealthFill" style="width:${ pct }%"></div><span class="bossHealthNum">${ st.michaelHp } / ${ st.michaelMaxHp }</span></div><div class="grid top"><div><small>Nivel del medidor</small><b>${ st.darkLevel || 0 } / 5</b></div>${ [1,2,3,4].map(n => `<div><small>Piedra ${ n }</small><b>${ st['corruptionStone'+n] || 0 }</b></div>`).join('') }<div><small>Dados negros extra</small><b>+${ st.extraBlackDice || 0 }</b></div><div><small>Estado</small><b>${ st.michaelInvulnerable ? 'Invulnerable' : 'Vulnerable' }</b></div></div>${ st.michaelInvulnerable ? `<button id="removeInvulnBtn" class="primary top">Quitar invulnerabilidad</button>` : `<button id="restoreInvulnBtn" class="top">Restaurar invulnerabilidad</button>` }<p class="muted top">Al tirar sus dados negros, Miguel lanza +${ st.extraBlackDice || 0 } dado(s) extra (según el medidor).</p><button id="michaelClawsEffectBtn" class="top">Salieron Garras en dados negros de Miguel</button></div>`;
   }
   if (m.id === 'soul_collector') {
     const st = s.missionState;
@@ -5100,11 +5530,11 @@ function bindMissionMechanics(m) {
   if (m.id === 'free_michael' && $('removeInvulnBtn'))
     $('removeInvulnBtn').onclick = () => {
       if (michaelTotalCorruption() > 0)
-        return alert(`Todavía quedan fichas de Corrupción (Piedra 1: ${ s.missionState.corruptionStone1 || 0 }, Piedra 2: ${ s.missionState.corruptionStone2 || 0 }). Miguel sigue invulnerable.`);
-      if (!confirm('Confirma que ambas Piedras de Corrupción están vacías. ¿Quitar la invulnerabilidad de Miguel?'))
+        return alert(`Todavía quedan fichas de Corrupción (${ [1,2,3,4].map(n => 'Piedra '+n+': '+(s.missionState['corruptionStone'+n]||0)).join(', ') }). Miguel sigue invulnerable.`);
+      if (!confirm('Confirma que las 4 Piedras de Corrupción están vacías. ¿Quitar la invulnerabilidad de Miguel?'))
         return;
       s.missionState.michaelInvulnerable = false;
-      log('Ambas Piedras de Corrupción están vacías. Miguel deja de ser invulnerable.');
+      log('Las 4 Piedras de Corrupción están vacías. Miguel deja de ser invulnerable.');
       save();
       renderMissions();
     };
@@ -5115,6 +5545,30 @@ function bindMissionMechanics(m) {
       save();
       renderMissions();
       say('Miguel vuelve a ser invulnerable.');
+    };
+  if (m.id === 'free_michael' && $('michaelClawsEffectBtn'))
+    $('michaelClawsEffectBtn').onclick = () => {
+      const withCorruption = s.heroes.filter(q => (q.personalCorruption || 0) > 0);
+      const opts = s.heroes.map(q => `<button data-claws-hero="${ q.id }" class="primary">${ q.name } (${ q.personalCorruption || 0 } Corrupción)</button>`).join('');
+      const panel = $('heroPage');
+      if (!panel)
+        return;
+      panel.innerHTML = `<div class="card"><h2>Garras en dados negros de Miguel</h2><p class="notice">Se infligen Heridas al héroe involucrado en el combate (atacante o defensor), 1 por cada ficha de Corrupción en su tablero personal. Luego se descartan esas fichas. ¿Cuál héroe participó en este combate?</p><div class="actions">${ opts }</div></div>`;
+      document.querySelectorAll('[data-claws-hero]').forEach(b => b.onclick = () => {
+        const hero = s.heroes.find(q => q.id === b.dataset.clawsHero);
+        const dmg = hero.personalCorruption || 0;
+        if (dmg > 0) {
+          hero.hp = Math.max(0, hero.hp - dmg);
+          log(`${ hero.name } recibe ${ dmg } Heridas por las Garras de Miguel (1 por cada ficha de Corrupción propia). Fichas descartadas.`);
+          say(`${ hero.name } recibe ${ dmg } Heridas por Corrupción propia.`);
+        } else {
+          log(`${ hero.name } no tenía Corrupción propia: sin efecto de Garras.`);
+        }
+        hero.personalCorruption = 0;
+        save();
+        renderMissions();
+        renderHero();
+      });
     };
 }
 initMissions();

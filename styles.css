@@ -825,21 +825,20 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 
 /* ============ CONSAGRACIÓN DEL PALADÍN ============ */
 
-
-    /* CONTENEDOR PRINCIPAL DEL ESCUDO */
-    .shield-container {
+/* CONTENEDOR PRINCIPAL DEL ESCUDO (Ajustado Responsive) */
+.shield-container {
   position: relative;
   width: 100%;
-  max-width: 340px;
+  max-width: 360px;
+  height: auto;
   aspect-ratio: 1 / 1;
-  margin: 10px auto;
+  margin: 12px auto;
   border-radius: 50%;
-  /* TEXTURA DE MADERA REALISTA */
   background: 
     radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0.85) 100%),
     repeating-radial-gradient(circle at 20% 30%, #543318 0px, #3d230e 15px, #261406 30px, #442710 45px),
     repeating-linear-gradient(15deg, transparent 0px, rgba(0,0,0,0.15) 4px, transparent 8px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.95);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -859,7 +858,7 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 10%;
+  padding: 0 9%;
   box-sizing: border-box;
 }
 
@@ -868,8 +867,8 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 
 /* REMACHES EN LAS BARRAS EN X */
 .strap-rivet {
-  width: 8px;
-  height: 8px;
+  width: 2.2%;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #ffffff, #9ca3af 40%, #374151 75%, #000 100%);
   box-shadow: 0 2px 4px rgba(0,0,0,0.9), inset 0 1px 2px rgba(255,255,255,0.8);
@@ -889,7 +888,7 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   z-index: 3;
 }
 
-/* CONTENEDOR DE REMACHES CIRCULARES */
+/* CONTENEDOR DE REMACHES CIRCULARES EN EL ANILLO PERIMETRAL */
 .ring-rivets-container {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -898,32 +897,31 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   z-index: 4;
 }
 
-/* Remaches circulares distribuidos alrededor del anillo */
 .ring-rivet {
   position: absolute;
   top: 50%; left: 50%;
-  width: 8px;
-  height: 8px;
-  margin: -4px;
+  width: 2.2%;
+  aspect-ratio: 1 / 1;
+  margin: -1.1%;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #ffffff, #9ca3af 40%, #1f2937 80%, #000 100%);
   box-shadow: 0 2px 4px rgba(0,0,0,0.9), inset 0 1px 2px rgba(255,255,255,0.8);
   border: 1px solid #4b5563;
 }
 
-/* Posicionamiento radial de los 12 remaches del borde */
-.r-1  { transform: rotate(0deg) translateX(158px); }
-.r-2  { transform: rotate(30deg) translateX(158px); }
-.r-3  { transform: rotate(60deg) translateX(158px); }
-.r-4  { transform: rotate(90deg) translateX(158px); }
-.r-5  { transform: rotate(120deg) translateX(158px); }
-.r-6  { transform: rotate(150deg) translateX(158px); }
-.r-7  { transform: rotate(180deg) translateX(158px); }
-.r-8  { transform: rotate(210deg) translateX(158px); }
-.r-9  { transform: rotate(240deg) translateX(158px); }
-.r-10 { transform: rotate(270deg) translateX(158px); }
-.r-11 { transform: rotate(300deg) translateX(158px); }
-.r-12 { transform: rotate(330deg) translateX(158px); }
+/* Posicionamiento radial */
+.r-1  { transform: rotate(0deg) translateX(168px); }
+.r-2  { transform: rotate(30deg) translateX(168px); }
+.r-3  { transform: rotate(60deg) translateX(168px); }
+.r-4  { transform: rotate(90deg) translateX(168px); }
+.r-5  { transform: rotate(120deg) translateX(168px); }
+.r-6  { transform: rotate(150deg) translateX(168px); }
+.r-7  { transform: rotate(180deg) translateX(168px); }
+.r-8  { transform: rotate(210deg) translateX(168px); }
+.r-9  { transform: rotate(240deg) translateX(168px); }
+.r-10 { transform: rotate(270deg) translateX(168px); }
+.r-11 { transform: rotate(300deg) translateX(168px); }
+.r-12 { transform: rotate(330deg) translateX(168px); }
 
 /* Filo dorado interno */
 .inner-gold-line {
@@ -960,12 +958,12 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 /* CÍRCULOS DE CONSAGRACIÓN */
 .energy-circle {
   position: absolute;
-  width: 58px;
-  height: 58px;
+  width: 16.5%;
+  height: 16.5%;
   border-radius: 50%;
   background: radial-gradient(circle, #1a1c23 60%, #0d0e12 100%);
   border: 2px solid #d97706;
-  box-shadow: inset 0 0 12px #000, 0 6px 14px rgba(0,0,0,0.85);
+  box-shadow: inset 0 0 12px #000, 0 8px 18px rgba(0,0,0,0.85);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -982,27 +980,27 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   transition: opacity 0.3s ease;
 }
 
-.circle-green { top: 22px; left: 50%; transform: translateX(-50%); }
-.circle-blue { top: 50%; left: 22px; transform: translateY(-50%); }
-.circle-red { top: 50%; right: 22px; transform: translateY(-50%); }
+.circle-green { top: 7%; left: 50%; transform: translateX(-50%); }
+.circle-blue { top: 50%; left: 7%; transform: translateY(-50%); }
+.circle-red { top: 50%; right: 7%; transform: translateY(-50%); }
 
 /* ORBE DE MANÁ INFERIOR */
 .mana-display {
   position: absolute;
-  bottom: 26px;
+  bottom: 9%;
   left: 50%;
   transform: translateX(-50%);
-  width: 48px;
-  height: 48px;
+  width: 13%;
+  height: 13%;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #93c5fd, #1d4ed8 70%, #0f172a);
   border: 2px solid #fef08a;
-  box-shadow: 0 0 14px rgba(59, 130, 246, 0.95);
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.95);
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  font-size: 18px;
+  font-size: 1.1rem;
   color: #fff;
   user-select: none;
   pointer-events: none;
@@ -1012,12 +1010,12 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 /* UMBO CENTRAL METÁLICO */
 .center-boss {
   position: absolute;
-  width: 140px;
-  height: 140px;
+  width: 40%;
+  height: 40%;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #e5e7eb 0%, #9ca3af 25%, #374151 65%, #111827 100%);
   border: 3px solid #d97706;
-  box-shadow: 0 0 12px rgba(217, 119, 6, 0.4), 0 10px 25px rgba(0,0,0,0.9), inset 0 2px 6px rgba(255,255,255,0.7);
+  box-shadow: 0 0 12px rgba(217, 119, 6, 0.4), 0 15px 35px rgba(0,0,0,0.9), inset 0 2px 8px rgba(255,255,255,0.7);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1027,14 +1025,14 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 /* ACERO PAVONADO DIFERENCIADO EN BENDICIÓN */
 .center-boss-ornament {
   position: absolute;
-  width: 112px;
-  height: 112px;
+  width: 80%;
+  height: 80%;
   border-radius: 50%;
   border: 1.5px solid #fef08a;
   background: 
     radial-gradient(circle at 40% 30%, rgba(255,255,255,0.18) 0%, transparent 50%),
     radial-gradient(circle, #2d3748 0%, #1a202c 60%, #0f172a 100%);
-  box-shadow: inset 0 0 14px rgba(0,0,0,0.95), inset 0 1px 3px rgba(255,255,255,0.2);
+  box-shadow: inset 0 0 18px rgba(0,0,0,0.95), inset 0 1px 3px rgba(255,255,255,0.2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1042,19 +1040,19 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 }
 
 .blessing-bar-container {
-  width: 100px;
+  width: 85%;
   z-index: 6;
 }
 
 .blessing-select {
   width: 100%;
-  padding: 4px 6px;
+  padding: 4px 2px;
   background: #090d16;
   color: #fef08a;
   border: 1px solid #d97706;
   border-radius: 4px;
   font-family: inherit;
-  font-size: 8.5px;
+  font-size: 0.55rem;
   letter-spacing: 0.3px;
   text-align: center;
   outline: none;

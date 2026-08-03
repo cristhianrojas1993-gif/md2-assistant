@@ -1185,3 +1185,19 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
   border-color:#c9a8ff;color:#f3e8ff;box-shadow:0 0 10px rgba(139,92,246,.6)}
 .bossMeter.dark .bossMeterCell.current{animation:bossMeterDarkPulse 1.8s ease-in-out infinite}
 @keyframes bossMeterDarkPulse{0%,100%{box-shadow:0 0 10px rgba(139,92,246,.6)}50%{box-shadow:0 0 22px rgba(168,120,255,.95),0 0 34px rgba(124,58,237,.5)}}
+
+/* ============ DISCLAIMER Y ONBOARDING ============ */
+.onboardOverlay{position:fixed;inset:0;z-index:200;background:rgba(5,5,7,.94);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+.onboardOverlay.hidden{display:none}
+.onboardCard{background:linear-gradient(160deg,#241c2c,#130f18);border:2px solid rgba(219,179,85,.4);border-radius:12px;
+  padding:24px 20px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.7);max-height:85vh;overflow-y:auto;text-align:center}
+.onboardCard h2{font-family:var(--font-display);color:var(--accent-bright,#f5d98a);font-size:1.05rem;margin:0 0 12px;line-height:1.3}
+.onboardCard p{font-size:.85rem;line-height:1.55;color:#d8cdb8;margin:0 0 10px;text-align:left}
+.onboardCard .muted{color:#a89a86;text-align:center}
+.onboardCard .actions{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.onboardStepDots{display:flex;gap:6px;justify-content:center;margin:16px 0 2px}
+.onboardStepDot{width:8px;height:8px;border-radius:50%;background:rgba(219,179,85,.3);transition:background .3s ease}
+.onboardStepDot.active{background:var(--accent-bright,#f5d98a)}
+.onboardStepIcon{font-size:2.4rem;text-align:center;margin-bottom:6px}
+#onboardPrevBtn:disabled{opacity:.35}
+#onboardSkipBtn{background:none;border:none;color:#a89a86;font-size:.75rem;text-decoration:underline;min-height:auto;padding:4px}

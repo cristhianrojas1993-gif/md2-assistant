@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260731e">
+<link rel="stylesheet" href="styles.css?v=20260731f">
 <title>Asistente para los Portadores de la Luz</title>
 </head>
 <body>
@@ -56,6 +56,38 @@
   </div>
   <div class="splash-title">PORTADORES DE LA LUZ</div>
   <div class="splash-sub">Asistente de partida</div>
+</div>
+<div id="disclaimerModal" class="onboardOverlay hidden">
+  <div class="onboardCard">
+    <div class="onboardStepIcon">📜</div>
+    <h2>Antes de empezar...</h2>
+    <p>Esta es una app hecha por un fan, <b>no oficial</b>, para acompañar tus partidas físicas de <b>Massive Darkness 2</b>.</p>
+    <p>No tiene relación con CMON ni con los creadores del juego. Todo el arte, el nombre y las reglas originales pertenecen a sus dueños.</p>
+    <p>Esta app no reemplaza el tablero ni el manual físico: es solo una ayuda para llevar el registro de la partida.</p>
+    <button id="acceptDisclaimerBtn" class="primary top">Entendido, ¡vamos!</button>
+  </div>
+</div>
+<div id="onboardAskModal" class="onboardOverlay hidden">
+  <div class="onboardCard">
+    <div class="onboardStepIcon">👋</div>
+    <h2>¿Es tu primera vez jugando Massive Darkness 2?</h2>
+    <p class="muted">Si querés, te muestro rapidito cómo se usa la app y cómo funciona una partida. No toma más de un minuto.</p>
+    <div class="actions">
+      <button id="onboardYesBtn" class="primary">Sí, mostrame cómo funciona</button>
+      <button id="onboardNoBtn">No, ya sé jugar</button>
+    </div>
+  </div>
+</div>
+<div id="onboardTutorialModal" class="onboardOverlay hidden">
+  <div class="onboardCard">
+    <div id="onboardStepContent"></div>
+    <div class="onboardStepDots" id="onboardStepDots"></div>
+    <div class="actions top">
+      <button id="onboardPrevBtn">← Anterior</button>
+      <button id="onboardNextBtn" class="primary">Siguiente →</button>
+    </div>
+    <button id="onboardSkipBtn" class="top">Saltar, ya entendí</button>
+  </div>
 </div>
 <div id="gameOverScreen" class="hidden"></div>
 <div id="phaseCurtain"><span id="phaseCurtainText"></span></div>
@@ -196,6 +228,6 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-<script src="data.js?v=20260731e"></script>
-<script src="app.js?v=20260731e"></script>
+<script src="data.js?v=20260731f"></script>
+<script src="app.js?v=20260731f"></script>
 </body></html>

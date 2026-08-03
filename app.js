@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731e';
+const APP_VERSION = '20260731f';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -4368,16 +4368,28 @@ function renderParcaActivation() {
     panel.innerHTML = `<div class="card"><h2>La Muerte se Acerca</h2><p class="notice">La Parca se mueve a la Zona central. Lanza 1 dado amarillo. ¿Cuántas espadas salieron?</p><div class="actions">${ [0, 1, 2, 3].map(n => `<button data-swords="${ n }" class="primary">${ n }</button>`).join('') }</div></div>`;
     document.querySelectorAll('[data-swords]').forEach(b => b.onclick = () => {
       const swords = +b.dataset.swords;
+      const totalClockTokens = (st.clockZone1 || 0) + (st.clockZone2 || 0);
+      s.heroes.forEach(q => {
+        if (!q.unconscious)
+          q.mana = Math.max(0, q.mana - swords);
+      });
+      if (swords > totalClockTokens) {
+        log(`La Muerte se Acerca: salen ${ swords } espadas, pero solo quedan ${ totalClockTokens } ficha(s) de Tiempo en total. Los Relojes de Arena llegan a cero: la Parca ha destruido las almas de los héroes. Derrota.`);
+        st.clockZone1 = 0;
+        st.clockZone2 = 0;
+        save();
+        stopParcaSong();
+        triggerMissionResult('defeat');
+        finishFlow(true);
+        duckAndSay(`Salen ${ swords } espadas, más de las fichas de Tiempo que quedan. Los Relojes de Arena llegan a cero. La misión termina en derrota.`);
+        return;
+      }
       st.parcaSwordsResult = swords;
       st.parcaClawStep = 'clock-distribute';
       st.parcaClockDist = {
         1: 0,
         2: 0
       };
-      s.heroes.forEach(q => {
-        if (!q.unconscious)
-          q.mana = Math.max(0, q.mana - swords);
-      });
       log(`La Muerte se Acerca: salen ${ swords } espadas. Todos los héroes pierden ${ swords } de Maná. Deben retirarse ${ swords } ficha(s) de Tiempo repartidas entre ambas Zonas de Reloj de Arena.`);
       save();
       render();
@@ -5681,3 +5693,83 @@ document.addEventListener('pointerdown', firstTouchStartMenuMusic, { once: true 
 document.addEventListener('touchstart', firstTouchStartMenuMusic, { once: true });
 document.addEventListener('click', firstTouchStartMenuMusic, { once: true });
 document.addEventListener('keydown', firstTouchStartMenuMusic, { once: true });
+const ONBOARD_STEPS = [
+  {
+    icon: '🎲',
+    title: '¡Hola! Bienvenido/a',
+    body: 'Soy tu asistente digital para las partidas de Massive Darkness 2. Vos jugás con el tablero físico de siempre; yo me encargo de llevar la cuenta de vida, maná, turnos y todos los números para que no tengas que preocuparte por eso.'
+  },
+  {
+    icon: '🧙',
+    title: 'Armar tu grupo',
+    body: 'Primero elegís el modo de partida (solitario o con más jugadores) y las clases de tus héroes en la pantalla de Preparación. Cuando confirmás el grupo, te voy guiando héroe por héroe para elegir sus habilidades iniciales.'
+  },
+  {
+    icon: '🔄',
+    title: 'Cómo avanza una ronda',
+    body: 'Cada ronda pasa por 4 momentos: primero juegan los Héroes (uno por uno), después los Enemigos, luego se revisa si alguien Sube de Nivel, y por último la Fase de Oscuridad. El botón "Siguiente fase" te va llevando de una a otra.'
+  },
+  {
+    icon: '⚔️',
+    title: 'El turno de un héroe',
+    body: 'Durante su turno, cada héroe tiene botones para Moverse, Atacar, Recuperarse, o usar objetos. Yo te voy marcando los pasos y calculando el daño, el maná y los efectos de cada habilidad.'
+  },
+  {
+    icon: '📖',
+    title: '¿Tenés dudas en medio del juego?',
+    body: 'Abajo de todo siempre vas a tener "Reglas" y "Configuración" a mano, arriba junto a los héroes vas a encontrar el botón de "Partida". Y si en algún momento algo no suena, siempre podés tocar de nuevo cualquier botón sin miedo a romper algo: probá, explorá, ¡esto está para ayudarte, no para complicarte!'
+  }
+];
+let onboardStepIndex = 0;
+function renderOnboardStep() {
+  const step = ONBOARD_STEPS[onboardStepIndex];
+  $('onboardStepContent').innerHTML = `<div class="onboardStepIcon">${ step.icon }</div><h2>${ step.title }</h2><p>${ step.body }</p>`;
+  $('onboardStepDots').innerHTML = ONBOARD_STEPS.map((_, i) => `<div class="onboardStepDot ${ i === onboardStepIndex ? 'active' : '' }"></div>`).join('');
+  $('onboardPrevBtn').disabled = onboardStepIndex === 0;
+  $('onboardNextBtn').textContent = onboardStepIndex === ONBOARD_STEPS.length - 1 ? '¡Listo, a jugar!' : 'Siguiente →';
+}
+function closeOnboarding() {
+  $('onboardTutorialModal').classList.add('hidden');
+  localStorage.setItem('md2_onboarding_done', 'yes');
+}
+function initOnboardingFlow() {
+  const disclaimerSeen = localStorage.getItem('md2_disclaimer_seen');
+  const onboardingDone = localStorage.getItem('md2_onboarding_done');
+  if (!disclaimerSeen) {
+    $('disclaimerModal').classList.remove('hidden');
+  } else if (!onboardingDone) {
+    $('onboardAskModal').classList.remove('hidden');
+  }
+  $('acceptDisclaimerBtn').onclick = () => {
+    localStorage.setItem('md2_disclaimer_seen', 'yes');
+    $('disclaimerModal').classList.add('hidden');
+    if (!localStorage.getItem('md2_onboarding_done'))
+      $('onboardAskModal').classList.remove('hidden');
+  };
+  $('onboardYesBtn').onclick = () => {
+    $('onboardAskModal').classList.add('hidden');
+    onboardStepIndex = 0;
+    renderOnboardStep();
+    $('onboardTutorialModal').classList.remove('hidden');
+  };
+  $('onboardNoBtn').onclick = () => {
+    $('onboardAskModal').classList.add('hidden');
+    localStorage.setItem('md2_onboarding_done', 'yes');
+  };
+  $('onboardNextBtn').onclick = () => {
+    if (onboardStepIndex === ONBOARD_STEPS.length - 1) {
+      closeOnboarding();
+      return;
+    }
+    onboardStepIndex++;
+    renderOnboardStep();
+  };
+  $('onboardPrevBtn').onclick = () => {
+    if (onboardStepIndex > 0) {
+      onboardStepIndex--;
+      renderOnboardStep();
+    }
+  };
+  $('onboardSkipBtn').onclick = () => closeOnboarding();
+}
+initOnboardingFlow();

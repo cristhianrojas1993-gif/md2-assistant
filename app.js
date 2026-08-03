@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731l';
+const APP_VERSION = '20260731m';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -1173,6 +1173,8 @@ function duckAndSay(t) {
 function updateAmbient() {
 }
 const h = () => s.heroes[s.active], cl = () => C[h().cls], save = () => {
+  if (window.__tutorialDemoActive)
+    return;
   localStorage.setItem(KEY, JSON.stringify(s));
   mpPushState();
 };
@@ -1827,7 +1829,7 @@ function heroBarsHtml(x) {
   return `<div class="statBars"><div class="statBarRow"><small>Vida</small><div class="statBarTrack"><div class="statBarFill hpFill" style="width:${ hpPct }%"></div></div><span class="statBarNum">${ x.hp }/${ x.hpMax }</span></div><div class="statBarRow"><small>Maná</small><div class="statBarTrack"><div class="statBarFill manaFill" style="width:${ manaPct }%"></div></div><span class="statBarNum">${ x.mana }/${ x.manaMax }</span></div><div class="statBarRow"><small>XP</small><div class="statBarTrack"><div class="statBarFill xpFill" style="width:${ xpPct }%"></div></div><span class="statBarNum">${ xpLabel }</span></div></div>`;
 }
 function summaryHtml(x) {
-  return `<div class="card"><h2>Estadísticas</h2><div class="row"><button id="hpDown">− Vida</button><button id="hpUp">+ Vida</button><button id="manaDown">− Maná</button><button id="manaUp">+ Maná</button></div><div class="row"><button id="xpDown">− XP</button><button id="xpUp">+ XP</button></div><h3>Habilidad propia</h3><div class="passive">${ C[x.cls].ability }</div><h3>Sombras</h3><div class="passive">${ C[x.cls].shadow }</div></div><div class="card"><h2>Mecánica exclusiva</h2>${ classHtml(x) }</div><div class="card"><h2>Estados activos</h2><div class="statusChips">${ (x.statuses || []).map((st, i) => `<span class="statusChip">${ st }<button data-remove-status="${ i }">×</button></span>`).join('') || '<span class="muted">Sin estados activos.</span>' }</div><div class="row"><select id="statusPicker"><option>Quemado</option><option>Congelado</option><option>Envenenado</option><option>Aturdido</option><option>Maldito</option><option>Bendecido</option></select><button id="addStatus">Añadir estado</button></div></div>`;
+  return `<div class="card"><h2>Estadísticas</h2><div class="row" id="statAdjustRow1"><button id="hpDown">− Vida</button><button id="hpUp">+ Vida</button><button id="manaDown">− Maná</button><button id="manaUp">+ Maná</button></div><div class="row" id="statAdjustRow2"><button id="xpDown">− XP</button><button id="xpUp">+ XP</button></div><h3>Habilidad propia</h3><div class="passive">${ C[x.cls].ability }</div><h3>Sombras</h3><div class="passive">${ C[x.cls].shadow }</div></div><div class="card"><h2>Mecánica exclusiva</h2>${ classHtml(x) }</div><div class="card"><h2>Estados activos</h2><div class="statusChips">${ (x.statuses || []).map((st, i) => `<span class="statusChip">${ st }<button data-remove-status="${ i }">×</button></span>`).join('') || '<span class="muted">Sin estados activos.</span>' }</div><div class="row"><select id="statusPicker"><option>Quemado</option><option>Congelado</option><option>Envenenado</option><option>Aturdido</option><option>Maldito</option><option>Bendecido</option></select><button id="addStatus">Añadir estado</button></div></div>`;
 }
 function shamanCostText(cost) {
   return Object.entries(cost || {}).map(([k, v]) => `${ v } ${ MD2.shamanElements[k] }`).join(' + ');
@@ -5693,6 +5695,39 @@ document.addEventListener('pointerdown', firstTouchStartMenuMusic, { once: true 
 document.addEventListener('touchstart', firstTouchStartMenuMusic, { once: true });
 document.addEventListener('click', firstTouchStartMenuMusic, { once: true });
 document.addEventListener('keydown', firstTouchStartMenuMusic, { once: true });
+let onboardDemoSnapshot = null;
+function startHeroDemo() {
+  onboardDemoSnapshot = JSON.parse(JSON.stringify(s));
+  window.__tutorialDemoActive = true;
+  const demo = makeHero('paladin');
+  demo.name = 'Héroe de ejemplo';
+  demo.hp = Math.max(1, demo.hpMax - 2);
+  demo.mana = Math.max(0, demo.manaMax - 1);
+  const lvl1 = skills(demo).find(q => q.level === 1);
+  if (lvl1) {
+    demo.choices = { 1: lvl1.name };
+    demo.lockedChoices = { 1: true };
+  }
+  s.heroes = [demo];
+  s.active = 0;
+  s.confirmed = true;
+  s.mode = 'solo';
+  s.phase = 0;
+  s.turnPrompt = false;
+  tab('hero');
+  renderHeroTabs();
+  render();
+}
+function endHeroDemo() {
+  if (!onboardDemoSnapshot)
+    return;
+  s = onboardDemoSnapshot;
+  onboardDemoSnapshot = null;
+  window.__tutorialDemoActive = false;
+  tab('setup');
+  renderHeroTabs();
+  render();
+}
 const ONBOARD_STEPS = [
   {
     type: 'card',
@@ -5726,21 +5761,71 @@ const ONBOARD_STEPS = [
   },
   {
     type: 'card',
+    demo: true,
+    icon: '🛡️',
+    title: 'Así se ve un héroe en juego',
+    body: 'Preparé un Paladín de ejemplo para mostrarte cómo se maneja un héroe una vez que la partida arrancó. No es un héroe real, es solo para que conozcas la pantalla.'
+  },
+  {
+    type: 'spotlight',
+    demo: true,
+    selector: '#heroTabs',
+    title: '5. Cambiar entre héroes',
+    body: 'Arriba siempre vas a ver un botón por cada héroe del grupo. Tócalo para cambiar de héroe activo en cualquier momento.'
+  },
+  {
+    type: 'spotlight',
+    demo: true,
+    selector: '[data-sec="summary"]',
+    title: '6. Pestaña Resumen',
+    body: 'Esta es la pantalla principal de cada héroe: su vida, maná, habilidad propia, y los estados activos (como Quemado o Envenenado).'
+  },
+  {
+    type: 'spotlight',
+    demo: true,
+    selector: ['#statAdjustRow1', '#statAdjustRow2'],
+    title: '7. Ajuste manual',
+    body: 'Si en algún momento se marca mal la vida, el maná o la experiencia (por un error de dedo o algo del juego físico), puedes corregirlo aquí mismo, sumando o restando manualmente.'
+  },
+  {
+    type: 'spotlight',
+    demo: true,
+    selector: '[data-sec="skills"]',
+    title: '8. Pestaña Habilidades',
+    body: 'Acá se eligen las habilidades del héroe a medida que sube de nivel, organizadas por rama.'
+  },
+  {
+    type: 'card',
+    demo: true,
+    icon: '⭐',
+    title: 'Subir de nivel',
+    body: 'Cuando un héroe junta suficiente experiencia, la app te avisa que subió de nivel y te pide elegir una nueva habilidad para esa rama. Vas a ver una pantalla especial para elegirla antes de poder seguir jugando.'
+  },
+  {
+    type: 'spotlight',
+    demo: true,
+    selector: '[data-sec="actions"]',
+    title: '9. Pestaña Turno',
+    body: 'Acá es donde el héroe actúa: Moverse, Atacar, Recuperarse, o usar un objeto. La app te va guiando paso a paso durante cada acción.'
+  },
+  {
+    type: 'spotlight',
+    demo: true,
+    selector: '[data-sec="consagracion"]',
+    title: '10. Pestañas especiales',
+    body: 'Algunos héroes (como este Paladín) tienen una pestaña extra con una mecánica única de su clase. El Mago tiene su Talismán, el Chamán su Tablero de Elementos, el Berserker su Corazón de Furia, y así con cada clase especial.'
+  },
+  {
+    type: 'card',
     icon: '🔄',
     title: 'Cómo avanza una ronda',
-    body: 'Cada ronda pasa por 4 momentos: primero juegan los Héroes (uno por uno), después los Enemigos, luego se revisa si alguien Sube de Nivel, y por último la Fase de Oscuridad. El botón "Siguiente fase" te va llevando de una a otra.'
+    body: 'Cada ronda pasa por 4 fases en orden: <b>Héroes</b> (cada uno juega su turno), <b>Enemigos</b> (se activan y atacan), <b>Subida de Nivel</b> (se revisa si alguien subió), y <b>Oscuridad</b> (un evento aleatorio afecta la partida). El botón "Siguiente fase" te va llevando de una a otra, y la app te indica qué hacer en cada una.'
   },
   {
     type: 'spotlight',
     selector: 'nav',
-    title: '5. Siempre a mano, abajo',
+    title: '11. Siempre a mano, abajo',
     body: 'Estos 3 botones están disponibles en todo momento: Preparación, Misiones, y Configuración. Ahí puedes ajustar el volumen, la voz, y encontrar el número de versión de la app.'
-  },
-  {
-    type: 'card',
-    icon: '⚔️',
-    title: 'El turno de un héroe',
-    body: 'Cuando un héroe empieza su turno, vas a ver botones para Moverse, Atacar, Recuperarse o usar objetos. Yo te voy marcando los pasos y calculando el daño, el maná y los efectos de cada habilidad a medida que jugás.'
   },
   {
     type: 'card',
@@ -5756,31 +5841,41 @@ const ONBOARD_STEPS = [
   }
 ];
 let onboardStepIndex = 0;
-function positionSpotlight(selector) {
-  const el = document.querySelector(selector);
+function positionSpotlight(selectorOrArray) {
+  const selectors = Array.isArray(selectorOrArray) ? selectorOrArray : [selectorOrArray];
+  const els = selectors.map(sel => document.querySelector(sel)).filter(Boolean);
   const hole = $('spotlightHole');
   const tip = $('spotlightTooltip');
-  if (!el) {
+  if (!els.length) {
     hole.style.display = 'none';
     tip.style.top = '50%';
     tip.style.left = '50%';
     tip.style.transform = 'translate(-50%,-50%)';
     return;
   }
-  const r = el.getBoundingClientRect();
+  function combinedRect() {
+    const rects = els.map(el => el.getBoundingClientRect());
+    return {
+      top: Math.min(...rects.map(r => r.top)),
+      left: Math.min(...rects.map(r => r.left)),
+      right: Math.max(...rects.map(r => r.right)),
+      bottom: Math.max(...rects.map(r => r.bottom))
+    };
+  }
   const pad = 8;
+  const r = combinedRect();
   hole.style.display = 'block';
   hole.style.top = (r.top - pad) + 'px';
   hole.style.left = (r.left - pad) + 'px';
-  hole.style.width = (r.width + pad * 2) + 'px';
-  hole.style.height = (r.height + pad * 2) + 'px';
-  el.scrollIntoView({ block: 'center', behavior: 'instant' });
+  hole.style.width = (r.right - r.left + pad * 2) + 'px';
+  hole.style.height = (r.bottom - r.top + pad * 2) + 'px';
+  els[0].scrollIntoView({ block: 'center', behavior: 'instant' });
   requestAnimationFrame(() => {
-    const r2 = el.getBoundingClientRect();
+    const r2 = combinedRect();
     hole.style.top = (r2.top - pad) + 'px';
     hole.style.left = (r2.left - pad) + 'px';
-    hole.style.width = (r2.width + pad * 2) + 'px';
-    hole.style.height = (r2.height + pad * 2) + 'px';
+    hole.style.width = (r2.right - r2.left + pad * 2) + 'px';
+    hole.style.height = (r2.bottom - r2.top + pad * 2) + 'px';
     const tipW = 280, tipH = tip.offsetHeight || 160;
     let top = r2.bottom + pad + 10;
     if (top + tipH > window.innerHeight - 10)
@@ -5794,6 +5889,12 @@ function positionSpotlight(selector) {
 function renderOnboardStep() {
   const step = ONBOARD_STEPS[onboardStepIndex];
   const isLast = onboardStepIndex === ONBOARD_STEPS.length - 1;
+  const needsDemo = !!step.demo;
+  const demoIsActive = !!onboardDemoSnapshot;
+  if (needsDemo && !demoIsActive)
+    startHeroDemo();
+  else if (!needsDemo && demoIsActive)
+    endHeroDemo();
   if (step.type === 'card') {
     $('spotlightOverlay').classList.remove('active');
     $('onboardTutorialModal').classList.remove('hidden');
@@ -5827,6 +5928,8 @@ function retreatOnboard() {
   }
 }
 function closeOnboarding() {
+  if (onboardDemoSnapshot)
+    endHeroDemo();
   $('onboardTutorialModal').classList.add('hidden');
   $('spotlightOverlay').classList.remove('active');
 }

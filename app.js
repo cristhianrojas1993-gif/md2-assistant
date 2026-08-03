@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731f';
+const APP_VERSION = '20260731g';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -1734,7 +1734,7 @@ function renderHero() {
     return;
   }
   if (s.roomCode && s.myHeroIndex !== null && s.myHeroIndex !== undefined && s.active !== s.myHeroIndex) {
-    $('heroPage').innerHTML = `<div class="card"><h2>${ x.name } <small class="muted">(héroe de otro jugador — solo lectura)</small></h2><div class="statBarRow"><small>Vida</small><div class="statBarTrack"><div class="statBarFill hpFill" style="width:${ Math.round(x.hp / x.hpMax * 100) }%"></div></div><span class="statBarNum">${ x.hp }/${ x.hpMax }</span></div><div class="statBarRow"><small>Maná</small><div class="statBarTrack"><div class="statBarFill manaFill" style="width:${ Math.round(x.mana / x.manaMax * 100) }%"></div></div><span class="statBarNum">${ x.mana }/${ x.manaMax }</span></div><p class="muted top">No podés actuar sobre este héroe. Elige el tuyo en Configuración → Multijugador, o en la pestaña de héroes arriba.</p></div>`;
+    $('heroPage').innerHTML = `<div class="card"><h2>${ x.name } <small class="muted">(héroe de otro jugador — solo lectura)</small></h2><div class="statBarRow"><small>Vida</small><div class="statBarTrack"><div class="statBarFill hpFill" style="width:${ Math.round(x.hp / x.hpMax * 100) }%"></div></div><span class="statBarNum">${ x.hp }/${ x.hpMax }</span></div><div class="statBarRow"><small>Maná</small><div class="statBarTrack"><div class="statBarFill manaFill" style="width:${ Math.round(x.mana / x.manaMax * 100) }%"></div></div><span class="statBarNum">${ x.mana }/${ x.manaMax }</span></div><p class="muted top">No puedes actuar sobre este héroe. Elige el tuyo en Configuración → Multijugador, o en la pestaña de héroes arriba.</p></div>`;
     return;
   }
   document.documentElement.style.setProperty('--hero', COLORS[x.cls]);
@@ -2908,7 +2908,7 @@ function arrowFlow(x) {
 function attackTypeSelector(x) {
   if (x.cls === 'mage') {
     const active = x.mage.slots[x.mage.amulet];
-    return `<div class="card actionFlow active"><h2>Ataque del Mago</h2><p class="notice">Revisa la cara activa del Talismán (pestaña "Talismán") para ver qué habilidad podés usar, o gasta 1 maná para forzar el giro a otra cara.</p><p class="muted">Cara activa ahora: <b>${ active.name }</b> (${ active.manaCost } maná).</p><button id="mageAttackContinue" class="primary top">Continuar con el ataque</button></div>`;
+    return `<div class="card actionFlow active"><h2>Ataque del Mago</h2><p class="notice">Revisa la cara activa del Talismán (pestaña "Talismán") para ver qué habilidad puedes usar, o gasta 1 maná para forzar el giro a otra cara.</p><p class="muted">Cara activa ahora: <b>${ active.name }</b> (${ active.manaCost } maná).</p><button id="mageAttackContinue" class="primary top">Continuar con el ataque</button></div>`;
   }
   return `<div class="card actionFlow active"><h2>Tipo de Ataque</h2><p class="notice">¿Qué tipo de ataque realiza ${ x.name }?</p><div class="actions"><button data-attacktype="distancia">A distancia</button><button data-attacktype="cuerpo">Cuerpo a cuerpo</button><button data-attacktype="magico">Mágico</button></div></div>`;
 }
@@ -5697,12 +5697,12 @@ const ONBOARD_STEPS = [
   {
     icon: '🎲',
     title: '¡Hola! Bienvenido/a',
-    body: 'Soy tu asistente digital para las partidas de Massive Darkness 2. Vos jugás con el tablero físico de siempre; yo me encargo de llevar la cuenta de vida, maná, turnos y todos los números para que no tengas que preocuparte por eso.'
+    body: 'Soy tu asistente digital para las partidas de Massive Darkness 2. Tú juegas con el tablero físico de siempre; yo me encargo de llevar la cuenta de vida, maná, turnos y todos los números para que no tengas que preocuparte por eso.'
   },
   {
     icon: '🧙',
     title: 'Armar tu grupo',
-    body: 'Primero elegís el modo de partida (solitario o con más jugadores) y las clases de tus héroes en la pantalla de Preparación. Cuando confirmás el grupo, te voy guiando héroe por héroe para elegir sus habilidades iniciales.'
+    body: 'Primero eliges el modo de partida (solitario o con más jugadores) y las clases de tus héroes en la pantalla de Preparación. Cuando confirmas el grupo, te voy guiando héroe por héroe para elegir sus habilidades iniciales.'
   },
   {
     icon: '🔄',
@@ -5716,8 +5716,8 @@ const ONBOARD_STEPS = [
   },
   {
     icon: '📖',
-    title: '¿Tenés dudas en medio del juego?',
-    body: 'Abajo de todo siempre vas a tener "Reglas" y "Configuración" a mano, arriba junto a los héroes vas a encontrar el botón de "Partida". Y si en algún momento algo no suena, siempre podés tocar de nuevo cualquier botón sin miedo a romper algo: probá, explorá, ¡esto está para ayudarte, no para complicarte!'
+    title: '¿Tienes dudas en medio del juego?',
+    body: 'Abajo de todo siempre vas a tener "Reglas" y "Configuración" a mano, arriba junto a los héroes vas a encontrar el botón de "Partida". Y si en algún momento algo no se entiende, siempre puedes tocar de nuevo cualquier botón sin miedo a romper algo: prueba, explora, ¡esto está para ayudarte, no para complicarte!'
   }
 ];
 let onboardStepIndex = 0;

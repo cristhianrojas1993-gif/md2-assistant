@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731g';
+const APP_VERSION = '20260731h';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -5730,21 +5730,18 @@ function renderOnboardStep() {
 }
 function closeOnboarding() {
   $('onboardTutorialModal').classList.add('hidden');
-  localStorage.setItem('md2_onboarding_done', 'yes');
 }
 function initOnboardingFlow() {
   const disclaimerSeen = localStorage.getItem('md2_disclaimer_seen');
-  const onboardingDone = localStorage.getItem('md2_onboarding_done');
   if (!disclaimerSeen) {
     $('disclaimerModal').classList.remove('hidden');
-  } else if (!onboardingDone) {
+  } else {
     $('onboardAskModal').classList.remove('hidden');
   }
   $('acceptDisclaimerBtn').onclick = () => {
     localStorage.setItem('md2_disclaimer_seen', 'yes');
     $('disclaimerModal').classList.add('hidden');
-    if (!localStorage.getItem('md2_onboarding_done'))
-      $('onboardAskModal').classList.remove('hidden');
+    $('onboardAskModal').classList.remove('hidden');
   };
   $('onboardYesBtn').onclick = () => {
     $('onboardAskModal').classList.add('hidden');
@@ -5754,7 +5751,6 @@ function initOnboardingFlow() {
   };
   $('onboardNoBtn').onclick = () => {
     $('onboardAskModal').classList.add('hidden');
-    localStorage.setItem('md2_onboarding_done', 'yes');
   };
   $('onboardNextBtn').onclick = () => {
     if (onboardStepIndex === ONBOARD_STEPS.length - 1) {

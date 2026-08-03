@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731m';
+const APP_VERSION = '20260731n';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -5828,6 +5828,39 @@ const ONBOARD_STEPS = [
     body: 'Estos 3 botones están disponibles en todo momento: Preparación, Misiones, y Configuración. Ahí puedes ajustar el volumen, la voz, y encontrar el número de versión de la app.'
   },
   {
+    type: 'spotlight',
+    preAction: () => tab('missions'),
+    selector: '#missionSelect',
+    title: '12. Elegir misión',
+    body: 'Desde acá eliges qué misión están jugando. Al elegirla, se activa automáticamente y algunas mecánicas del juego cambian según esa misión (por ejemplo, combates finales especiales con reglas propias, como el de la Parca o el del Arcángel Miguel).'
+  },
+  {
+    type: 'spotlight',
+    preAction: () => tab('settings'),
+    selector: ['#reactivateAmbient', '#repeatLastAnnouncement'],
+    title: '13. Si se corta el audio',
+    body: 'A veces el celular puede cortar la música o la narración por voz (por ejemplo, al pasar la app a segundo plano un buen rato). Si eso pasa, estos botones la reactivan sin perder nada de la partida.'
+  },
+  {
+    type: 'card',
+    icon: '🌐',
+    title: 'La función estrella: multijugador',
+    body: 'Esta app permite que <b>cada jugador use su propio celular</b> a la vez, todos conectados a la misma partida en tiempo real. Uno arma el grupo completo con todos los héroes, y luego cada persona se conecta desde su dispositivo y elige cuál de esos héroes va a manejar.'
+  },
+  {
+    type: 'spotlight',
+    preAction: () => tab('settings'),
+    selector: '#mpControls',
+    title: '14. Crear o unirse a una sala',
+    body: 'Un jugador (normalmente quien arma el grupo) toca "Crear sala" y le va a aparecer un código de 5 letras. Ese código se comparte con el resto del grupo. Cada uno de los demás jugadores, desde su propio celular, escribe ese código acá y toca "Unirse".'
+  },
+  {
+    type: 'card',
+    icon: '🎮',
+    title: 'Cada jugador, su héroe',
+    body: 'Una vez dentro de la sala, cada jugador elige en su celular cuál héroe del grupo va a controlar él. <b>Un jugador solo puede manejar el héroe que eligió</b>: puede ver a los demás héroes, pero no puede tocar sus botones ni cambiar sus datos. Así cada uno juega su propio turno desde su propio dispositivo, y todos ven la partida actualizarse en tiempo real en las pantallas de los demás.'
+  },
+  {
     type: 'card',
     icon: '📖',
     title: 'Sobre las reglas',
@@ -5895,6 +5928,8 @@ function renderOnboardStep() {
     startHeroDemo();
   else if (!needsDemo && demoIsActive)
     endHeroDemo();
+  if (step.preAction)
+    step.preAction();
   if (step.type === 'card') {
     $('spotlightOverlay').classList.remove('active');
     $('onboardTutorialModal').classList.remove('hidden');

@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731j';
+const APP_VERSION = '20260731k';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -5831,14 +5831,10 @@ function closeOnboarding() {
   $('spotlightOverlay').classList.remove('active');
 }
 function initOnboardingFlow() {
-  const disclaimerSeen = localStorage.getItem('md2_disclaimer_seen');
-  if (!disclaimerSeen) {
+  setTimeout(() => {
     $('disclaimerModal').classList.remove('hidden');
-  } else {
-    $('onboardAskModal').classList.remove('hidden');
-  }
+  }, 4300);
   $('acceptDisclaimerBtn').onclick = () => {
-    localStorage.setItem('md2_disclaimer_seen', 'yes');
     $('disclaimerModal').classList.add('hidden');
     $('onboardAskModal').classList.remove('hidden');
   };

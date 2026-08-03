@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731a';
+const APP_VERSION = '20260731e';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -1675,11 +1675,21 @@ function renderGame() {
   $('round').textContent = s.round;
   $('phase').textContent = MD2.phases[s.phase];
   $('dungeon').textContent = dungeon();
-  $('darkPos').textContent = s.heroes.length ? `${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' } ${ darkNow()[0] }` : '\u2014';
   const canResolve = canResolveSharedPhase();
   $('phaseHelp').textContent = !canResolve ? 'Estas fases las resuelve quien jugó el último turno de héroe.' : s.phase === 3 && s.darknessPending ? 'Resuelve el efecto anunciado y luego pulsa Siguiente fase para confirmarlo.' : phaseHelp();
-  $('darkTrack').innerHTML = `<div class="badge top">${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' }</div>` + darkArr().map((x, i) => `<div class="cell ${ i === s.dark.i ? 'active' : '' }">${ x[0] }</div>`).join('');
-  $('darkEvent').textContent = `${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' } · Casilla ${ darkNow()[0] }: ${ darkNow()[1] }`;
+  const michaelActive = getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive && !s.missionResult;
+  const parcaActive = getActiveMission()?.id === 'soul_keys' && s.missionState.finalCombatActive && !s.missionResult;
+  if (michaelActive || parcaActive) {
+    const level = michaelActive ? (s.missionState.darkLevel || 1) : (s.missionState.parcaDarkLevel || 1);
+    const theme = michaelActive ? 'light' : 'dark';
+    $('darkPos').textContent = michaelActive ? `Medidor de Luz — Nivel ${ level }/5` : `Medidor de Oscuridad de la Parca — Nivel ${ level }/5`;
+    $('darkTrack').innerHTML = `<div class="badge top">${ michaelActive ? '✦ Medidor de Luz' : '☠ Medidor de Oscuridad' }</div><div class="bossMeter ${ theme }">${ Array.from({ length: 5 }, (_, i) => `<div class="bossMeterCell ${ i < level ? 'lit' : '' } ${ i === level - 1 ? 'current' : '' }">${ i + 1 }</div>` ).join('') }</div>`;
+    $('darkEvent').textContent = michaelActive ? 'Cada nivel intensifica el poder purificador de Miguel.' : 'Cada nivel intensifica el poder de la Parca sobre las almas.';
+  } else {
+    $('darkPos').textContent = s.heroes.length ? `${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' } ${ darkNow()[0] }` : '\u2014';
+    $('darkTrack').innerHTML = `<div class="badge top">${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' }</div>` + darkArr().map((x, i) => `<div class="cell ${ i === s.dark.i ? 'active' : '' }">${ x[0] }</div>`).join('');
+    $('darkEvent').textContent = `${ s.dark.side === 'front' ? 'Anverso' : 'Reverso' } · Casilla ${ darkNow()[0] }: ${ darkNow()[1] }`;
+  }
   $('resolveDarkness').classList.toggle('hidden', !(s.phase === 3 && s.darknessPending));
   $('nextPhase').classList.toggle('hidden', s.phase === 3 && s.darknessPending);
   $('nextPhase').disabled = !canResolve;
@@ -4243,12 +4253,23 @@ function triggerParcaActivation(isLastHero) {
   st.awaitingParcaActivation = true;
   st.parcaPendingAfter = isLastHero ? 'phase' : 'prompt';
   st.parcaClawStep = 'ask';
+  st.parcaActivationsRemaining = st.parcaActions || 1;
+  st.parcaActivationsTotal = st.parcaActions || 1;
   save();
   render();
-  duckAndSay('La Parca se activa. Lanza 2 dados negros.');
+  const n = st.parcaActivationsTotal;
+  duckAndSay(n > 1 ? `La Parca se activa. Con el medidor en su nivel actual, realizará ${ n } activaciones seguidas. Lanza 2 dados negros para la primera.` : 'La Parca se activa. Lanza 2 dados negros.');
 }
 function resolveParcaAfterActivation() {
   const st = s.missionState;
+  st.parcaActivationsRemaining = Math.max(0, (st.parcaActivationsRemaining || 1) - 1);
+  if (st.parcaActivationsRemaining > 0) {
+    st.parcaClawStep = 'ask';
+    save();
+    render();
+    duckAndSay(`La Parca se activa de nuevo (activación ${ st.parcaActivationsTotal - st.parcaActivationsRemaining + 1 } de ${ st.parcaActivationsTotal }). Lanza 2 dados negros.`);
+    return;
+  }
   st.awaitingParcaActivation = false;
   st.parcaClawStep = null;
   const pendingAfter = st.parcaPendingAfter;
@@ -4318,10 +4339,8 @@ function renderParcaActivation() {
   if (!panel)
     return;
   if (st.parcaClawStep === 'ask' || !st.parcaClawStep) {
-    panel.innerHTML = `<div class="card"><h2>☠ Activación de la Parca</h2><p class="notice">Lanza 2 dados negros. ¿Cuántas <b>garras</b> salieron? (las Marcas de Garra no activan ninguna habilidad, solo cuentan las garras)</p><div class="actions"><button data-parcaclaws="0" class="primary">0 garras</button><button data-parcaclaws="1" class="primary">1 garra</button><button data-parcaclaws="2" class="primary">2 garras</button><button id="parcaNoAbilityBtn">Solo salieron Marcas de Garra (ninguna habilidad)</button></div></div>`;
+    panel.innerHTML = `<div class="card"><h2>☠ Activación de la Parca</h2><p class="notice">Lanza 2 dados negros. ¿Cuántas <b>garras</b> salieron?</p><div class="actions"><button data-parcaclaws="0" class="primary">0 garras</button><button data-parcaclaws="1" class="primary">1 garra</button><button data-parcaclaws="2" class="primary">2 garras</button></div></div>`;
     document.querySelectorAll('[data-parcaclaws]').forEach(b => b.onclick = () => resolveParcaAbility(+b.dataset.parcaclaws));
-    if ($('parcaNoAbilityBtn'))
-      $('parcaNoAbilityBtn').onclick = () => resolveParcaNoAbility();
     return;
   }
   if (st.parcaClawStep === 'single-damage') {
@@ -4399,12 +4418,6 @@ function renderParcaActivation() {
       };
     return;
   }
-}
-function resolveParcaNoAbility() {
-  log('La Parca se activa: solo salieron Marcas de Garra, ninguna garra. No se activa ninguna habilidad.');
-  save();
-  duckAndSay('Solo Marcas de Garra. Ninguna habilidad se activa.');
-  resolveParcaAfterActivation();
 }
 function resolveParcaAbility(claws) {
   const st = s.missionState;
@@ -4652,6 +4665,14 @@ function nextPhase() {
   });
   if (s.phase === 0) {
     if (getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive && !s.missionResult) {
+      s.phase = 2;
+      showPhaseCurtain('Fase de Subida de Nivel');
+      beginLevelPhase();
+      save();
+      render();
+      return;
+    }
+    if (getActiveMission()?.id === 'soul_keys' && s.missionState.finalCombatActive && !s.missionResult) {
       s.phase = 2;
       showPhaseCurtain('Fase de Subida de Nivel');
       beginLevelPhase();

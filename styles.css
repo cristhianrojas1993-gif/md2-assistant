@@ -1190,8 +1190,8 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 .onboardOverlay{position:fixed;inset:0;z-index:200;background:rgba(5,5,7,.94);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
 #spotlightOverlay{position:fixed;inset:0;z-index:210;pointer-events:none;display:none}
 #spotlightOverlay.active{display:block}
-#spotlightDim{position:absolute;inset:0;background:rgba(5,5,7,.8);pointer-events:auto}
-#spotlightHole{position:absolute;border-radius:10px;box-shadow:0 0 0 4px var(--accent-bright,#f5d98a),0 0 0 9999px rgba(5,5,7,.8);
+#spotlightBlocker{position:absolute;inset:0;background:transparent;pointer-events:auto}
+#spotlightHole{position:absolute;border-radius:10px;background:transparent;box-shadow:0 0 0 9999px rgba(5,5,7,.82),0 0 0 3px var(--accent-bright,#f5d98a),0 0 18px 3px rgba(245,217,138,.5);
   transition:top .35s ease,left .35s ease,width .35s ease,height .35s ease;pointer-events:none}
 #spotlightTooltip{position:absolute;background:linear-gradient(160deg,#241c2c,#130f18);border:2px solid rgba(219,179,85,.5);
   border-radius:10px;padding:14px 16px;max-width:280px;box-shadow:0 8px 24px rgba(0,0,0,.7);pointer-events:auto;

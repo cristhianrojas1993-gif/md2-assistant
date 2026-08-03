@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731k';
+const APP_VERSION = '20260731l';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',

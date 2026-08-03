@@ -1187,7 +1187,20 @@ nav button.active{background:linear-gradient(180deg,var(--accent-bright),var(--a
 @keyframes bossMeterDarkPulse{0%,100%{box-shadow:0 0 10px rgba(139,92,246,.6)}50%{box-shadow:0 0 22px rgba(168,120,255,.95),0 0 34px rgba(124,58,237,.5)}}
 
 /* ============ DISCLAIMER Y ONBOARDING ============ */
-.onboardOverlay{position:fixed;inset:0;z-index:200;background:rgba(5,5,7,.94);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+.onboardOverlay{position:fixed;inset:0;z-index:1200;background:rgba(5,5,7,.94);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+#spotlightOverlay{position:fixed;inset:0;z-index:1210;pointer-events:none;display:none}
+#spotlightOverlay.active{display:block}
+#spotlightDim{position:absolute;inset:0;background:rgba(5,5,7,.8);pointer-events:auto}
+#spotlightHole{position:absolute;border-radius:10px;box-shadow:0 0 0 4px var(--accent-bright,#f5d98a),0 0 0 9999px rgba(5,5,7,.8);
+  transition:top .35s ease,left .35s ease,width .35s ease,height .35s ease;pointer-events:none}
+#spotlightTooltip{position:absolute;background:linear-gradient(160deg,#241c2c,#130f18);border:2px solid rgba(219,179,85,.5);
+  border-radius:10px;padding:14px 16px;max-width:280px;box-shadow:0 8px 24px rgba(0,0,0,.7);pointer-events:auto;
+  transition:top .35s ease,left .35s ease}
+#spotlightTooltip h3{font-family:var(--font-display);color:var(--accent-bright,#f5d98a);font-size:.9rem;margin:0 0 6px}
+#spotlightTooltip p{font-size:.78rem;line-height:1.4;color:#d8cdb8;margin:0 0 10px}
+#spotlightTooltip .actions{display:flex;gap:8px;justify-content:space-between}
+#spotlightTooltip button{font-size:.72rem;padding:7px 10px;min-height:auto}
+#spotlightCounter{font-size:.68rem;color:#a89a86;text-align:center;margin-top:4px}
 .onboardOverlay.hidden{display:none}
 .onboardCard{background:linear-gradient(160deg,#241c2c,#130f18);border:2px solid rgba(219,179,85,.4);border-radius:12px;
   padding:24px 20px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.7);max-height:85vh;overflow-y:auto;text-align:center}

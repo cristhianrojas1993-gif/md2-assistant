@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731h';
+const APP_VERSION = '20260731j';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -5695,41 +5695,140 @@ document.addEventListener('click', firstTouchStartMenuMusic, { once: true });
 document.addEventListener('keydown', firstTouchStartMenuMusic, { once: true });
 const ONBOARD_STEPS = [
   {
+    type: 'card',
     icon: '🎲',
     title: '¡Hola! Bienvenido/a',
-    body: 'Soy tu asistente digital para las partidas de Massive Darkness 2. Tú juegas con el tablero físico de siempre; yo me encargo de llevar la cuenta de vida, maná, turnos y todos los números para que no tengas que preocuparte por eso.'
+    body: 'Soy tu asistente digital para las partidas de Massive Darkness 2. Tú juegas con el tablero físico de siempre; yo me encargo de llevar la cuenta de vida, maná, turnos y todos los números. Te voy a mostrar los botones principales tocando cada uno en la pantalla real.'
   },
   {
-    icon: '🧙',
-    title: 'Armar tu grupo',
-    body: 'Primero eliges el modo de partida (solitario o con más jugadores) y las clases de tus héroes en la pantalla de Preparación. Cuando confirmas el grupo, te voy guiando héroe por héroe para elegir sus habilidades iniciales.'
+    type: 'spotlight',
+    selector: '#playerMode',
+    title: '1. Elige el modo de partida',
+    body: 'Aquí eliges si van a jugar en Solitario (1 héroe) o en Grupo (2 a 6 héroes). Empezamos siempre por acá.'
   },
   {
+    type: 'spotlight',
+    selector: '#classPicker',
+    title: '2. Elige las clases',
+    body: 'Toca la clase de cada héroe que va a participar en la partida. Solo esas clases van a aparecer durante el juego.'
+  },
+  {
+    type: 'spotlight',
+    selector: '#addSelectedClass',
+    title: '3. Añade cada héroe',
+    body: 'Después de elegir una clase, presiona aquí para añadirla al grupo. Repite esto por cada héroe que vayan a jugar.'
+  },
+  {
+    type: 'spotlight',
+    selector: '#confirmGroup',
+    title: '4. Confirma el grupo',
+    body: 'Cuando ya añadiste a todos los héroes, presiona aquí. De ahí en adelante te voy guiando paso a paso, empezando por elegir la primera habilidad de cada héroe.'
+  },
+  {
+    type: 'card',
     icon: '🔄',
     title: 'Cómo avanza una ronda',
     body: 'Cada ronda pasa por 4 momentos: primero juegan los Héroes (uno por uno), después los Enemigos, luego se revisa si alguien Sube de Nivel, y por último la Fase de Oscuridad. El botón "Siguiente fase" te va llevando de una a otra.'
   },
   {
-    icon: '⚔️',
-    title: 'El turno de un héroe',
-    body: 'Durante su turno, cada héroe tiene botones para Moverse, Atacar, Recuperarse, o usar objetos. Yo te voy marcando los pasos y calculando el daño, el maná y los efectos de cada habilidad.'
+    type: 'spotlight',
+    selector: 'nav',
+    title: '5. Siempre a mano, abajo',
+    body: 'Estos 3 botones están disponibles en todo momento: Preparación, Misiones, y Configuración. Ahí puedes ajustar el volumen, la voz, y encontrar el número de versión de la app.'
   },
   {
+    type: 'card',
+    icon: '⚔️',
+    title: 'El turno de un héroe',
+    body: 'Cuando un héroe empieza su turno, vas a ver botones para Moverse, Atacar, Recuperarse o usar objetos. Yo te voy marcando los pasos y calculando el daño, el maná y los efectos de cada habilidad a medida que jugás.'
+  },
+  {
+    type: 'card',
     icon: '📖',
-    title: '¿Tienes dudas en medio del juego?',
-    body: 'Abajo de todo siempre vas a tener "Reglas" y "Configuración" a mano, arriba junto a los héroes vas a encontrar el botón de "Partida". Y si en algún momento algo no se entiende, siempre puedes tocar de nuevo cualquier botón sin miedo a romper algo: prueba, explora, ¡esto está para ayudarte, no para complicarte!'
+    title: 'Sobre las reglas',
+    body: 'Una vez que confirmes tu grupo, vas a ver un botón "Reglas" arriba, junto a los héroes. Ahí encontrás explicaciones rápidas de varias mecánicas del juego. Pero recuerda siempre: esta app aclara dudas puntuales, el <b>libro de reglas físico de Massive Darkness 2 es la fuente definitiva</b> ante cualquier duda o diferencia. Si algo en la app no coincide con el manual, el manual manda.'
+  },
+  {
+    type: 'card',
+    icon: '✅',
+    title: '¡Listo para jugar!',
+    body: 'Eso es todo lo esencial. Si en algún momento algo no se entiende, prueba tocar el botón, explora sin miedo: esto está para ayudarte, no para complicarte. ¡Que tengan una gran partida!'
   }
 ];
 let onboardStepIndex = 0;
+function positionSpotlight(selector) {
+  const el = document.querySelector(selector);
+  const hole = $('spotlightHole');
+  const tip = $('spotlightTooltip');
+  if (!el) {
+    hole.style.display = 'none';
+    tip.style.top = '50%';
+    tip.style.left = '50%';
+    tip.style.transform = 'translate(-50%,-50%)';
+    return;
+  }
+  const r = el.getBoundingClientRect();
+  const pad = 8;
+  hole.style.display = 'block';
+  hole.style.top = (r.top - pad) + 'px';
+  hole.style.left = (r.left - pad) + 'px';
+  hole.style.width = (r.width + pad * 2) + 'px';
+  hole.style.height = (r.height + pad * 2) + 'px';
+  el.scrollIntoView({ block: 'center', behavior: 'instant' });
+  requestAnimationFrame(() => {
+    const r2 = el.getBoundingClientRect();
+    hole.style.top = (r2.top - pad) + 'px';
+    hole.style.left = (r2.left - pad) + 'px';
+    hole.style.width = (r2.width + pad * 2) + 'px';
+    hole.style.height = (r2.height + pad * 2) + 'px';
+    const tipW = 280, tipH = tip.offsetHeight || 160;
+    let top = r2.bottom + pad + 10;
+    if (top + tipH > window.innerHeight - 10)
+      top = Math.max(10, r2.top - tipH - pad - 10);
+    let left = Math.min(Math.max(10, r2.left), window.innerWidth - tipW - 10);
+    tip.style.transform = 'none';
+    tip.style.top = top + 'px';
+    tip.style.left = left + 'px';
+  });
+}
 function renderOnboardStep() {
   const step = ONBOARD_STEPS[onboardStepIndex];
-  $('onboardStepContent').innerHTML = `<div class="onboardStepIcon">${ step.icon }</div><h2>${ step.title }</h2><p>${ step.body }</p>`;
-  $('onboardStepDots').innerHTML = ONBOARD_STEPS.map((_, i) => `<div class="onboardStepDot ${ i === onboardStepIndex ? 'active' : '' }"></div>`).join('');
-  $('onboardPrevBtn').disabled = onboardStepIndex === 0;
-  $('onboardNextBtn').textContent = onboardStepIndex === ONBOARD_STEPS.length - 1 ? '¡Listo, a jugar!' : 'Siguiente →';
+  const isLast = onboardStepIndex === ONBOARD_STEPS.length - 1;
+  if (step.type === 'card') {
+    $('spotlightOverlay').classList.remove('active');
+    $('onboardTutorialModal').classList.remove('hidden');
+    $('onboardStepContent').innerHTML = `<div class="onboardStepIcon">${ step.icon }</div><h2>${ step.title }</h2><p>${ step.body }</p>`;
+    $('onboardStepDots').innerHTML = ONBOARD_STEPS.map((_, i) => `<div class="onboardStepDot ${ i === onboardStepIndex ? 'active' : '' }"></div>`).join('');
+    $('onboardPrevBtn').disabled = onboardStepIndex === 0;
+    $('onboardNextBtn').textContent = isLast ? '¡Listo, a jugar!' : 'Siguiente →';
+  } else {
+    $('onboardTutorialModal').classList.add('hidden');
+    $('spotlightOverlay').classList.add('active');
+    $('spotlightTitle').textContent = step.title;
+    $('spotlightBody').innerHTML = step.body;
+    $('spotlightCounter').textContent = `Paso ${ onboardStepIndex + 1 } de ${ ONBOARD_STEPS.length }`;
+    $('spotlightPrevBtn').disabled = onboardStepIndex === 0;
+    $('spotlightNextBtn').textContent = isLast ? '¡Listo, a jugar!' : 'Siguiente →';
+    positionSpotlight(step.selector);
+  }
+}
+function advanceOnboard() {
+  if (onboardStepIndex === ONBOARD_STEPS.length - 1) {
+    closeOnboarding();
+    return;
+  }
+  onboardStepIndex++;
+  renderOnboardStep();
+}
+function retreatOnboard() {
+  if (onboardStepIndex > 0) {
+    onboardStepIndex--;
+    renderOnboardStep();
+  }
 }
 function closeOnboarding() {
   $('onboardTutorialModal').classList.add('hidden');
+  $('spotlightOverlay').classList.remove('active');
 }
 function initOnboardingFlow() {
   const disclaimerSeen = localStorage.getItem('md2_disclaimer_seen');
@@ -5747,25 +5846,19 @@ function initOnboardingFlow() {
     $('onboardAskModal').classList.add('hidden');
     onboardStepIndex = 0;
     renderOnboardStep();
-    $('onboardTutorialModal').classList.remove('hidden');
   };
   $('onboardNoBtn').onclick = () => {
     $('onboardAskModal').classList.add('hidden');
   };
-  $('onboardNextBtn').onclick = () => {
-    if (onboardStepIndex === ONBOARD_STEPS.length - 1) {
-      closeOnboarding();
-      return;
-    }
-    onboardStepIndex++;
-    renderOnboardStep();
-  };
-  $('onboardPrevBtn').onclick = () => {
-    if (onboardStepIndex > 0) {
-      onboardStepIndex--;
-      renderOnboardStep();
-    }
-  };
+  $('onboardNextBtn').onclick = advanceOnboard;
+  $('onboardPrevBtn').onclick = retreatOnboard;
+  $('spotlightNextBtn').onclick = advanceOnboard;
+  $('spotlightPrevBtn').onclick = retreatOnboard;
   $('onboardSkipBtn').onclick = () => closeOnboarding();
+  window.addEventListener('resize', () => {
+    const step = ONBOARD_STEPS[onboardStepIndex];
+    if (step && step.type === 'spotlight' && $('spotlightOverlay').classList.contains('active'))
+      positionSpotlight(step.selector);
+  });
 }
 initOnboardingFlow();

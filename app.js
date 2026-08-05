@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731n';
+const APP_VERSION = '20260731o';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -443,27 +443,28 @@ function fresh() {
   };
 }
 let s = JSON.parse(localStorage.getItem(KEY) || 'null') || fresh();
-function mpDeepFixArrays(obj, seen) {
+const MP_KNOWN_ARRAY_FIELDS = new Set(['heroes', 'statuses', 'inventory', 'equipped', 'spirits', 'history', 'phaseHistory', 'xpHistory', 'levelQueue', 'Furia Sangrienta', 'Provocador', 'Temerario']);
+function mpDeepFixArrays(obj, seen, parentKey) {
   seen = seen || new Set();
   if (!obj || typeof obj !== 'object' || seen.has(obj))
     return obj;
   seen.add(obj);
   if (Array.isArray(obj)) {
     for (let i = 0; i < obj.length; i++)
-      obj[i] = mpDeepFixArrays(obj[i], seen);
+      obj[i] = mpDeepFixArrays(obj[i], seen, parentKey);
     return obj;
   }
   const keys = Object.keys(obj);
-  const looksLikeArray = keys.length > 0 && keys.every(k => /^\d+$/.test(k));
+  const looksLikeArray = keys.length > 0 && keys.every(k => /^\d+$/.test(k)) && MP_KNOWN_ARRAY_FIELDS.has(parentKey);
   if (looksLikeArray) {
     const arr = [];
     keys.forEach(k => {
-      arr[+k] = mpDeepFixArrays(obj[k], seen);
+      arr[+k] = mpDeepFixArrays(obj[k], seen, parentKey);
     });
     return arr;
   }
   keys.forEach(k => {
-    obj[k] = mpDeepFixArrays(obj[k], seen);
+    obj[k] = mpDeepFixArrays(obj[k], seen, k);
   });
   return obj;
 }
@@ -495,6 +496,10 @@ s.heroes.forEach(x => {
       unlocked: {}
     };
     x.shaman.unlocked = x.shaman.unlocked || {};
+    ['fire', 'water', 'air', 'nature'].forEach(k => {
+      if (typeof x.shaman.unlocked[k] !== 'boolean')
+        x.shaman.unlocked[k] = false;
+    });
     x.shaman.spirits = x.shaman.spirits || [];
   }
 });
@@ -580,8 +585,20 @@ s.heroes.forEach(x => {
   }
   if (x.paladin && !x.paladin.consecrations)
     x.paladin.consecrations = { green: false, blue: false, red: false };
+  if (x.paladin && x.paladin.consecrations) {
+    ['green', 'blue', 'red'].forEach(k => {
+      if (typeof x.paladin.consecrations[k] !== 'boolean')
+        x.paladin.consecrations[k] = false;
+    });
+  }
   if (x.berserker && !x.berserker.stanceAbilities)
     x.berserker.stanceAbilities = { 'Furia Sangrienta': [], 'Provocador': [], 'Temerario': [] };
+  if (x.berserker && x.berserker.stanceAbilities) {
+    ['Furia Sangrienta', 'Provocador', 'Temerario'].forEach(k => {
+      if (!Array.isArray(x.berserker.stanceAbilities[k]))
+        x.berserker.stanceAbilities[k] = [];
+    });
+  }
   if (x.berserker && x.berserker.pendingStanceAssign === undefined)
     x.berserker.pendingStanceAssign = null;
   if (!x.choices || typeof x.choices !== 'object')
@@ -2557,6 +2574,8 @@ function paladinConsagracionHtml(x) {
   `;
 }
 function berserkerFuryBoardHtml(x) {
+  if (!x.berserker.stanceAbilities)
+    x.berserker.stanceAbilities = { 'Furia Sangrienta': [], 'Provocador': [], 'Temerario': [] };
   if (x.berserker.pendingStanceAssign) {
     const v = x.berserker.pendingStanceAssign;
     return `<p class="notice"><b>${ v }</b> se aprendió. ¿En qué postura la dejas? Quedará disponible mientras estés en esa postura.</p><div class="stancePickerBtns"><button data-assign-stance="Furia Sangrienta" class="primary">Furia Sangrienta</button><button data-assign-stance="Provocador" class="primary">Provocador</button><button data-assign-stance="Temerario" class="primary">Temerario</button></div>`;
@@ -2659,7 +2678,7 @@ function berserkerFuryBoardHtml(x) {
         <button class="stExpandBtn" data-expand-for="Furia Sangrienta" aria-label="Expandir"></button>
       </div>
       <div class="stDesc">Ataque: gasta 1 Furia para relanzar cualquier dado.</div>
-      <div class="stAbilitiesPanel" id="panelFS">${ x.berserker.stanceAbilities['Furia Sangrienta'].map(a => `<div class="stAbilityItem">${ a }</div>`).join('') || '<div class="stAbilityItem muted">Sin habilidades asignadas</div>' }</div>
+      <div class="stAbilitiesPanel" id="panelFS">${ (x.berserker.stanceAbilities['Furia Sangrienta'] || []).map(a => `<div class="stAbilityItem">${ a }</div>`).join('') || '<div class="stAbilityItem muted">Sin habilidades asignadas</div>' }</div>
     </div>
     <div class="stanceCard cream cardPR" id="cardPR" data-stance="Provocador">
       <div class="stCardHeader">
@@ -2667,7 +2686,7 @@ function berserkerFuryBoardHtml(x) {
         <button class="stExpandBtn" data-expand-for="Provocador" aria-label="Expandir"></button>
       </div>
       <div class="stDesc">Defensa: gasta 1 Furia para infligir 1 Herida al atacante.</div>
-      <div class="stAbilitiesPanel" id="panelPR">${ x.berserker.stanceAbilities['Provocador'].map(a => `<div class="stAbilityItem">${ a }</div>`).join('') || '<div class="stAbilityItem muted">Sin habilidades asignadas</div>' }</div>
+      <div class="stAbilitiesPanel" id="panelPR">${ (x.berserker.stanceAbilities['Provocador'] || []).map(a => `<div class="stAbilityItem">${ a }</div>`).join('') || '<div class="stAbilityItem muted">Sin habilidades asignadas</div>' }</div>
     </div>
     <div class="stanceCard cream cardTM" id="cardTM" data-stance="Temerario">
       <div class="stCardHeader">
@@ -2675,7 +2694,7 @@ function berserkerFuryBoardHtml(x) {
         <button class="stExpandBtn" data-expand-for="Temerario" aria-label="Expandir"></button>
       </div>
       <div class="stDesc">Movimiento: gasta 1 Furia para obtener +1 PM.</div>
-      <div class="stAbilitiesPanel" id="panelTM">${ x.berserker.stanceAbilities['Temerario'].map(a => `<div class="stAbilityItem">${ a }</div>`).join('') || '<div class="stAbilityItem muted">Sin habilidades asignadas</div>' }</div>
+      <div class="stAbilitiesPanel" id="panelTM">${ (x.berserker.stanceAbilities['Temerario'] || []).map(a => `<div class="stAbilityItem">${ a }</div>`).join('') || '<div class="stAbilityItem muted">Sin habilidades asignadas</div>' }</div>
     </div>
 
     <div class="tubeGroup" id="tubeFS">

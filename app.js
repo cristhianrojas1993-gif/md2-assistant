@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731o';
+const APP_VERSION = '20260731q';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -157,7 +157,8 @@ function mpSetupPresence(code) {
   mpPresenceRef.set({
     name: 'Sin héroe elegido',
     connected: true,
-    lastSeen: Date.now()
+    lastSeen: Date.now(),
+    heroIndex: -1
   });
   mpPresenceRef.onDisconnect().update({
     connected: false,
@@ -184,13 +185,18 @@ function mpSetupPresence(code) {
     renderMultiplayerPanel();
   });
 }
-function mpUpdatePresenceName(name) {
+function mpUpdatePresenceName(name, heroIndex) {
   if (mpPresenceRef)
     mpPresenceRef.update({
       name,
       connected: true,
-      lastSeen: Date.now()
+      lastSeen: Date.now(),
+      heroIndex: heroIndex === undefined ? -1 : heroIndex
     });
+}
+function mpHeroIndexTakenByOther(idx) {
+  const clientId = mpClientId();
+  return Object.entries(mpPresenceData || {}).some(([cid, p]) => cid !== clientId && p.connected && p.heroIndex === idx);
 }
 let mpPresenceData = {};
 function mpCreateRoom() {
@@ -204,6 +210,7 @@ function mpCreateRoom() {
   s.myHeroIndex = null;
   s.mpHostId = mpClientId();
   save();
+  localStorage.setItem('md2_last_room', JSON.stringify({ code, heroIndex: null, timestamp: Date.now() }));
   mpSubscribe(code);
   mpSetupPresence(code);
   return code;
@@ -231,6 +238,7 @@ function mpJoinRoom(code, cb) {
     }
     s.myHeroIndex = null;
     localStorage.setItem(KEY, JSON.stringify(s));
+    localStorage.setItem('md2_last_room', JSON.stringify({ code, heroIndex: null, timestamp: Date.now() }));
     mpApplyingRemote = false;
     mpSubscribe(code);
     mpSetupPresence(code);
@@ -260,6 +268,7 @@ function mpLeaveRoom() {
   s.roomCode = null;
   s.myHeroIndex = null;
   save();
+  localStorage.removeItem('md2_last_room');
 }
 const COLORS = {
   rogue: '#8b5cf6',
@@ -974,7 +983,7 @@ function stopMichaelSong() {
 }
 const AMBIENT_LOOP_START = 25;
 const GAME_TRACKS = ['ambiental_1.mp3', 'ambiental_2.mp3', 'ambiental_3.mp3'];
-const AMBIENT_3_FADE_AT = 343; // 5:43
+const AMBIENT_3_FADE_AT = 339; // 5:39
 let currentGameTrack = null;
 function ambientEl() {
   let el = document.getElementById('ambientSong');
@@ -1047,7 +1056,6 @@ function startMenuAmbient() {
   }
 }
 function syncMusicToGameState() {
-  console.log("DEBUG syncMusicToGameState called, confirmed=" + s.confirmed);
   stopAmbient();
   const missionId = getActiveMission()?.id;
   if (missionId === 'free_michael' && s.missionState.finalCombatActive && !s.missionResult) {
@@ -1787,7 +1795,7 @@ function renderHero() {
     activeSec = 'talisman';
   if (x.cls === 'berserker' && x.berserker.pendingStanceAssign)
     activeSec = 'furia';
-  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }${ getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive ? `<div><small>Corrupción propia</small><b>${ x.personalCorruption || 0 } 😈</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }${ x.cls === 'shaman' ? `<button data-sec="elements" class="${ activeSec === 'elements' ? 'active' : '' }">Elementos</button>` : '' }${ x.cls === 'mage' ? `<button data-sec="talisman" class="${ activeSec === 'talisman' ? 'active' : '' }">Talismán</button>` : '' }${ x.cls === 'berserker' ? `<button data-sec="furia" class="${ activeSec === 'furia' ? 'active' : '' }">Furia</button>` : '' }${ x.cls === 'paladin' ? `<button data-sec="consagracion" class="${ activeSec === 'consagracion' ? 'active' : '' }">Consagración</button>` : '' }</div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }${ x.cls === 'shaman' ? `<div id="sec-elements" class="heroSection ${ activeSec === 'elements' ? 'active' : '' }"><div class="card"><h2>Tablero de Elementos</h2>${ shamanElementsBoardHtml(x) }</div></div>` : '' }${ x.cls === 'mage' ? `<div id="sec-talisman" class="heroSection ${ activeSec === 'talisman' ? 'active' : '' }"><div class="card"><h2>Talismán Arcano</h2>${ talismanFullHtml(x) }</div></div>` : '' }${ x.cls === 'berserker' ? `<div id="sec-furia" class="heroSection ${ activeSec === 'furia' ? 'active' : '' }"><div class="card"><h2>Corazón de Furia</h2>${ berserkerFuryBoardHtml(x) }</div></div>` : '' }${ x.cls === 'paladin' ? `<div id="sec-consagracion" class="heroSection ${ activeSec === 'consagracion' ? 'active' : '' }"><div class="card"><h2>Escudo de Consagración</h2><p class="notice">Toca una esfera para Consagrar esa zona (cuesta 1 maná). Elige una habilidad para Bendecirla hasta el final de la ronda.</p>${ paladinConsagracionHtml(x) }</div></div>` : '' }`;
+  $('heroPage').innerHTML = `<div class="activeHeroBanner">Héroe activo: ${ heroSpoken(x) }</div>${ s.roomCode && s.myHeroIndex === s.active ? `<button id="mpDeselectHeroBtn" class="top">Deseleccionar héroe</button>` : '' }${ x.unconscious ? '<div class="unconsciousBanner">INCONSCIENTE \xB7 Tumba la miniatura. No realiza acciones ni puede ser objetivo.</div>' : '' }<div class="card heroHeader" id="heroHeaderCard"><div id="floatNumSlot"></div><div class="row between"><div><h2>${ classIcon(x.cls) }${ x.name }</h2><small>${ C[x.cls].label }</small></div>${ levelBadge(x.level) }</div>${ heroBarsHtml(x) }<div class="stats top"><div><small>Acciones</small><b>${ x.actions }</b></div><div><small>Habilidad pendiente</small><b>${ pending(x) ? 'Sí' : 'No' }</b></div>${ getActiveMission()?.id === 'terrifying_beast' ? `<div><small>Plumas de Ángel</small><b>${ x.angelFeathers || 0 } 🪶</b></div>` : '' }${ getActiveMission()?.id === 'free_michael' && s.missionState.finalCombatActive ? `<div><small>Corrupción propia</small><b>${ x.personalCorruption || 0 } 😈</b></div>` : '' }</div></div><div class="sectionTabs"><button data-sec="summary" class="${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">Resumen</button><button data-sec="skills" class="${ activeSec === 'skills' ? 'active' : '' }">Habilidades${ pending(x) ? '<span class="alertDot"></span>' : '' }</button><button data-sec="actions" class="${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">Turno</button>${ x.cls === 'shaman' ? `<button data-sec="spirits" class="${ activeSec === 'spirits' ? 'active' : '' }">Espíritus</button>` : '' }${ x.cls === 'shaman' ? `<button data-sec="elements" class="${ activeSec === 'elements' ? 'active' : '' }">Elementos</button>` : '' }${ x.cls === 'mage' ? `<button data-sec="talisman" class="${ activeSec === 'talisman' ? 'active' : '' }">Talismán</button>` : '' }${ x.cls === 'berserker' ? `<button data-sec="furia" class="${ activeSec === 'furia' ? 'active' : '' }">Furia</button>` : '' }${ x.cls === 'paladin' ? `<button data-sec="consagracion" class="${ activeSec === 'consagracion' ? 'active' : '' }">Consagración</button>` : '' }</div><div id="sec-summary" class="heroSection ${ !x.flow.type && (!activeSec || activeSec === 'summary') ? 'active' : '' }">${ summaryHtml(x) }</div><div id="sec-skills" class="heroSection ${ activeSec === 'skills' ? 'active' : '' }">${ skillsHtml(x) }</div><div id="sec-actions" class="heroSection ${ x.flow.type || activeSec === 'actions' ? 'active' : '' }">${ actionsHtml(x) }</div>${ x.cls === 'shaman' ? `<div id="sec-spirits" class="heroSection ${ activeSec === 'spirits' ? 'active' : '' }"><div class="card"><h2>Espíritus invocados</h2>${ shamanSpiritHtml(x) }</div></div>` : '' }${ x.cls === 'shaman' ? `<div id="sec-elements" class="heroSection ${ activeSec === 'elements' ? 'active' : '' }"><div class="card"><h2>Tablero de Elementos</h2>${ shamanElementsBoardHtml(x) }</div></div>` : '' }${ x.cls === 'mage' ? `<div id="sec-talisman" class="heroSection ${ activeSec === 'talisman' ? 'active' : '' }"><div class="card"><h2>Talismán Arcano</h2>${ talismanFullHtml(x) }</div></div>` : '' }${ x.cls === 'berserker' ? `<div id="sec-furia" class="heroSection ${ activeSec === 'furia' ? 'active' : '' }"><div class="card"><h2>Corazón de Furia</h2>${ berserkerFuryBoardHtml(x) }</div></div>` : '' }${ x.cls === 'paladin' ? `<div id="sec-consagracion" class="heroSection ${ activeSec === 'consagracion' ? 'active' : '' }"><div class="card"><h2>Escudo de Consagración</h2><p class="notice">Toca una esfera para Consagrar esa zona (cuesta 1 maná). Elige una habilidad para Bendecirla hasta el final de la ronda.</p>${ paladinConsagracionHtml(x) }</div></div>` : '' }`;
   if (x.unconscious)
     $('heroHeaderCard')?.classList.add('ko-fx');
   document.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => {
@@ -3007,6 +3015,20 @@ function attackReminders(x) {
 }
 function bindHero() {
   const x = h();
+  if ($('mpDeselectHeroBtn'))
+    $('mpDeselectHeroBtn').onclick = () => {
+      if (!confirm('¿Deseleccionar este héroe? Volverá a estar disponible para que cualquier jugador de la sala lo elija.'))
+        return;
+      s.myHeroIndex = null;
+      save();
+      const lastRoom = JSON.parse(localStorage.getItem('md2_last_room') || 'null');
+      if (lastRoom)
+        localStorage.setItem('md2_last_room', JSON.stringify({ ...lastRoom, heroIndex: null, timestamp: Date.now() }));
+      mpUpdatePresenceName('Sin héroe elegido', -1);
+      renderMultiplayerPanel();
+      tab('settings');
+      say('Has liberado el héroe. Elige otro desde Configuración si quieres.');
+    };
   if ($('addStatus'))
     $('addStatus').onclick = () => {
       const st = $('statusPicker').value;
@@ -5250,7 +5272,13 @@ function renderMultiplayerPanel() {
     infoEl.classList.remove('hidden');
     $('mpRoomCodeDisplay').textContent = s.roomCode;
     const select = $('mpHeroSelect');
-    select.innerHTML = '<option value="">Solo observar (fase/oscuridad/enemigos)</option>' + s.heroes.map((x, i) => `<option value="${ i }" ${ s.myHeroIndex === i ? 'selected' : '' }>${ x.name } (${ C[x.cls].label })</option>`).join('');
+    const clientId = mpClientId();
+    select.innerHTML = '<option value="">Solo observar (fase/oscuridad/enemigos)</option>' + s.heroes.map((x, i) => {
+      const takenBy = Object.entries(mpPresenceData || {}).find(([cid, p]) => cid !== clientId && p.connected && p.heroIndex === i);
+      if (takenBy)
+        return `<option value="${ i }" disabled>${ x.name } (${ C[x.cls].label }) — elegido por otro jugador</option>`;
+      return `<option value="${ i }" ${ s.myHeroIndex === i ? 'selected' : '' }>${ x.name } (${ C[x.cls].label })</option>`;
+    }).join('');
     const presenceTable = $('mpPresenceTable');
     if (presenceTable) {
       const entries = Object.values(mpPresenceData || {});
@@ -5299,17 +5327,25 @@ $('mpHeroSelect').onchange = e => {
     alert('No se pudo cargar ese héroe. Es probable que la sala no se haya sincronizado bien: sal de la sala y vuelve a unirte con el código.');
     return;
   }
+  if (idx !== null && mpHeroIndexTakenByOther(idx)) {
+    alert('Ese héroe ya lo eligió otro jugador de la sala. Elige otro.');
+    renderMultiplayerPanel();
+    return;
+  }
   s.myHeroIndex = idx;
   save();
+  const lastRoom = JSON.parse(localStorage.getItem('md2_last_room') || 'null');
+  if (lastRoom)
+    localStorage.setItem('md2_last_room', JSON.stringify({ ...lastRoom, heroIndex: idx, timestamp: Date.now() }));
   if (s.myHeroIndex !== null) {
     s.active = s.myHeroIndex;
     save();
     tab('hero');
     render();
-    mpUpdatePresenceName(`${ h().name } (${ C[h().cls].label })`);
+    mpUpdatePresenceName(`${ h().name } (${ C[h().cls].label })`, idx);
     say(`Tu héroe es ${ heroSpoken(h()) }.`);
   } else {
-    mpUpdatePresenceName('Sin héroe elegido');
+    mpUpdatePresenceName('Sin héroe elegido', -1);
   }
 };
 renderMultiplayerPanel();
@@ -5986,6 +6022,7 @@ function closeOnboarding() {
     endHeroDemo();
   $('onboardTutorialModal').classList.add('hidden');
   $('spotlightOverlay').classList.remove('active');
+  checkMpReconnect();
 }
 function initOnboardingFlow() {
   setTimeout(() => {
@@ -6002,6 +6039,7 @@ function initOnboardingFlow() {
   };
   $('onboardNoBtn').onclick = () => {
     $('onboardAskModal').classList.add('hidden');
+    checkMpReconnect();
   };
   $('onboardNextBtn').onclick = advanceOnboard;
   $('onboardPrevBtn').onclick = retreatOnboard;
@@ -6015,3 +6053,42 @@ function initOnboardingFlow() {
   });
 }
 initOnboardingFlow();
+function checkMpReconnect() {
+  const lastRoom = JSON.parse(localStorage.getItem('md2_last_room') || 'null');
+  if (!lastRoom || s.roomCode) {
+    return;
+  }
+  const hoursSince = (Date.now() - (lastRoom.timestamp || 0)) / 3600000;
+  if (hoursSince > 12) {
+    localStorage.removeItem('md2_last_room');
+    return;
+  }
+  $('mpReconnectText').textContent = `Este dispositivo estaba unido a la sala ${ lastRoom.code }. ¿Quieres reconectarte para seguir jugando?`;
+  $('mpReconnectModal').classList.remove('hidden');
+  $('mpReconnectYesBtn').onclick = () => {
+    $('mpReconnectModal').classList.add('hidden');
+    mpJoinRoom(lastRoom.code, ok => {
+      if (!ok) {
+        localStorage.removeItem('md2_last_room');
+        return;
+      }
+      if (lastRoom.heroIndex !== null && lastRoom.heroIndex !== undefined && s.heroes[lastRoom.heroIndex]) {
+        s.myHeroIndex = lastRoom.heroIndex;
+        s.active = lastRoom.heroIndex;
+        save();
+        mpUpdatePresenceName(`${ s.heroes[lastRoom.heroIndex].name } (${ C[s.heroes[lastRoom.heroIndex].cls].label })`, lastRoom.heroIndex);
+        tab('hero');
+      } else {
+        tab('setup');
+      }
+      renderMultiplayerPanel();
+      render();
+      syncMusicToGameState();
+      say('Te reconectaste a la sala.');
+    });
+  };
+  $('mpReconnectNoBtn').onclick = () => {
+    $('mpReconnectModal').classList.add('hidden');
+    localStorage.removeItem('md2_last_room');
+  };
+}

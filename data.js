@@ -29,7 +29,7 @@ const MD2 = {
     },
     '5': {
       'hp': 2,
-      'mana': 1,
+      'mana': 2,
       'treasure': 'Añade 1 Tesoro Épico.'
     }
   },
@@ -443,7 +443,7 @@ const MD2 = {
     'mage': {
       'label': 'Mago',
       'hp': 4,
-      'mana': 5,
+      'mana': 6,
       'ability': 'Gira el Amuleto Mágico para cambiar su bonificación.',
       'shadow': 'Sombras: revisa la habilidad de Sombras de la carta del héroe.',
       'skills': [

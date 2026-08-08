@@ -1,4 +1,4 @@
-const APP_VERSION = '20260731q';
+const APP_VERSION = '20260731t';
 const KEY = 'md2v100', $ = id => document.getElementById(id), C = MD2.classes;
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDliM5PY-vnvdE86stScPJqxXkUZ0FSgms',
@@ -386,7 +386,8 @@ function makeHero(cls = 'rogue') {
       slots: MD2.talismanDefaults.map(q => ({ ...q })),
       pendingReplacement: null,
       pendingReplacementSlot: null,
-      totalRotations: 0
+      totalRotations: 0,
+      pendingInitialFace: true
     },
     berserker: {
       fury: 0,
@@ -492,6 +493,8 @@ s.heroes.forEach(x => {
     x.personalCorruption = 0;
   if (x.turnAnnounced === undefined)
     x.turnAnnounced = false;
+  if (x.heroTabAnnouncedThisRound === undefined)
+    x.heroTabAnnouncedThisRound = false;
 });
 if (!s.mode)
   s.mode = 'coop';
@@ -586,6 +589,8 @@ s.heroes.forEach(x => {
     x.mage.pendingReplacement = null;
   if (x.mage && x.mage.pendingReplacementSlot === undefined)
     x.mage.pendingReplacementSlot = null;
+  if (x.mage && x.mage.pendingInitialFace === undefined)
+    x.mage.pendingInitialFace = false;
   if (x.mage && x.mage.totalRotations === undefined)
     x.mage.totalRotations = x.mage.amulet || 0;
   if (x.paladin && typeof x.paladin.consecrations === 'number') {
@@ -983,7 +988,7 @@ function stopMichaelSong() {
 }
 const AMBIENT_LOOP_START = 25;
 const GAME_TRACKS = ['ambiental_1.mp3', 'ambiental_2.mp3', 'ambiental_3.mp3'];
-const AMBIENT_3_FADE_AT = 339; // 5:39
+const AMBIENT_3_FADE_AT = 116; // respaldo: actúa 3s antes del final real del archivo (1:59), por si el corte del audio fallara
 let currentGameTrack = null;
 function ambientEl() {
   let el = document.getElementById('ambientSong');
@@ -1308,6 +1313,8 @@ function say(t, profileHero = h()) {
   save();
   if (s.voice !== 'yes' || !('speechSynthesis' in window))
     return;
+  if (speechQueue.length >= 1)
+    speechQueue.length = 0;
   speechQueue.push({
     text: t,
     hero: profileHero
@@ -1491,7 +1498,11 @@ function renderHeroTabs() {
     save();
     render();
     tab('hero');
-    duckAndSay(`Héroe activo: ${ heroSpoken(h()) }.`);
+    if (!h().heroTabAnnouncedThisRound) {
+      h().heroTabAnnouncedThisRound = true;
+      save();
+      duckAndSay(`Héroe activo: ${ heroSpoken(h()) }.`);
+    }
   });
   b.querySelectorAll('[data-main]').forEach(q => q.onclick = () => tab(q.dataset.main));
 }
@@ -1756,7 +1767,11 @@ function renderHero() {
       s.turnPrompt = false;
       save();
       render();
-      duckAndSay(`Héroe activo: ${ heroSpoken(h()) }.`);
+      if (!h().heroTabAnnouncedThisRound) {
+        h().heroTabAnnouncedThisRound = true;
+        save();
+        duckAndSay(`Héroe activo: ${ heroSpoken(h()) }.`);
+      }
     });
     return;
   }
@@ -1783,6 +1798,20 @@ function renderHero() {
   }
   if (s.missionState && s.missionState.awaitingCorruptionRoll) {
     renderCorruptionRemoval();
+    return;
+  }
+  if (x.cls === 'mage' && x.mage.pendingInitialFace && !pending(x)) {
+    $('heroPage').innerHTML = `<div class="card"><h2>Elige tu cara inicial</h2><p class="notice">¿En qué cara del Talismán quieres empezar la partida?</p><div class="actions">${ x.mage.slots.map((sl, i) => `<button data-initial-face="${ i }" class="primary">Cara ${ i + 1 }: ${ sl.name } (${ sl.manaCost } maná)</button>`).join('') }</div></div>`;
+    document.querySelectorAll('[data-initial-face]').forEach(b => b.onclick = () => {
+      const idx = +b.dataset.initialFace;
+      x.mage.amulet = idx;
+      x.mage.totalRotations = idx;
+      x.mage.pendingInitialFace = false;
+      log(`${ x.name } empieza la partida con el Talismán en la Cara ${ idx + 1 }.`);
+      save();
+      renderHero();
+      say(`Empiezas con ${ x.mage.slots[idx].name } activa.`);
+    });
     return;
   }
   if (x.cls === 'shaman' && !x.shaman.elementBoostDone && !x.unconscious && !pending(x)) {
@@ -2849,7 +2878,7 @@ function missionTurnButton(x) {
   return '';
 }
 function actionsHtml(x) {
-  return `<div class="card"><h2>Turno de ${ x.name }</h2><p class="notice">Acciones restantes: <b>${ x.actions }</b></p><div class="actions"><button id="moveAction">Movimiento</button><button id="attackAction">Ataque</button><button data-action="Recuperación">Recuperación</button><button data-action="Intercambiar y equipar">Intercambiar y equipar</button><button data-action="Acción especial">Acción especial (objeto)</button>${ missionTurnButton(x) }<button id="finishTurn" class="primary">Finalizar turno</button></div></div>${ flowHtml(x) }`;
+  return `<div class="card"><h2>Turno de ${ x.name }</h2><p class="notice">Acciones restantes: <b>${ x.actions }</b></p><div class="actions"><button id="moveAction">Movimiento</button><button id="attackAction">Ataque</button><button data-action="Recuperación">Recuperación</button><button data-action="Intercambiar y equipar">Intercambiar y equipar</button><button data-action="Acción especial">Acción especial (objeto)</button>${ missionTurnButton(x) }<button id="finishTurn" class="primary">Finalizar turno</button></div><button id="enemyBurningBtn" class="top">Un enemigo está Quemado: tirar dado amarillo</button></div>${ flowHtml(x) }`;
 }
 function flowHtml(x) {
   if (!x.flow.type)
@@ -3389,6 +3418,21 @@ function bindClass(x) {
     });
 }
 function bindFlow(x) {
+  if ($('enemyBurningBtn'))
+    $('enemyBurningBtn').onclick = () => {
+      const panel = $('heroPage');
+      if (!panel)
+        return;
+      panel.innerHTML = `<div class="card"><h2>Enemigo Quemado</h2><p class="notice">Lanza 1 dado amarillo por el enemigo con ficha de fuego. ¿Cuántas espadas salieron?</p><div class="actions">${ Array.from({ length: 7 }, (_, i) => i).map(n => `<button data-enemy-burn="${ n }" class="primary">${ n }</button>`).join('') }</div><button id="cancelEnemyBurn" class="top">Cancelar</button></div>`;
+      document.querySelectorAll('[data-enemy-burn]').forEach(b => b.onclick = () => {
+        const dmg = +b.dataset.enemyBurn;
+        log(`Enemigo Quemado: recibe ${ dmg } de daño por fuego (aplícalo en la miniatura física).`);
+        say(dmg > 0 ? `El enemigo recibe ${ dmg } de daño por Quemado.` : 'El enemigo no recibe daño por Quemado esta vez.');
+        renderHero();
+      });
+      if ($('cancelEnemyBurn'))
+        $('cancelEnemyBurn').onclick = () => renderHero();
+    };
   if ($('mageAttackContinue'))
     $('mageAttackContinue').onclick = () => {
       x.flow.attackType = 'magico';
@@ -3807,7 +3851,7 @@ function startAction(type, targetBeast = false) {
   renderHero();
   setTimeout(() => document.querySelector('.actionFlow')?.scrollIntoView({ behavior: 'smooth' }), 30);
   const actionLabel = type === 'move' ? 'Movimiento' : type === 'attack' ? 'Ataque' : type === 'defense' ? 'Defensa' : type;
-  const extraInfo = `${ x.cls === 'shaman' && type === 'attack' ? ' Revisa tus Bendiciones y las habilidades del Chamán disponibles según tus elementos.' : '' }${ type === 'attack' ? ' Elige primero el tipo de ataque.' : '' }`;
+  const extraInfo = `${ x.cls === 'shaman' && type === 'attack' ? ' Revisa tus elementos.' : '' }${ type === 'attack' ? ' Elige el tipo de ataque.' : '' }`;
   let baseAnnouncement;
   if (!x.turnAnnounced) {
     x.turnAnnounced = true;
@@ -3818,7 +3862,7 @@ function startAction(type, targetBeast = false) {
   if (type === 'attack' && x.cls !== 'ranger') {
     duckAndSay(baseAnnouncement);
     if (s.voice === 'yes' && confirm('¿Quieres que el asistente de voz lea los pasos del ataque?'))
-      duckAndSay('Pasos del ataque: primero arma tu reserva de dados y elige el objetivo. Segundo, lanza físicamente los dados. Tercero, revisa habilidades y efectos disponibles. Cuarto, marca el resultado del ataque y confirma.');
+      duckAndSay('Arma tu reserva de dados, lanza, revisa habilidades, y confirma el resultado.');
     return;
   }
   duckAndSay(baseAnnouncement);
@@ -4648,6 +4692,7 @@ function finishDarkness() {
   s.heroes.forEach(x => {
     x.actions = x.unconscious ? 0 : s.mode === 'solo' ? 4 : 3;
     x.turnDone = false;
+    x.heroTabAnnouncedThisRound = false;
     x.flow = {
       type: null,
       step: 0,
@@ -5601,7 +5646,7 @@ function renderMissionMechanics(m) {
     if (!st.finalCombatActive)
       return `<div class="card"><h3>Sellos de Corrupción</h3><p class="notice">Rotos: <b>${ st.sealsBreached || 0 } / 4</b></p><p class="muted">Cada héroe puede gastar 1 acción en la zona de un Sello para romperlo ("Romper Sello de Corrupción" en su turno). Todo el grupo gana 5 XP por sello. Al romper los 4, se habilita "Entrar a la Cámara de la Corrupción" en Movimiento.</p></div>`;
     const pct = Math.max(0, Math.min(100, Math.round(st.michaelHp / st.michaelMaxHp * 100)));
-    return `<div class="card bossPanel"><div class="bossTitle">✦ EL ARCÁNGEL MIGUEL ✦<span class="bossSubtitle">El Arcángel Corrupto</span></div><div class="bossHealthTrack"><div class="bossHealthFill" style="width:${ pct }%"></div><span class="bossHealthNum">${ st.michaelHp } / ${ st.michaelMaxHp }</span></div><div class="grid top"><div><small>Nivel del medidor</small><b>${ st.darkLevel || 0 } / 5</b></div><div><small>Corrupción en la Cámara</small><b>${ st.corruptionChamber || 0 }</b></div><div><small>Dados negros extra</small><b>+${ st.extraBlackDice || 0 }</b></div><div><small>Estado</small><b>${ st.michaelInvulnerable ? 'Invulnerable' : 'Vulnerable' }</b></div></div>${ st.michaelInvulnerable ? `<button id="removeInvulnBtn" class="primary top">Quitar invulnerabilidad</button>` : `<button id="restoreInvulnBtn" class="top">Restaurar invulnerabilidad</button>` }<p class="muted top">Al tirar sus dados negros, Miguel lanza +${ st.extraBlackDice || 0 } dado(s) extra (según el medidor).</p><button id="michaelClawsEffectBtn" class="top">Miguel ataca: salieron Garras en sus dados negros</button></div>`;
+    return `<div class="card bossPanel"><div class="bossTitle">✦ EL ARCÁNGEL MIGUEL ✦<span class="bossSubtitle">El Arcángel Corrupto</span></div><div class="bossHealthTrack"><div class="bossHealthFill" style="width:${ pct }%"></div><span class="bossHealthNum">${ st.michaelHp } / ${ st.michaelMaxHp }</span></div><div class="grid top"><div><small>Nivel del medidor</small><b>${ st.darkLevel || 0 } / 5</b></div><div><small>Corrupción en la Cámara</small><b>${ st.corruptionChamber || 0 }</b></div><div><small>Dados negros extra</small><b>+${ st.extraBlackDice || 0 }</b></div><div><small>Estado</small><b>${ st.michaelInvulnerable ? 'Invulnerable' : 'Vulnerable' }</b></div></div>${ st.michaelInvulnerable ? `<button id="removeInvulnBtn" class="primary top">Quitar invulnerabilidad</button>` : `<button id="restoreInvulnBtn" class="top">Restaurar invulnerabilidad</button>` }<p class="muted top">Al tirar sus dados negros, Miguel lanza +${ st.extraBlackDice || 0 } dado(s) extra (según el medidor).</p><button id="michaelClawsEffectBtn" class="top">Miguel ataca: salieron Garras en sus dados negros</button><button id="michaelBurningBtn" class="top">Miguel está Quemado: tirar dado amarillo</button></div>`;
   }
   if (m.id === 'soul_collector') {
     const st = s.missionState;
@@ -5730,6 +5775,30 @@ function bindMissionMechanics(m) {
         save();
         renderMissions();
         renderHero();
+      });
+    };
+  if (m.id === 'free_michael' && $('michaelBurningBtn'))
+    $('michaelBurningBtn').onclick = () => {
+      const panel = $('heroPage');
+      if (!panel)
+        return;
+      panel.innerHTML = `<div class="card"><h2>Miguel está Quemado</h2><p class="notice">Lanza 1 dado amarillo. ¿Cuántas espadas salieron?</p><div class="actions">${ Array.from({ length: 7 }, (_, i) => i).map(n => `<button data-burn-swords="${ n }" class="primary">${ n }</button>`).join('') }</div></div>`;
+      document.querySelectorAll('[data-burn-swords]').forEach(b => b.onclick = () => {
+        const dmg = +b.dataset.burnSwords;
+        const st = s.missionState;
+        st.michaelHp = Math.max(0, st.michaelHp - dmg);
+        log(`Miguel está Quemado: recibe ${ dmg } de daño por fuego. Vida restante: ${ st.michaelHp }/${ st.michaelMaxHp }.`);
+        say(`Miguel recibe ${ dmg } de daño por Quemado.`);
+        save();
+        renderMissions();
+        renderHero();
+        if (st.michaelHp <= 0) {
+          stopMichaelSong();
+          triggerMissionResult('victory');
+          log('El Arcángel Miguel ha sido derrotado. Victoria.');
+          finishFlow(true);
+          duckAndSay('Miguel ha sido liberado de la Corrupción. La misión termina en victoria.');
+        }
       });
     };
 }
